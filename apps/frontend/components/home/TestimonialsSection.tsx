@@ -11,16 +11,16 @@ export default function TestimonialsSection({ testimonials }: { testimonials: an
   return (
     <section className="py-20 lg:py-28 bg-[#f0f2f5] relative overflow-hidden border-t border-gray-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center max-w-3xl mx-auto mb-16 md:mb-24 relative z-10">
+        <div className="text-center max-w-3xl mx-auto mb-16 md:mb-16 lg:mb-24 relative z-10">
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Testimoni</h2>
-          <h3 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight">Apa Kata <span className="text-blue-600">Mereka?</span></h3>
-          <p className="text-xl text-gray-600 leading-relaxed font-medium">
+          <h3 className="text-3xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">Apa Kata <span className="text-blue-600">Mereka?</span></h3>
+          <p className="text-xl md:text-lg lg:text-xl text-gray-600 leading-relaxed font-medium">
             Bukan sekadar janji teknis, tapi dampak nyata dari produk digital yang kami hasilkan, layaknya obrolan nyata bersama klien kami.
           </p>
         </div>
 
         {/* WhatsApp UI Container */}
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden border border-gray-200 flex flex-col md:flex-row h-[650px] md:h-[600px] w-full">
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden border border-gray-200 flex flex-col md:flex-row h-[650px] md:h-[500px] lg:h-[600px] w-full">
           
           {/* Sidebar (Chat List) */}
           <div className={`w-full md:w-1/3 lg:w-[30%] md:border-r border-gray-200 bg-white flex-col h-full shrink-0 ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>

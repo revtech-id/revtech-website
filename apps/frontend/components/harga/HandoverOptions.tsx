@@ -56,7 +56,7 @@ export default function HandoverOptions() {
                             
                             transition={{ duration: 0.4, delay: i * 0.1 }}
                             key={i}
-                            className={`flex flex-col h-full p-8 rounded-3xl bg-white border hover-card ${opt.border}`}
+                            className={`flex flex-col h-full p-8 md:p-5 lg:p-8 rounded-3xl bg-white border hover-card ${opt.border}`}
                         >
                             {opt.badge && (
                                 <div className="inline-block bg-blue-600 text-white text-[11px] font-black px-4 py-1.5 rounded-full tracking-widest uppercase mb-4 w-fit">

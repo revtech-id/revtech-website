@@ -14,18 +14,19 @@ export default function AICtaBanner() {
         </div>
 
         {/* Text Content */}
-        <div className="w-full md:w-[60%] p-8 pt-12 md:py-16 pl-8 md:pl-16 lg:pl-24 flex flex-col justify-center items-start relative z-20">
-                  <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
-                    Masih Ragu atau <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Punya Pertanyaan?</span>
+        <div className="w-full md:w-[60%] p-8 pt-12 md:py-12 pl-8 md:pl-10 lg:pl-24 flex flex-col justify-center items-start relative z-20">
+                  <h2 className="text-3xl md:text-[2.2rem] lg:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+                    Masih Ragu atau <br className="hidden lg:block"/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Punya Pertanyaan?</span>
                   </h2>
-          <p className="text-blue-100/80 text-base md:text-lg mb-8 max-w-[400px] leading-relaxed font-medium">
+          <p className="text-blue-100/80 text-base md:text-sm lg:text-lg mb-6 lg:mb-8 max-w-[320px] lg:max-w-[400px] leading-relaxed font-medium">
             Mari diskusikan kebutuhan website Anda bersama Asisten Pintar kami, atau hubungi tim ahli kami via WhatsApp.
           </p>
           <button 
             onClick={() => window.dispatchEvent(new CustomEvent("open-speed-dial"))}
-            className="w-full sm:w-auto bg-white text-blue-950 hover:bg-blue-50 font-black text-base px-8 py-5 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.15)] hover-btn inline-flex items-center justify-center gap-2 relative z-20"
+            className="w-full sm:w-auto bg-white text-blue-950 hover:bg-blue-50 font-black text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.15)] hover-btn inline-flex items-center justify-center gap-2 relative z-20"
           >
-            <span className="material-symbols-outlined text-[20px]">forum</span> Mulai Konsultasi Sekarang
+            <span className="material-symbols-outlined text-[18px] lg:text-[20px]">forum</span> Mulai Konsultasi Sekarang
           </button>
         </div>
 

@@ -24,7 +24,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                             {plan.promoBadge}
                         </div>
                     )}
-                    <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight">
+                    <h1 className="text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">
                         Paket <span className="text-blue-600">{plan.name.replace('Paket ', '')}</span>
                     </h1>
                     <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl">

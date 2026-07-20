@@ -25,7 +25,7 @@ export default function PricingCards() {
 
     return (
         <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 max-w-md lg:max-w-none mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-8 mb-12 max-w-md md:max-w-none mx-auto">
                 {pricingPlans.map((plan, idx) => {
                     const currentPrice = plan.basicPrice;
                     const currentFeatures = plan.basicFeatures;
@@ -44,21 +44,21 @@ export default function PricingCards() {
                             }`}
                         >
                             {plan.popular && (
-                                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-blue-600 text-[11px] sm:text-xs font-black px-5 py-1 rounded-full shadow-sm tracking-widest z-10 uppercase whitespace-nowrap">
+                                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-blue-600 text-[10px] md:text-[9px] lg:text-[11px] sm:text-xs font-black px-4 md:px-3 lg:px-5 py-1 rounded-full shadow-sm tracking-widest z-10 uppercase whitespace-nowrap">
                                     {plan.promoBadge || "BEST SELLER"}
                                 </div>
                             )}
-                            <div className={`rounded-[29px] p-8 sm:p-10 h-full flex flex-col ${plan.popular ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'}`}>
-                                <h4 className="text-2xl font-black mb-3 mt-2 tracking-tight">{plan.name}</h4>
-                                <p className={`text-sm mb-8 font-medium leading-relaxed ${plan.popular ? 'text-blue-100' : 'text-gray-500'}`}>{plan.description}</p>
+                            <div className={`rounded-[29px] p-8 sm:p-10 md:p-5 lg:p-10 h-full flex flex-col ${plan.popular ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'}`}>
+                                <h4 className="text-2xl md:text-xl lg:text-2xl font-black mb-3 md:mb-2 lg:mb-3 mt-2 tracking-tight">{plan.name}</h4>
+                                <p className={`text-sm md:text-[13px] lg:text-sm mb-8 md:mb-5 lg:mb-8 font-medium leading-relaxed ${plan.popular ? 'text-blue-100' : 'text-gray-500'}`}>{plan.description}</p>
 
-                                <div className="mb-8 flex flex-col gap-1 h-[48px] justify-end">
+                                <div className="mb-8 md:mb-5 lg:mb-8 flex flex-col gap-1 h-[48px] justify-end">
                                     {plan.originalPrice && (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-400 line-through font-bold">{plan.originalPrice}</span>
+                                            <span className="text-sm md:text-xs lg:text-sm text-gray-400 line-through font-bold">{plan.originalPrice}</span>
                                         </div>
                                     )}
-                                    <span className={`font-black tracking-tighter leading-none whitespace-nowrap text-[32px] md:text-4xl lg:text-[28px] xl:text-[36px] ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
+                                    <span className={`font-black tracking-tighter leading-none whitespace-nowrap text-[32px] md:text-2xl lg:text-[28px] xl:text-[36px] ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
                                         {currentPrice}
                                     </span>
                                 </div>

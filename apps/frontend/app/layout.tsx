@@ -64,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
       </head>
       <body
         className={`${inter.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] flex flex-col pt-20 bg-[#F8FAFC]`}

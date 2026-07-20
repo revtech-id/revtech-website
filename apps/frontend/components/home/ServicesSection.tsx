@@ -67,14 +67,14 @@ export default function ServicesSection() {
            
            
            
-          className="max-w-3xl mb-20"
+          className="max-w-3xl mb-12 md:mb-20 text-left"
         >
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Layanan Kami</h2>
           <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">Tiga Pilar Solusi <br className="hidden sm:block"/><span className="text-blue-600">Digital Anda.</span></h3>
           <p className="text-xl text-gray-600 leading-relaxed font-medium">Kami menyediakan tiga pilar layanan utama yang dirancang khusus untuk menjawab segala kebutuhan digital Anda.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-12">
           {servicePillars.map((pillar, idx) => (
             <motion.div 
               key={pillar.id}
@@ -83,20 +83,20 @@ export default function ServicesSection() {
                
                
               transition={{ delay: idx * 0.1 }} 
-              className={`group relative flex flex-col h-full bg-white rounded-3xl p-8 border border-gray-100 hover-card`}
+              className={`group relative flex flex-col h-full bg-white rounded-3xl p-6 md:p-5 lg:p-8 border border-gray-100 hover-card`}
             >
               <div className="relative z-10 flex-1">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${colorMap[pillar.color].bg} ${colorMap[pillar.color].text}`}>
-                  <span className="material-symbols-outlined text-xl">{pillar.icon}</span>
+                <div className={`w-10 h-10 md:w-9 md:h-9 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center mb-5 md:mb-4 lg:mb-6 ${colorMap[pillar.color].bg} ${colorMap[pillar.color].text}`}>
+                  <span className="material-symbols-outlined text-lg md:text-base lg:text-xl">{pillar.icon}</span>
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">{pillar.title}</h4>
-                <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                <h4 className="text-xl md:text-lg lg:text-xl font-bold text-gray-900 mb-2 lg:mb-3 tracking-tight">{pillar.title}</h4>
+                <p className="text-gray-600 mb-4 md:mb-3 lg:mb-6 text-sm md:text-[13px] lg:text-sm leading-relaxed">
                   {pillar.description}
                 </p>
-                <ul className="space-y-2 mb-6 text-sm font-medium text-gray-700">
+                <ul className="space-y-2 md:space-y-1.5 lg:space-y-2 mb-6 md:mb-4 lg:mb-6 text-sm md:text-[13px] lg:text-sm font-medium text-gray-700">
                   {pillar.features.map((feat, fIdx) => (
                     <li key={fIdx} className="flex items-center gap-2">
-                      <span className={`material-symbols-outlined text-sm ${colorMap[pillar.color].text}`}>check_circle</span> 
+                      <span className={`material-symbols-outlined text-sm md:text-[13px] lg:text-sm ${colorMap[pillar.color].text}`}>check_circle</span> 
                       {feat}
                     </li>
                   ))}

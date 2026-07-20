@@ -13,10 +13,10 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
 
         {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-16 mb-12">
 
           {/* Col 1 — Brand */}
-          <div className="md:col-span-4">
+          <div className="lg:col-span-4">
             <Link href="/">
               <Image
                 src="/assets/logo.webp"
@@ -71,7 +71,7 @@ export default function Footer() {
           </div>
 
           {/* Col 2 — Layanan */}
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <h4 className="font-semibold text-slate-800 mb-5 text-sm">Layanan</h4>
             <ul className="space-y-3">
               <li>
@@ -93,7 +93,7 @@ export default function Footer() {
           </div>
 
           {/* Col 3 — Jelajahi */}
-          <div className="md:col-span-2">
+          <div className="lg:col-span-2">
             <h4 className="font-semibold text-slate-800 mb-5 text-sm">Jelajahi</h4>
             <ul className="space-y-3">
               <li>
@@ -120,7 +120,7 @@ export default function Footer() {
           </div>
 
           {/* Col 4 — Kontak Kami */}
-          <div className="md:col-span-4">
+          <div className="lg:col-span-4">
             <h4 className="font-semibold text-slate-800 mb-5 text-sm">Kontak Kami</h4>
             <ul className="space-y-4">
               <li>
@@ -129,7 +129,7 @@ export default function Footer() {
                   className="flex items-center gap-3 text-slate-500 hover:text-blue-600 text-sm transition-colors group"
                 >
                   <span className="material-symbols-outlined text-[18px] shrink-0">mail</span>
-                  <span>revtech.id.contact@gmail.com</span>
+                  <span className="break-all md:break-normal">revtech.id.contact@gmail.com</span>
                 </a>
               </li>
               <li>

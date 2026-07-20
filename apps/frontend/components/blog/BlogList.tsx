@@ -9,7 +9,7 @@ export default function BlogList({ posts }: { posts: BlogPostData[] }) {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 lg:mb-20">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight mb-6">
+                <h1 className="text-4xl md:text-[2.5rem] lg:text-6xl font-black text-gray-900 tracking-tight mb-6">
                     Blog & <span className="text-blue-600">Insight</span>
                 </h1>
                 <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">

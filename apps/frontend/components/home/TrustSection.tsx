@@ -44,17 +44,17 @@ export default function TrustSection() {
           {/* Left Column - Header (Sticky on desktop) */}
           <div className="lg:col-span-5 lg:sticky lg:top-28 text-left space-y-6">
             <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Keunggulan</h2>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 tracking-tight leading-tight">
               Kenapa Memilih <br className="hidden md:block" />
               <span className="text-blue-600">RevTech?</span>
             </h2>
-            <p className="text-base sm:text-lg text-gray-500 font-medium leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg md:text-[17px] lg:text-lg text-gray-500 font-medium leading-relaxed max-w-lg">
               Kami tidak hanya membangun platform digital, tetapi mewujudkan ide-ide Anda dengan standar teknologi mutakhir dan transparansi penuh.
             </p>
           </div>
 
           {/* Right Column - Glowing Premium Card Grid */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
             {metrics.map((metric, idx) => (
               <motion.div 
                 key={metric.id}
@@ -65,7 +65,7 @@ export default function TrustSection() {
                 transition={{ delay: idx * 0.1 }} 
                 className="group relative rounded-3xl p-[1px] bg-gradient-to-br from-blue-500/15 via-transparent to-blue-500/15 hover:from-blue-500 hover:to-blue-400 hover-card block"
               >
-                <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 p-8 rounded-[23px] text-left h-full flex flex-col justify-between min-h-[220px]">
+                <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 p-6 lg:p-8 rounded-[23px] text-left h-full flex flex-col justify-between min-h-[200px] lg:min-h-[220px]">
                   <div>
                     {/* Glowing Icon container */}
                     <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 text-white mb-6 group-hover:scale-110 group-hover:bg-white group-hover:text-primary transition-all duration-300 shadow-md">
