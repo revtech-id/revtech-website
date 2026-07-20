@@ -43,7 +43,7 @@ export default function AfterSalesSupport() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             {/* Overlay Background */}
             <motion.div 
-              initial={{ opacity: 0 }} 
+               
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsOpen(false)}
@@ -52,7 +52,7 @@ export default function AfterSalesSupport() {
             
             {/* Modal Box */}
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden"

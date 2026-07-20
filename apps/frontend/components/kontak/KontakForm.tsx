@@ -53,7 +53,7 @@ export default function KontakForm() {
     if (submittedData) {
         return (
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
+                
                 animate={{ opacity: 1, scale: 1 }}
                 className="max-w-2xl mx-auto bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl shadow-gray-200/40 border border-gray-100 text-center flex flex-col items-center justify-center"
             >
@@ -120,7 +120,7 @@ export default function KontakForm() {
 
     return (
         <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            
             animate={{ opacity: 1, y: 0 }}
             className="max-w-4xl mx-auto bg-white rounded-[2rem] p-6 sm:p-8 md:p-12 shadow-xl shadow-gray-200/50 border border-gray-100"
         >
@@ -172,7 +172,7 @@ export default function KontakForm() {
                 <AnimatePresence>
                     {service === 'jasa_web' && (
                         <motion.div 
-                            initial={{ opacity: 0, height: 0 }} 
+                             
                             animate={{ opacity: 1, height: 'auto' }} 
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden mb-10"
@@ -270,7 +270,7 @@ export default function KontakForm() {
                     <AnimatePresence>
                         {service === 'custom' && (
                             <motion.div
-                                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                                
                                 animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
                                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                                 className="overflow-hidden"

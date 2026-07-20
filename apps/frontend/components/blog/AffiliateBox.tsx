@@ -15,9 +15,9 @@ export default function AffiliateBox({ productId }: AffiliateBoxProps) {
 
     return (
         <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
+            
+            
+            
             transition={{ duration: 0.5 }}
             className="my-10 relative bg-white border-2 border-primary/20 rounded-[2rem] p-6 sm:p-8 md:p-10 shadow-xl shadow-primary/5 group hover:border-primary/40 transition-colors"
         >

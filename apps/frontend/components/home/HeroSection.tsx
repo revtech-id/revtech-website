@@ -18,8 +18,8 @@ export default function HeroSection() {
 
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
         <motion.div 
-          variants={fadeUpVariant} 
-          initial="hidden" 
+           
+           
           animate="visible" 
           className="flex flex-col items-start max-w-2xl space-y-5 md:space-y-6"
         >

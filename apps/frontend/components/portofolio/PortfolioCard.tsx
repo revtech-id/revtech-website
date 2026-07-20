@@ -16,10 +16,10 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
             href={item.slug ? `/portofolio/${item.slug}` : item.liveUrl}
             target={item.slug ? "_self" : "_blank"}
             rel={item.slug ? undefined : "noreferrer"}
-            variants={fadeUpVariant} 
-            initial="hidden" 
-            whileInView="visible" 
-            viewport={{ once: true, margin: '-64px' }}
+             
+             
+             
+            
             className="group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full"
         >
             <div className="aspect-[4/3] sm:aspect-[3/2] overflow-hidden relative bg-gray-100 border-b border-gray-100">

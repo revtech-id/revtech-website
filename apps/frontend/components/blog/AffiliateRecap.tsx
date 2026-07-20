@@ -15,9 +15,9 @@ export default function AffiliateRecap({ productId }: AffiliateRecapProps) {
 
     return (
         <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-50px" }}
+            
+            
+            
             transition={{ duration: 0.5 }}
             className="my-16 bg-gradient-to-br from-gray-900 via-gray-800 to-primary p-8 sm:p-10 md:p-12 rounded-[2rem] text-center shadow-2xl relative overflow-hidden"
         >

@@ -63,10 +63,10 @@ export default function ServicesSection() {
     <section id="pilar-layanan" className="py-16 lg:py-24 relative bg-white border-y border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
-          variants={fadeUpVariant} 
-          initial="hidden" 
-          whileInView="visible" 
-          viewport={{ once: true, margin: '-64px' }} 
+           
+           
+           
+           
           className="max-w-3xl mb-20"
         >
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Layanan Kami</h2>
@@ -78,10 +78,10 @@ export default function ServicesSection() {
           {servicePillars.map((pillar, idx) => (
             <motion.div 
               key={pillar.id}
-              variants={fadeUpVariant} 
-              initial="hidden" 
-              whileInView="visible" 
-              viewport={{ once: true, margin: '-64px' }} 
+               
+               
+               
+               
               transition={{ delay: idx * 0.1 }} 
               className={`group relative flex flex-col h-full bg-white rounded-3xl p-8 border border-gray-100 hover-card`}
             >

@@ -6,7 +6,7 @@ import { fadeUpVariant } from '@/lib/animations';
 
 export default function LayananHeader() {
   return (
-    <motion.div variants={fadeUpVariant} initial="hidden" animate="visible" className="text-center mb-16 lg:mb-24 max-w-3xl mx-auto">
+    <motion.div   animate="visible" className="text-center mb-16 lg:mb-24 max-w-3xl mx-auto">
       <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
         Tiga Pilar Solusi <br className="hidden sm:block"/>
         <span className="text-blue-600">Digital Anda.</span>

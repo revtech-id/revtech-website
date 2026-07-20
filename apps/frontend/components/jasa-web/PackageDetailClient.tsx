@@ -14,7 +14,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
             {/* HERO SECTION - SUPER SIMPLE */}
             <section className="pt-32 pb-16 px-6 border-b border-gray-200 bg-white text-center">
                 <motion.div 
-                    initial={{ opacity: 0, y: 15 }} 
+                     
                     animate={{ opacity: 1, y: 0 }} 
                     transition={{ duration: 0.4 }}
                     className="max-w-3xl mx-auto flex flex-col items-center"
@@ -49,9 +49,9 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                             {plan.detailedExplanations.map((exp, idx) => (
                                 <motion.div 
                                     key={idx}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true, margin: '-64px' }}
+                                    
+                                    
+                                    
                                     transition={{ delay: idx * 0.1, duration: 0.4 }}
                                     className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                                 >
@@ -73,9 +73,9 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                         </h2>
                         
                         <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: '-64px' }}
+                            
+                            
+                            
                             transition={{ duration: 0.4 }}
                             className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex flex-col md:flex-row"
                         >
@@ -131,9 +131,9 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                     </h2>
                     
                     <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: '-64px' }}
+                        
+                        
+                        
                         transition={{ duration: 0.4 }}
                         className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                     >
