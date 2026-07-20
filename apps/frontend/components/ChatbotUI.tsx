@@ -5,8 +5,9 @@ import { useChat } from '@ai-sdk/react';
 
 export default function ChatbotUI() {
   const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState('');
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, append, isLoading } = useChat({
     api: '/api/chat',
     initialMessages: [
       {
@@ -16,6 +17,21 @@ export default function ChatbotUI() {
       }
     ]
   });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    
+    append({
+      role: 'user',
+      content: input,
+    });
+    setInput('');
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
