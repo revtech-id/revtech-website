@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +23,21 @@ export default function KontakForm() {
     const [vipLane, setVipLane] = useState<boolean>(false);
 
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
+    
+    // State untuk Custom Country Dropdown
+    const [isCountryOpen, setIsCountryOpen] = useState(false);
+    const [selectedCountry, setSelectedCountry] = useState(countries[0]);
+    const countryDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+                setIsCountryOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = useForm<JasaWebFormValues>({
         resolver: zodResolver(jasaWebFormSchema),
@@ -244,18 +259,44 @@ export default function KontakForm() {
 
                         <div>
                             <div className="flex">
-                                <div className="relative flex">
-                                    <select 
-                                        className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl text-gray-900 font-bold pl-3 pr-8 focus:ring-2 focus:ring-gray-900 outline-none cursor-pointer appearance-none text-[14px]"
-                                        defaultValue="+62"
+                                <div className="relative flex" ref={countryDropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCountryOpen(!isCountryOpen)}
+                                        className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl text-gray-900 font-bold pl-3 pr-8 h-full flex items-center justify-center gap-2 focus:ring-2 focus:ring-gray-900 outline-none hover:bg-gray-200 transition-colors"
                                     >
-                                        {countries.map(country => (
-                                            <option key={country.code} value={country.dial_code} title={country.name}>
-                                                {country.emoji} {country.dial_code}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10">expand_more</span>
+                                        <img src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                        <span className="text-[14px]">{selectedCountry.dial_code}</span>
+                                    </button>
+                                    <span className={`absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                                    
+                                    <AnimatePresence>
+                                        {isCountryOpen && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: -5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -5 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 z-50 flex flex-col p-1 custom-scrollbar"
+                                            >
+                                                {countries.map(country => (
+                                                    <button
+                                                        key={country.code}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedCountry(country);
+                                                            setIsCountryOpen(false);
+                                                        }}
+                                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${selectedCountry.code === country.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}
+                                                    >
+                                                        <img src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                                        <span>{country.name}</span>
+                                                        <span className={`ml-auto ${selectedCountry.code === country.code ? 'text-blue-500' : 'text-gray-500'}`}>{country.dial_code}</span>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
                                 <Input 
                                     type="tel" 
