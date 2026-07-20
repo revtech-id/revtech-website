@@ -1,0 +1,21 @@
+{
+  "name": "revtech-workspace",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -c \"cyan,magenta\" \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "glob": "^13.0.6",
+    "sharp": "^0.35.3"
+  }
+}
