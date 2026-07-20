@@ -41,14 +41,6 @@ export const metadata: Metadata = {
     description: "Partner teknologi terbaik Anda untuk arsitektur website, produk digital, dan sistem kustom.",
     images: ["/assets/mockup-hero-section.webp"],
   },
-  icons: {
-    icon: [
-      { url: "/icon.webp", type: "image/webp" },
-    ],
-    apple: [
-      { url: "/icon.webp", type: "image/webp" },
-    ],
-  },
 };
 
 import { Analytics } from '@vercel/analytics/react';
