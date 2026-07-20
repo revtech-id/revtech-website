@@ -258,17 +258,17 @@ export default function KontakForm() {
                         </div>
 
                         <div>
-                            <div className="flex">
-                                <div className="relative flex" ref={countryDropdownRef}>
+                            <div className="flex bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-gray-900 transition-all hover:border-gray-300 shadow-sm group">
+                                <div className="relative flex shrink-0" ref={countryDropdownRef}>
                                     <button
                                         type="button"
                                         onClick={() => setIsCountryOpen(!isCountryOpen)}
-                                        className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl text-gray-900 font-bold pl-3 pr-8 h-full flex items-center justify-center gap-2 focus:ring-2 focus:ring-gray-900 outline-none hover:bg-gray-200 transition-colors"
+                                        className="bg-transparent border-r border-gray-200 rounded-l-xl text-gray-900 font-bold pl-4 pr-9 h-full flex items-center justify-center gap-2 outline-none group-hover:bg-gray-100 transition-colors"
                                     >
                                         <img src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
                                         <span className="text-[14px]">{selectedCountry.dial_code}</span>
                                     </button>
-                                    <span className={`absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
                                     
                                     <AnimatePresence>
                                         {isCountryOpen && (
@@ -277,7 +277,7 @@ export default function KontakForm() {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -5 }}
                                                 transition={{ duration: 0.15 }}
-                                                className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 z-50 flex flex-col p-1 custom-scrollbar"
+                                                className="absolute top-[calc(100%+8px)] left-0 w-64 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 z-50 flex flex-col p-1 custom-scrollbar"
                                             >
                                                 {countries.map(country => (
                                                     <button
@@ -301,7 +301,7 @@ export default function KontakForm() {
                                 <Input 
                                     type="tel" 
                                     {...register("whatsapp")}
-                                    className="flex-1 bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-4 rounded-l-none" 
+                                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-6 px-5 rounded-l-none text-gray-900 placeholder:text-gray-400 shadow-none" 
                                     placeholder="8123456... *" 
                                 />
                             </div>
