@@ -1,22 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { useChat } from '@ai-sdk/react';
 
 export default function ChatbotUI() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  
-  const { messages, append, isLoading } = useChat({
-    api: '/api/chat',
-    initialMessages: [
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Halo! Saya AI Asisten RevTech. Ada yang bisa saya bantu hari ini? Ingin konsultasi pembuatan website, katalog produk, atau punya ide custom?'
-      }
-    ]
-  });
+  const [messages, setMessages] = useState([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: 'Halo! Saya AI Asisten RevTech. Ada yang bisa saya bantu hari ini? Ingin konsultasi pembuatan website, katalog produk, atau punya ide custom?'
+    }
+  ]);
+  const isLoading = false;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -26,10 +22,7 @@ export default function ChatbotUI() {
     e.preventDefault();
     if (!input.trim()) return;
     
-    append({
-      role: 'user',
-      content: input,
-    });
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: input }]);
     setInput('');
   };
 
@@ -41,7 +34,7 @@ export default function ChatbotUI() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isOpen, isLoading]);
+  }, [messages, isOpen]);
 
   useEffect(() => {
     const handleOpenChatbot = () => setIsOpen(true);

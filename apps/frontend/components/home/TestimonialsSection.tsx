@@ -120,7 +120,7 @@ export default function TestimonialsSection({ testimonials }: { testimonials: an
                   transition={{ duration: 0.2 }}
                   className="space-y-3 md:space-y-4"
                 >
-                  {activeChat.messages.map((msg, idx) => {
+                  {activeChat.messages.map((msg: any, idx: number) => {
                     const isMe = msg.sender === "me";
                     return (
                       <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>

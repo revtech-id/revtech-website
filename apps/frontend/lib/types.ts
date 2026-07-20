@@ -3,4 +3,5 @@ export interface AdminProfile {
   name: string;
   email: string;
   role: string;
+  avatar_url?: string;
 }

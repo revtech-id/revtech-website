@@ -14,7 +14,8 @@ export default function HandoverOptions() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 text-left items-stretch">
-                    {[
+                    {(
+                        [
                         {
                             title: 'Terima Beres (Basic)',
                             desc: 'Website di-hosting di server kami. Biaya mencakup perpanjangan sewa server dan domain. Revisi konten dikenakan biaya terpisah.',
@@ -48,7 +49,7 @@ export default function HandoverOptions() {
                             simNote: '*Bebas tagihan rutin dari kami. Server dikelola mandiri.',
                             border: 'border-gray-200 shadow-sm'
                         }
-                    ].map((opt, i) => (
+                    ] as any[]).map((opt, i) => (
                         <motion.div
                             initial={{ opacity: 0, y: 15 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -76,7 +77,7 @@ export default function HandoverOptions() {
                                     <div>
                                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Simulasi Biaya</p>
                                         <div className={`p-4 rounded-xl border ${opt.bgSim || 'bg-gray-50 border-gray-100'} space-y-3`}>
-                                            {opt.simulations.map((sim, idx) => (
+                                            {opt.simulations.map((sim: any, idx: number) => (
                                                 <div key={idx} className={`flex justify-between items-center text-[13px] ${sim.total ? 'pt-3 mt-3 border-t border-black/10' : ''}`}>
                                                     <span className={sim.total ? 'font-bold text-gray-900' : 'text-gray-500 font-medium'}>{sim.label}</span>
                                                     <span className={sim.total ? 'font-black text-gray-900' : 'text-gray-900 font-bold'}>{sim.value}</span>
