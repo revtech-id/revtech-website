@@ -6,7 +6,7 @@ import { fadeUpVariant } from '@/lib/animations';
 
 export default function PortfolioHeader() {
     return (
-        <motion.div variants={fadeUpVariant} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} className="text-center mb-16 lg:mb-20">
+        <motion.div variants={fadeUpVariant} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-64px' }} className="text-center mb-16 lg:mb-20">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
                 Karya & <span className="text-blue-600">Inovasi Kami</span>
             </h1>

@@ -61,7 +61,7 @@ export default function TrustSection() {
                 variants={fadeUpVariant} 
                 initial="hidden" 
                 whileInView="visible" 
-                viewport={{ once: true, amount: 0.1 }} 
+                viewport={{ once: true, margin: '-64px' }} 
                 transition={{ delay: idx * 0.1 }} 
                 className="group relative rounded-3xl p-[1px] bg-gradient-to-br from-blue-500/15 via-transparent to-blue-500/15 hover:from-blue-500 hover:to-blue-400 hover-card block"
               >

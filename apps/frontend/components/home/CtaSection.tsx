@@ -8,7 +8,7 @@ export default function CtaSection() {
           <motion.div 
               initial={{ opacity: 0, scale: 0.98 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: '-64px' }}
               transition={{ duration: 0.5 }}
               className="max-w-5xl mx-auto relative flex flex-col md:flex-row items-stretch mt-8"
           >

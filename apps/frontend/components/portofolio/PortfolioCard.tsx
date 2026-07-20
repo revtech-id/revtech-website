@@ -19,7 +19,7 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
             variants={fadeUpVariant} 
             initial="hidden" 
             whileInView="visible" 
-            viewport={{ once: true, amount: 0.1 }}
+            viewport={{ once: true, margin: '-64px' }}
             className="group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full"
         >
             <div className="aspect-[4/3] sm:aspect-[3/2] overflow-hidden relative bg-gray-100 border-b border-gray-100">

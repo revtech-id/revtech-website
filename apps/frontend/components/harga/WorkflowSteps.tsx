@@ -50,7 +50,7 @@ export default function WorkflowSteps() {
                 onClick={() => setActiveStep(index)}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: '-64px' }}
                 transition={{ delay: index * 0.1 }}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >

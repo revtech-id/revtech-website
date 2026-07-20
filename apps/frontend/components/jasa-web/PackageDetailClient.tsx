@@ -51,7 +51,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                                     key={idx}
                                     initial={{ opacity: 0, y: 15 }}
                                     whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
+                                    viewport={{ once: true, margin: '-64px' }}
                                     transition={{ delay: idx * 0.1, duration: 0.4 }}
                                     className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                                 >
@@ -75,7 +75,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                            viewport={{ once: true, margin: '-64px' }}
                             transition={{ duration: 0.4 }}
                             className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex flex-col md:flex-row"
                         >
@@ -133,7 +133,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
+                        viewport={{ once: true, margin: '-64px' }}
                         transition={{ duration: 0.4 }}
                         className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                     >

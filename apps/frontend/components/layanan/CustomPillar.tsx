@@ -13,7 +13,7 @@ export default function CustomPillar() {
       variants={fadeUpVariant} 
       initial="hidden" 
       whileInView="visible" 
-      viewport={{ once: true, amount: 0.2 }} 
+      viewport={{ once: true, margin: '-64px' }} 
       className="bg-white border border-gray-100 rounded-[2rem] p-6 sm:p-8 md:p-10 lg:p-14 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col md:flex-row gap-8 lg:gap-12 items-center relative overflow-hidden group"
     >
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-slate-100/50 rounded-full blur-3xl -mr-40 -mb-40 opacity-50 group-hover:opacity-100 transition-opacity duration-500"></div>

@@ -35,7 +35,7 @@ export default function PricingCards() {
                             key={plan.id} 
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                            viewport={{ once: true, margin: '-64px' }}
                             transition={{ delay: idx * 0.1, duration: 0.5 }}
                             className={`rounded-[32px] p-[3px] transition-all duration-500 relative flex flex-col ${
                                 plan.popular 

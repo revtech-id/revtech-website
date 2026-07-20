@@ -7,7 +7,7 @@ export default function AffiliateDisclaimer() {
         <motion.div 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: '-64px' }}
             className="flex items-start gap-2"
         >
             <span className="material-symbols-outlined text-gray-300 mt-0.5 text-base">info</span>

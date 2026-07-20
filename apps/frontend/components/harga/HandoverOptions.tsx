@@ -53,7 +53,7 @@ export default function HandoverOptions() {
                         <motion.div
                             initial={{ opacity: 0, y: 15 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                            viewport={{ once: true, margin: '-64px' }}
                             transition={{ duration: 0.4, delay: i * 0.1 }}
                             key={i}
                             className={`flex flex-col h-full p-8 rounded-3xl bg-white border hover-card ${opt.border}`}
