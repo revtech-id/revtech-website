@@ -242,12 +242,26 @@ export default function KontakForm() {
                         </div>
 
                         <div>
-                            <Input 
-                                type="tel" 
-                                {...register("whatsapp")}
-                                className="bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-5" 
-                                placeholder="Nomor WhatsApp (Contoh: 0812...) *" 
-                            />
+                            <div className="flex">
+                                <div className="relative flex">
+                                    <select 
+                                        className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl text-gray-900 font-bold pl-3 pr-8 focus:ring-2 focus:ring-gray-900 outline-none cursor-pointer appearance-none text-[14px]"
+                                        defaultValue="+62"
+                                    >
+                                        <option value="+62">🇮🇩 +62</option>
+                                        <option value="+60">🇲🇾 +60</option>
+                                        <option value="+65">🇸🇬 +65</option>
+                                        <option value="+673">🇧🇳 +673</option>
+                                    </select>
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10">expand_more</span>
+                                </div>
+                                <Input 
+                                    type="tel" 
+                                    {...register("whatsapp")}
+                                    className="flex-1 bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-4 rounded-l-none" 
+                                    placeholder="8123456... *" 
+                                />
+                            </div>
                             {errors.whatsapp && <p className="text-red-500 text-sm mt-1 font-medium">{errors.whatsapp.message}</p>}
                         </div>
                         
