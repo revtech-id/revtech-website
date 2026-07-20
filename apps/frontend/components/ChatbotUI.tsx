@@ -86,11 +86,6 @@ export default function ChatbotUI() {
           <div className="flex-1 bg-white p-6 overflow-y-auto flex flex-col gap-6">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden shadow-sm">
-                    <img src="/images/icon-robot.webp" alt="AI Icon" className="w-[80%] h-[80%] object-contain drop-shadow-sm" />
-                  </div>
-                )}
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-[14px] sm:text-[15px] leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                 </div>
@@ -100,9 +95,6 @@ export default function ChatbotUI() {
             {/* Loading Indicator */}
             {isLoading && (
               <div className="flex justify-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1 overflow-hidden shadow-sm">
-                    <img src="/images/icon-robot.webp" alt="AI Icon" className="w-[80%] h-[80%] object-contain drop-shadow-sm" />
-                </div>
                 <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center gap-1.5">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
