@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { jasaWebFormSchema, type JasaWebFormValues } from '@/lib/validations/form';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { countries } from '@/lib/countries';
 
 type ServiceCategory = 'jasa_web' | 'produk_digital' | 'custom';
 type JasaWebPackage = 'Usaha' | 'Profesional' | 'Eksklusif';
@@ -248,10 +249,11 @@ export default function KontakForm() {
                                         className="bg-gray-100 border border-gray-200 border-r-0 rounded-l-xl text-gray-900 font-bold pl-3 pr-8 focus:ring-2 focus:ring-gray-900 outline-none cursor-pointer appearance-none text-[14px]"
                                         defaultValue="+62"
                                     >
-                                        <option value="+62">🇮🇩 +62</option>
-                                        <option value="+60">🇲🇾 +60</option>
-                                        <option value="+65">🇸🇬 +65</option>
-                                        <option value="+673">🇧🇳 +673</option>
+                                        {countries.map(country => (
+                                            <option key={country.code} value={country.dial_code} title={country.name}>
+                                                {country.emoji} {country.dial_code}
+                                            </option>
+                                        ))}
                                     </select>
                                     <span className="absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10">expand_more</span>
                                 </div>
