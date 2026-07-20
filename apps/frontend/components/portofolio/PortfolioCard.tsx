@@ -31,7 +31,7 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
                     alt={item.title} 
                     fill 
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
-                    className="object-contain object-center transform group-hover:scale-105 transition-transform duration-700 ease-[0.16,1,0.3,1] relative z-10" 
+                    className="object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-[0.16,1,0.3,1] relative z-10" 
                 />
                 <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-500 z-20"></div>
             </div>
