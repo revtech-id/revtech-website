@@ -43,10 +43,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/assets/logo.webp", type: "image/webp" },
+      { url: "/icon.webp", type: "image/webp" },
     ],
     apple: [
-      { url: "/assets/logo.webp", type: "image/webp" },
+      { url: "/icon.webp", type: "image/webp" },
     ],
   },
 };
