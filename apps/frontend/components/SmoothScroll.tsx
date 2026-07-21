@@ -15,7 +15,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       lerp: 0.08,
       // syncToNative: true pada touch = gunakan scroll native di mobile
       // Ini penting agar mobile tidak terasa lambat/laggy
-      syncToNative: typeof window !== 'undefined' && 'ontouchstart' in window,
+      syncTouch: typeof window !== 'undefined' && 'ontouchstart' in window,
       smoothWheel: true,
       wheelMultiplier: 1,
       touchMultiplier: 1.5,
