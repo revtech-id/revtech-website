@@ -64,8 +64,8 @@ export default function WorkflowSteps() {
                 onClick={() => setActiveStep(index)}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >
-                <div className="relative mb-6">
-                  <div className={`absolute inset-0 bg-blue-500 rounded-full blur-[20px] scale-150 transition-opacity duration-700 ${isActive ? 'opacity-40 animate-pulse' : 'opacity-0'}`} />
+                <div className="relative mb-6 inline-flex justify-center items-center">
+                  <div className={`absolute inset-0 rounded-full transition-opacity duration-700 ${isActive ? 'shadow-[0_0_40px_15px_rgba(59,130,246,0.6)] sm:shadow-[0_0_50px_20px_rgba(59,130,246,0.6)] animate-pulse' : 'opacity-0'}`} />
                   <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-xl bg-blue-600 text-white font-black text-2xl transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
                     {index + 1}
                   </div>
