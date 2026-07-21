@@ -31,17 +31,10 @@ export default function KontakForm() {
     const [selectedCountry, setSelectedCountry] = useState(countries[0]);
     const countryDropdownRef = useRef<HTMLDivElement>(null);
 
-    // State untuk Custom Service Dropdown
-    const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
-    const serviceDropdownRef = useRef<HTMLDivElement>(null);
-
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
                 setIsCountryOpen(false);
-            }
-            if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(event.target as Node)) {
-                setIsServiceDropdownOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -218,53 +211,18 @@ export default function KontakForm() {
                         </button>
                     </div>
 
-                    {/* Mobile: Custom Dropdown */}
-                    <div className="md:hidden relative" ref={serviceDropdownRef}>
-                        <button
-                            type="button"
-                            onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
-                            className="w-full bg-white border border-gray-200 text-gray-900 text-[15px] font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all shadow-sm flex items-center justify-between"
+                    {/* Mobile: Dropdown */}
+                    <div className="md:hidden relative">
+                        <select 
+                            value={service}
+                            onChange={(e) => setService(e.target.value as ServiceCategory)}
+                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-[16px] font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer shadow-sm"
                         >
-                            <span>
-                                {service === 'jasa_web' ? 'Jasa Website' : service === 'custom' ? 'Ide Custom' : 'Pilih Layanan'}
-                            </span>
-                            <span className={`material-symbols-outlined text-gray-400 transition-transform ${isServiceDropdownOpen ? 'rotate-180' : ''}`}>expand_more</span>
-                        </button>
-                        
-                        <AnimatePresence>
-                            {isServiceDropdownOpen && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.15 }}
-                                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 z-50 flex flex-col p-2"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => { setService('jasa_web'); setIsServiceDropdownOpen(false); }}
-                                        className={`flex items-center gap-3 px-3 py-3 rounded-lg text-[15px] font-bold text-left transition-colors ${service === 'jasa_web' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
-                                    >
-                                        Jasa Website
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled
-                                        className="flex items-center gap-2 px-3 py-3 rounded-lg text-[15px] font-bold text-left text-gray-400 bg-gray-50/50 cursor-not-allowed"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">lock</span>
-                                        Produk Digital (Segera Hadir)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setService('custom'); setIsServiceDropdownOpen(false); }}
-                                        className={`flex items-center gap-3 px-3 py-3 rounded-lg text-[15px] font-bold text-left transition-colors ${service === 'custom' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
-                                    >
-                                        Ide Custom
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                            <option value="jasa_web">Jasa Website</option>
+                            <option value="produk_digital" disabled>🔒 Produk Digital (Segera Hadir)</option>
+                            <option value="custom">Ide Custom</option>
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
                 </div>
 
