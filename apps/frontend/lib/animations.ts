@@ -5,12 +5,12 @@ import { Variants } from 'framer-motion';
  * Uses spring physics for an organic, elegant feel.
  */
 export const fadeUpVariant: Variants = {
-  hidden: { opacity: 0, y: 20, willChange: "transform, opacity" },
+  hidden: { opacity: 0, y: 40, willChange: "transform, opacity" },
   visible: { 
     opacity: 1, 
     y: 0, 
     willChange: "auto",
-    transition: { type: "tween", duration: 0.4, ease: "easeOut" }
+    transition: { type: "tween", duration: 0.7, ease: [0.16, 1, 0.3, 1] }
   }
 };
 

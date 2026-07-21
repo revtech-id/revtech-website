@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatbotUI from "@/components/ChatbotUI";
 import WhatsAppFAB from "@/components/ui/WhatsAppFAB";
+import SmoothScroll from "@/components/SmoothScroll";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -52,20 +53,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="scroll-smooth">
+    <html lang="id">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
       </head>
       <body
         className={`${inter.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] flex flex-col pt-20 bg-[#F8FAFC]`}
       >
-        <Navbar />
-        <main className="flex-grow">
-            {children}
-        </main>
-        <Footer />
-        <WhatsAppFAB />
-        <ChatbotUI />
+        <SmoothScroll>
+          <Navbar />
+          <main className="flex-grow">
+              {children}
+          </main>
+          <Footer />
+          <WhatsAppFAB />
+          <ChatbotUI />
+        </SmoothScroll>
         <Analytics />
         <SpeedInsights />
       </body>
