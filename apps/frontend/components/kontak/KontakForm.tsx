@@ -41,10 +41,19 @@ export default function KontakForm() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
         resolver: zodResolver(jasaWebFormSchema),
         defaultValues: { name: '', whatsapp: '', business: '', message: '' }
     });
+
+    const handleReset = () => {
+        reset();
+        setService('jasa_web');
+        setJasaWebPackage('Usaha');
+        setHandoverOption('Terima Beres (Basic)');
+        setVipLane(false);
+        setSelectedCountry(countries[0]);
+    };
 
     useEffect(() => {
         const paket = searchParams.get('paket');
@@ -402,8 +411,16 @@ export default function KontakForm() {
                     {errors.message && <p className="text-red-500 text-sm mt-1 font-medium">{errors.message.message}</p>}
                 </div>
 
-                <div className="pt-6 mt-8 border-t border-gray-100 flex justify-end">
-                    <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto px-10 py-6 text-base bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 group shadow-xl shadow-gray-900/20 hover:scale-[1.02] transition-transform">
+                <div className="pt-6 mt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onClick={handleReset}
+                        className="w-full sm:w-auto px-6 py-4 text-sm text-gray-500 hover:text-gray-900 font-bold flex items-center justify-center gap-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                        Reset Form
+                    </button>
+                    <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-6 text-base bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 group shadow-xl shadow-gray-900/20 hover:scale-[1.02] transition-transform">
                         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">send</span> 
                         {isSubmitting ? "Memproses..." : "Kirim Pesanan"}
                     </Button>
