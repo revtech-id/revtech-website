@@ -21,7 +21,7 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
         >
             <div className="relative overflow-hidden bg-white border-b border-gray-100">
                 <Image 
-                    src={item.coverImage || item.image || ""} 
+                    src={item.coverImage || ""} 
                     alt={item.title || "Portfolio"}
                     width={800}
                     height={600} 
