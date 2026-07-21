@@ -83,7 +83,7 @@ export default function KontakForm() {
         }
         messageText += `\n*Pesan / Catatan:*\n${data.message}`;
 
-        const waUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(messageText)}`;
+        const waUrl = `https://wa.me/6281290018819?text=${encodeURIComponent(messageText)}`;
         
         setWaLink(waUrl);
         setSubmittedData(data);
