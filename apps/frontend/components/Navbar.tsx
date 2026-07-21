@@ -44,8 +44,7 @@ export default function Navbar() {
 
                 <div className="hidden lg:flex">
                     <Link href="/kontak" className="relative group inline-flex items-center justify-center">
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-[#8A2BE2] rounded-full blur opacity-40 group-hover:opacity-70 transition duration-300"></div>
-                        <button className="relative bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full hover:bg-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center gap-2">
+                        <button className="relative bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full hover:bg-blue-700 hover:shadow-md transition-[background-color,box-shadow] duration-200 flex items-center gap-2">
                             Hubungi Kami
                             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                         </button>
@@ -62,7 +61,7 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Menu */}
-            <div className={`lg:hidden absolute top-20 left-0 w-full bg-white shadow-2xl border-t border-gray-100 transition-all duration-300 origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100 visible' : 'opacity-0 scale-y-0 invisible'}`}>
+            <div className={`lg:hidden absolute top-20 left-0 w-full bg-white shadow-2xl border-t border-gray-100 transition-[opacity,transform] duration-200 origin-top ${isMobileMenuOpen ? 'opacity-100 translate-y-0 visible pointer-events-auto' : 'opacity-0 -translate-y-2 invisible pointer-events-none'}`}>
                 <div className="flex flex-col p-4 space-y-2">
                     <Link className={getMobileLinkClass('/')} href="/" onClick={() => setIsMobileMenuOpen(false)}>Beranda</Link>
                     <Link className={getMobileLinkClass('/layanan')} href="/layanan" onClick={() => setIsMobileMenuOpen(false)}>Layanan</Link>

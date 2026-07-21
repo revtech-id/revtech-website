@@ -131,6 +131,28 @@
   html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover {
     background-color: #94a3b8;
   }
+
+  /*
+   * MOBILE PERFORMANCE: Nonaktifkan semua filter: blur() di mobile.
+   * blur() membutuhkan GPU offscreen composite layer per elemen.
+   * Di mobile GPU, ini sangat berat dan menjadi root cause utama lag/loading lama.
+   * Efek visual gradients & shadows tetap berjalan normal.
+   */
+  @media (max-width: 767px) {
+    .blur-sm, .blur, .blur-md, .blur-lg, .blur-xl, .blur-2xl, .blur-3xl,
+    [class*="blur-["] {
+      filter: none !important;
+    }
+    /* backdrop-blur juga dinonaktifkan di mobile */
+    .backdrop-blur-sm, .backdrop-blur, .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+    /* glass-nav tanpa backdrop-blur tetap solid */
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.98) !important;
+    }
+  }
 }
 
 @utility hover-card {
