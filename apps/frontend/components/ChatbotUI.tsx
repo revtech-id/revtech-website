@@ -2,16 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 
+const INITIAL_MESSAGE = {
+  id: 'welcome',
+  role: 'assistant',
+  content: 'Halo! Saya AI Asisten RevTech. Ada yang bisa saya bantu hari ini? Ingin konsultasi pembuatan website, katalog produk, atau punya ide custom?'
+};
+
 export default function ChatbotUI() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Halo! Saya AI Asisten RevTech. Ada yang bisa saya bantu hari ini? Ingin konsultasi pembuatan website, katalog produk, atau punya ide custom?'
-    }
-  ]);
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const isLoading = false;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -24,6 +24,22 @@ export default function ChatbotUI() {
     
     setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: input }]);
     setInput('');
+  };
+
+  const handleRestart = () => {
+    setMessages([INITIAL_MESSAGE]);
+    setInput('');
+  };
+
+  const handleEdit = (messageId: string, content: string) => {
+    const index = messages.findIndex(m => m.id === messageId);
+    if (index === -1) return;
+    
+    // Set input back to message content
+    setInput(content);
+    
+    // Remove this message and all subsequent messages to "rewind" the chat
+    setMessages(prev => prev.slice(0, index));
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -77,15 +93,29 @@ export default function ChatbotUI() {
                 <h3 className="font-bold text-gray-900 text-[15px] sm:text-base">RevTech Assistant</h3>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-700 p-2 rounded-lg transition-colors">
-              <span className="material-symbols-outlined block text-[20px] sm:text-[24px]">close</span>
-            </button>
+            <div className="flex gap-1">
+              <button onClick={handleRestart} title="Mulai Ulang Obrolan" className="text-gray-400 hover:text-primary p-2 rounded-lg transition-colors">
+                <span className="material-symbols-outlined block text-[20px] sm:text-[24px]">refresh</span>
+              </button>
+              <button onClick={() => setIsOpen(false)} title="Tutup" className="text-gray-400 hover:text-gray-700 p-2 rounded-lg transition-colors">
+                <span className="material-symbols-outlined block text-[20px] sm:text-[24px]">close</span>
+              </button>
+            </div>
           </div>
 
           {/* Messages Area */}
           <div className="flex-1 bg-white p-6 overflow-y-auto flex flex-col gap-6">
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end items-center group' : 'justify-start'}`}>
+                {msg.role === 'user' && (
+                  <button 
+                    onClick={() => handleEdit(msg.id, msg.content)}
+                    className="text-gray-300 hover:text-primary p-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    title="Edit pesan (mengulang obrolan dari titik ini)"
+                  >
+                    <span className="material-symbols-outlined text-[18px] block">edit</span>
+                  </button>
+                )}
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-[14px] sm:text-[15px] leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                 </div>
