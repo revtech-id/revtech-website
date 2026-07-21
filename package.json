@@ -5,17 +5,15 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently -c \"cyan,magenta\" \"npm run dev -w frontend\" \"npm run dev -w backend\"",
-    "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces",
-    "dev:frontend": "npm run dev -w frontend",
-    "dev:backend": "npm run dev -w backend"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
   },
   "dependencies": {
     "glob": "^13.0.6",
     "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.5"
   }
 }
