@@ -5,21 +5,20 @@ import Lenis from 'lenis';
 
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Respect prefers-reduced-motion — skip Lenis entirely untuk aksesibilitas
+    // Deteksi mobile/touch device — skip Lenis sepenuhnya
+    // Mobile browser sudah punya momentum scroll native yang optimal.
+    // Lenis di mobile = double processing = lag parah.
+    const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    if (isMobile) return;
+
+    // Respect prefers-reduced-motion
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
 
     const lenis = new Lenis({
-      // lerp: interpolasi linear yang menentukan "berat" scroll
-      // 0.08 = Apple-style: smooth tapi responsif, tidak terlalu mengambang
       lerp: 0.08,
-      // syncToNative: true pada touch = gunakan scroll native di mobile
-      // Ini penting agar mobile tidak terasa lambat/laggy
-      syncTouch: typeof window !== 'undefined' && 'ontouchstart' in window,
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-      // infinite: false agar tidak ada edge case di halaman biasa
       infinite: false,
     });
 
@@ -33,7 +32,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     rafId = requestAnimationFrame(raf);
 
     return () => {
-      // CRITICAL: cancel RAF sebelum destroy untuk mencegah memory leak
       cancelAnimationFrame(rafId);
       lenis.destroy();
     };

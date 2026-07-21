@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import { PricingPlan } from '@/data/pricing';
 import { CheckCircle2, XCircle, Lightbulb, LayoutTemplate, Layers, Settings, ExternalLink } from 'lucide-react';
+import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+
 
 interface PackageDetailClientProps {
     plan: PricingPlan;
@@ -14,9 +16,9 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
             {/* HERO SECTION - SUPER SIMPLE */}
             <section className="pt-32 pb-16 px-6 border-b border-gray-200 bg-white text-center">
                 <motion.div 
-                     
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ duration: 0.4 }}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 80, damping: 20, mass: 0.8 }}
                     className="max-w-3xl mx-auto flex flex-col items-center"
                 >
                     {plan.promoBadge && (
@@ -49,10 +51,10 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                             {plan.detailedExplanations.map((exp, idx) => (
                                 <motion.div 
                                     key={idx}
-                                    
-                                    
-                                    
-                                    transition={{ delay: idx * 0.1, duration: 0.4 }}
+                                    initial={{ opacity: 0, y: 16 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={defaultViewport}
+                                    transition={{ type: 'spring', stiffness: 80, damping: 20, delay: idx * 0.05 }}
                                     className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                                 >
                                     <h3 className="text-lg font-bold text-gray-900 mb-3">{exp.title}</h3>
@@ -73,10 +75,10 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                         </h2>
                         
                         <motion.div 
-                            
-                            
-                            
-                            transition={{ duration: 0.4 }}
+                            initial={{ opacity: 0, y: 16 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={defaultViewport}
+                            transition={{ type: 'spring', stiffness: 80, damping: 20 }}
                             className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex flex-col md:flex-row"
                         >
                             {/* Visual Anatomi */}
@@ -131,10 +133,10 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                     </h2>
                     
                     <motion.div 
-                        
-                        
-                        
-                        transition={{ duration: 0.4 }}
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={defaultViewport}
+                        transition={{ type: 'spring', stiffness: 80, damping: 20 }}
                         className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                     >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-8">

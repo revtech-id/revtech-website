@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pricingPlans } from '@/data/pricing';
 import { Button } from '@/components/ui/Button';
+import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+
 
 export default function PricingCards() {
     const [showEksklusifToast, setShowEksklusifToast] = useState(false);
@@ -25,7 +27,13 @@ export default function PricingCards() {
 
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-8 mb-12 max-w-md md:max-w-none mx-auto">
+            <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={defaultViewport}
+            variants={staggerContainerVariant}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-8 mb-12 max-w-md md:max-w-none mx-auto"
+        >
                 {pricingPlans.map((plan, idx) => {
                     const currentPrice = plan.basicPrice;
                     const currentFeatures = plan.basicFeatures;
@@ -33,11 +41,8 @@ export default function PricingCards() {
                     return (
                         <motion.div 
                             key={plan.id} 
-                            
-                            
-                            
-                            transition={{ delay: idx * 0.1, duration: 0.5 }}
-                            className={`rounded-[32px] p-[3px] transition-all duration-500 relative flex flex-col ${
+                            variants={fadeUpVariant}
+                            className={`rounded-[32px] p-[3px] transition-property-[box-shadow] duration-500 relative flex flex-col ${
                                 plan.popular 
                                     ? 'bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-600 shadow-2xl shadow-blue-600/40 lg:scale-105 z-10' 
                                     : 'bg-white border border-gray-200 hover:shadow-2xl hover:shadow-gray-200/50 hover:border-gray-300'
@@ -96,7 +101,7 @@ export default function PricingCards() {
                         </motion.div>
                     );
                 })}
-            </div>
+        </motion.div>
 
             {/* Eksklusif Toast Notification */}
             <AnimatePresence>
