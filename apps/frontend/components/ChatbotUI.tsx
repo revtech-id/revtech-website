@@ -143,7 +143,7 @@ export default function ChatbotUI() {
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Tanya sesuatu..." 
-                className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 sm:px-5 sm:py-3.5 text-[14px] sm:text-[15px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-3 sm:px-5 sm:py-3.5 text-[16px] sm:text-[15px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                 disabled={isLoading}
               />
               <button 
