@@ -21,9 +21,9 @@ export default function HeroSection() {
           
           {/* Text Content */}
           <motion.div 
-             
-             
-            animate="visible" 
+            initial="hidden"
+            animate="visible"
+            variants={fadeUpVariant}
             className="flex flex-col items-start text-left max-w-2xl space-y-4 md:space-y-5 md:w-[70%] lg:w-1/2 pt-4 pb-8 sm:pb-16 lg:pb-0"
           >
             <h1 className="text-4xl sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]">

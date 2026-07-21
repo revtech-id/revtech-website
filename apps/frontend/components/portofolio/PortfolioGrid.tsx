@@ -12,7 +12,13 @@ export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
     return (
         <section>
             {portfolios.length === 0 ? (
-                <motion.div     className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <motion.div 
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-50px" }}
+                    variants={fadeUpVariant}
+                    className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
+                >
                     <span className="material-symbols-outlined text-6xl text-gray-300 mb-4 block">construction</span>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Proyek Masih Dalam Pengembangan</h3>
                     <p className="text-gray-600">Kami sedang menyiapkan mahakarya selanjutnya untuk kategori ini.</p>

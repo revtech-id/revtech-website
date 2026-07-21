@@ -1,14 +1,16 @@
 "use client";
 
 import { motion } from 'framer-motion';
+import { fadeUpVariant } from '@/lib/animations';
 
 export default function CtaSection() {
     return (
       <section className="py-20 lg:py-32 bg-white px-4 sm:px-6 lg:px-8 border-t border-gray-100/80">
           <motion.div 
-              
-              
-              
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={fadeUpVariant}
               transition={{ duration: 0.5 }}
               className="max-w-5xl mx-auto relative flex flex-col md:flex-row items-stretch mt-8"
           >
@@ -37,6 +39,7 @@ export default function CtaSection() {
                 <img 
                   src="/images/robot-ai.webp" 
                   alt="AI Assistant Robot" 
+                  loading="eager"
                   className="absolute bottom-0 right-0 lg:-right-8 w-auto max-w-none object-contain object-bottom drop-shadow-2xl translate-y-[2px] h-[115%] lg:h-[135%]"
                   style={{ maxHeight: '550px' }}
                 />
@@ -46,6 +49,7 @@ export default function CtaSection() {
                 <img 
                   src="/images/robot-ai.webp" 
                   alt="AI Assistant Robot" 
+                  loading="eager"
                   className="absolute bottom-0 -right-4 w-auto max-w-none object-contain object-bottom drop-shadow-2xl translate-y-[2px]"
                   style={{ height: '115%' }}
                 />

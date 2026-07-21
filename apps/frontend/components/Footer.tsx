@@ -23,6 +23,7 @@ export default function Footer() {
                 alt="RevTech Logo"
                 width={150}
                 height={60}
+                priority={true}
                 className="h-16 w-auto mix-blend-multiply object-left object-contain mb-4 -ml-3"
               />
             </Link>
