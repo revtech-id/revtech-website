@@ -4,7 +4,8 @@ import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 
-import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+
 
 const servicePillars = [
   {
@@ -65,7 +66,7 @@ export default function ServicesSection() {
         <motion.div 
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.1 }}
+          viewport={defaultViewport}
           variants={fadeUpVariant}
           className="max-w-3xl mb-12 md:mb-20 text-left"
         >
@@ -77,7 +78,7 @@ export default function ServicesSection() {
         <motion.div 
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.1 }}
+          viewport={defaultViewport}
           variants={staggerContainerVariant}
           className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-12"
         >

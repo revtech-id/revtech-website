@@ -15,10 +15,10 @@ export default function AffiliateRecap({ productId }: AffiliateRecapProps) {
 
     return (
         <motion.div 
-            
-            
-            
-            transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.15 }}
+            transition={{ type: 'spring', stiffness: 80, damping: 20, mass: 0.8 }}
             className="my-16 bg-gradient-to-br from-gray-900 via-gray-800 to-primary p-8 sm:p-10 md:p-12 rounded-[2rem] text-center shadow-2xl relative overflow-hidden"
         >
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>

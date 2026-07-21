@@ -1,28 +1,100 @@
 import { Variants } from 'framer-motion';
 
 /**
- * Standard fade-up animation for scroll entrances.
- * Uses spring physics for an organic, elegant feel.
+ * Spring config presets — tuned untuk feel Apple/Vercel.
+ * Hanya animasikan transform & opacity untuk 60 FPS.
+ */
+const spring = {
+  smooth: { type: 'spring', stiffness: 80, damping: 20, mass: 0.8 },
+  snappy: { type: 'spring', stiffness: 200, damping: 30, mass: 0.5 },
+  gentle: { type: 'spring', stiffness: 60, damping: 18, mass: 1 },
+} as const;
+
+/**
+ * Fade up — animasi masuk standar untuk section headings & content blocks.
+ * Jangan set willChange di sini — Framer Motion manage sendiri via layoutId.
  */
 export const fadeUpVariant: Variants = {
-  hidden: { opacity: 0, y: 40, willChange: "transform, opacity" },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    willChange: "auto",
-    transition: { type: "tween", duration: 0.7, ease: [0.16, 1, 0.3, 1] }
-  }
+  hidden: { opacity: 0, y: 32 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: spring.smooth,
+  },
 };
 
 /**
- * Staggered container for lists of items to appear one by one.
+ * Fade in tanpa vertical movement — untuk elemen overlay, badge, subtitle.
+ */
+export const fadeInVariant: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { type: 'tween', duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+/**
+ * Scale + fade — untuk cards, modals, floating elements.
+ */
+export const scaleVariant: Variants = {
+  hidden: { opacity: 0, scale: 0.94 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: spring.snappy,
+  },
+};
+
+/**
+ * Slide in dari kiri — untuk sidebar, drawer, atau featured items.
+ */
+export const slideLeftVariant: Variants = {
+  hidden: { opacity: 0, x: -24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: spring.smooth,
+  },
+};
+
+/**
+ * Stagger container — untuk list items yang muncul berurutan.
+ * Amount stagger 0.08s adalah sweet-spot: cukup terlihat tapi tidak lambat.
  */
 export const staggerContainerVariant: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
-    }
-  }
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
 };
+
+/**
+ * Stagger container dengan delay custom — untuk section yang butuh
+ * delay setelah heading selesai animasi.
+ */
+export function createStaggerVariant(
+  staggerChildren = 0.08,
+  delayChildren = 0.1
+): Variants {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren, delayChildren },
+    },
+  };
+}
+
+/**
+ * Viewport config standar — `once: true` agar animasi tidak retrigger
+ * saat scroll balik ke atas. `amount: 0.15` lebih presisi dari 0.1.
+ */
+export const defaultViewport = {
+  once: true,
+  amount: 0.15,
+} as const;

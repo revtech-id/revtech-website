@@ -2,7 +2,8 @@
 
 import { motion, Variants } from "framer-motion";
 
-import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+
 const metrics = [
   {
     id: "quality",
@@ -56,7 +57,7 @@ export default function TrustSection() {
           <motion.div 
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
+            viewport={defaultViewport}
             variants={staggerContainerVariant}
             className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8"
           >

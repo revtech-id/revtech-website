@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { fadeUpVariant } from '@/lib/animations';
+import { fadeUpVariant, defaultViewport } from '@/lib/animations';
+
 
 export default function CtaSection() {
     return (
@@ -9,9 +10,8 @@ export default function CtaSection() {
           <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
+              viewport={defaultViewport}
               variants={fadeUpVariant}
-              transition={{ duration: 0.5 }}
               className="max-w-5xl mx-auto relative flex flex-col md:flex-row items-stretch mt-8"
           >
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#1e293b] to-blue-950 rounded-[2rem] shadow-xl overflow-hidden border border-slate-800">

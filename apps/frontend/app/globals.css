@@ -134,15 +134,24 @@
 }
 
 @utility hover-card {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* GPU-only transition: transform & box-shadow composited tanpa layout recalc */
+  transition-property: transform, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.04);
   }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover { transform: none; }
+  }
 }
 
 @utility hover-btn {
-  transition: all 0.2s ease;
+  transition-property: transform, box-shadow, opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
   &:hover {
     opacity: 0.95;
     transform: translateY(-1px);
@@ -152,6 +161,11 @@
     transform: translateY(1px);
     box-shadow: none;
     opacity: 0.9;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity 0.2s ease;
+    &:hover { transform: none; }
+    &:active { transform: none; }
   }
 }
 

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import PortfolioCard from './PortfolioCard';
 
-import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+
 
 export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
     const [activeCategory, setActiveCategory] = useState("Semua");
@@ -27,7 +28,7 @@ export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
                 <motion.div 
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true, amount: 0.1 }}
+                    viewport={defaultViewport}
                     variants={staggerContainerVariant}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
                 >

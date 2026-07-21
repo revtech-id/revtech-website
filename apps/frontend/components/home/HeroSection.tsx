@@ -3,7 +3,19 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
-import { fadeUpVariant } from '@/lib/animations';
+import { fadeUpVariant, fadeInVariant, defaultViewport } from '@/lib/animations';
+
+// Stagger container khusus untuk Hero — children muncul berurutan
+const heroContainerVariant = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+};
 
 export default function HeroSection() {
   return (
@@ -19,23 +31,32 @@ export default function HeroSection() {
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
         <div className="flex flex-col md:flex-row items-start justify-between">
           
-          {/* Text Content */}
+          {/* Text Content — staggered entrance per elemen */}
           <motion.div 
             initial="hidden"
             animate="visible"
-            variants={fadeUpVariant}
+            variants={heroContainerVariant}
             className="flex flex-col items-start text-left max-w-2xl space-y-4 md:space-y-5 md:w-[70%] lg:w-1/2 pt-4 pb-8 sm:pb-16 lg:pb-0"
           >
-            <h1 className="text-4xl sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]">
+            <motion.h1 
+              variants={fadeUpVariant}
+              className="text-4xl sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]"
+            >
               Wadah Solusi <br/>
               <span className="text-primary">Digital.</span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-base sm:text-lg md:text-lg lg:text-xl text-gray-500 max-w-lg leading-relaxed font-medium">
+            <motion.p 
+              variants={fadeUpVariant}
+              className="text-base sm:text-lg md:text-lg lg:text-xl text-gray-500 max-w-lg leading-relaxed font-medium"
+            >
               Kami siap mempercepat pertumbuhan Anda melalui layanan pembuatan website premium, pilihan katalog produk digital, hingga pengembangan solusi ide custom yang dibangun dari nol.
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 w-full sm:w-auto justify-start">
+            <motion.div 
+              variants={fadeUpVariant}
+              className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 w-full sm:w-auto justify-start"
+            >
               <a href="#pilar-layanan" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full text-[15px]">
                   Lihat Layanan <span className="material-symbols-outlined ml-2 text-[20px]">arrow_forward</span>
@@ -46,10 +67,8 @@ export default function HeroSection() {
                   Lihat Karya Kami
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           </motion.div>
-
-          {/* MOBILE: Gambar disembunyikan sesuai instruksi untuk tampilan yang lebih bersih */}
 
         </div>
       </div>

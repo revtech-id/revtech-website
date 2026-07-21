@@ -114,10 +114,10 @@ export default function TestimonialsSection({ testimonials }: { testimonials: an
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={activeChat.id}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 28, mass: 0.5 }}
                   className="space-y-3 md:space-y-4"
                 >
                   {activeChat.messages.map((msg: any, idx: number) => {
