@@ -411,19 +411,32 @@ export default function KontakForm() {
                     {errors.message && <p className="text-red-500 text-sm mt-1 font-medium">{errors.message.message}</p>}
                 </div>
 
-                <div className="pt-6 mt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <button
-                        type="button"
-                        onClick={handleReset}
-                        className="w-full sm:w-auto px-6 py-4 text-sm text-gray-500 hover:text-gray-900 font-bold flex items-center justify-center gap-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                        Reset Form
-                    </button>
-                    <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-6 text-base bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 group shadow-xl shadow-gray-900/20 hover:scale-[1.02] transition-transform">
-                        <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">send</span> 
-                        {isSubmitting ? "Memproses..." : "Kirim Pesanan"}
-                    </Button>
+                <div className="pt-6 mt-8 border-t border-gray-100 flex flex-col gap-4">
+                    {/* Mobile: small link at top, Desktop: side by side */}
+                    <div className="flex sm:hidden justify-end">
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="text-xs text-gray-400 hover:text-gray-700 font-semibold flex items-center gap-1 transition-colors py-1"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                            Reset Form
+                        </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="hidden sm:flex w-auto px-5 py-3 text-sm text-gray-500 hover:text-gray-900 font-bold items-center gap-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                            Reset Form
+                        </button>
+                        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-6 text-base bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 group shadow-xl shadow-gray-900/20 hover:scale-[1.02] transition-transform">
+                            <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">send</span> 
+                            {isSubmitting ? "Memproses..." : "Kirim Pesanan"}
+                        </Button>
+                    </div>
                 </div>
             </form>
         </motion.div>
