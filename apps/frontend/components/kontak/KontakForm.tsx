@@ -176,7 +176,9 @@ export default function KontakForm() {
                 {/* 1. Kategori Layanan */}
                 <div className="mb-8">
                     <label className="block text-sm font-bold text-gray-700 mb-3">1. Pilih Kategori Layanan</label>
-                    <div className="flex flex-wrap gap-2.5">
+                    
+                    {/* Desktop: Chips */}
+                    <div className="hidden md:flex flex-wrap gap-2.5">
                         <button
                             type="button"
                             onClick={() => setService('jasa_web')}
@@ -207,6 +209,20 @@ export default function KontakForm() {
                         >
                             Ide Custom
                         </button>
+                    </div>
+
+                    {/* Mobile: Dropdown */}
+                    <div className="md:hidden relative">
+                        <select 
+                            value={service}
+                            onChange={(e) => setService(e.target.value as ServiceCategory)}
+                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-[16px] font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer shadow-sm"
+                        >
+                            <option value="jasa_web">Jasa Website</option>
+                            <option value="produk_digital" disabled>🔒 Produk Digital (Segera Hadir)</option>
+                            <option value="custom">Ide Custom</option>
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
                 </div>
 
