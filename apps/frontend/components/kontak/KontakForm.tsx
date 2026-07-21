@@ -24,6 +24,7 @@ export default function KontakForm() {
     const [vipLane, setVipLane] = useState<boolean>(false);
 
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
+    const [waLink, setWaLink] = useState<string>('');
     
     // State untuk Custom Country Dropdown
     const [isCountryOpen, setIsCountryOpen] = useState(false);
@@ -63,11 +64,32 @@ export default function KontakForm() {
     }, [searchParams]);
 
     const onSubmit = async (data: JasaWebFormValues) => {
-        // Mockup Front-End: Delay pura-pura sedang loading 1 detik
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        let messageText = `Halo Admin RevTech, saya ingin memesan layanan dari website.\n\n`;
+        messageText += `*Detail Pemesan*\n`;
+        messageText += `Nama: ${data.name}\n`;
+        messageText += `No. WA: ${selectedCountry.dial_code}${data.whatsapp}\n`;
+        if (data.business) messageText += `Bisnis/Instansi: ${data.business}\n`;
         
-        // Simpan data untuk dirender sebagai "resi" bukti pengiriman
+        messageText += `\n*Detail Pesanan*\n`;
+        messageText += `Layanan: ${service === 'jasa_web' ? 'Jasa Website' : service === 'produk_digital' ? 'Produk Digital' : 'Ide Custom'}\n`;
+        
+        if (service === 'jasa_web') {
+            messageText += `Paket: ${jasaWebPackage}\n`;
+            messageText += `Opsi: ${handoverOption}\n`;
+            if (vipLane) messageText += `Jalur VIP: Ya\n`;
+        }
+        if (service === 'custom' && data.reference) {
+            messageText += `Referensi: ${data.reference}\n`;
+        }
+        messageText += `\n*Pesan / Catatan:*\n${data.message}`;
+
+        const waUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(messageText)}`;
+        
+        setWaLink(waUrl);
         setSubmittedData(data);
+        
+        // Membuka tab WA langsung
+        window.open(waUrl, '_blank');
     };
 
     if (submittedData) {
@@ -114,7 +136,7 @@ export default function KontakForm() {
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
                     <a 
-                        href="https://wa.me/6281234567890?text=Halo%20Admin%20RevTech,%20saya%20baru%20saja%20membuat%20pesanan%20melalui%20website.%20Mohon%20dicek%20ya!" 
+                        href={waLink} 
                         target="_blank" 
                         rel="noreferrer"
                         className="bg-gray-900 hover:bg-black text-white px-6 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors flex-1 w-full"
