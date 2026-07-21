@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +53,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         whileHover={{ y: -2 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
         className={cn(buttonVariants({ variant, size, className }))}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={ref as any}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         {...(props as any)}
       />
     );

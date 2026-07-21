@@ -1,15 +1,13 @@
 "use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import PortfolioCard from './PortfolioCard';
 
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
 
+import { PortfolioCaseStudyData } from '@/lib/portfolio';
 
-export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
-    const [activeCategory, setActiveCategory] = useState("Semua");
-    
+export default function PortfolioGrid({ portfolios }: { portfolios: PortfolioCaseStudyData[] }) {
     return (
         <section>
             {portfolios.length === 0 ? (
@@ -32,7 +30,7 @@ export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
                     variants={staggerContainerVariant}
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
                 >
-                    {portfolios.map((portfolio, index) => (
+                    {portfolios.map((portfolio) => (
                         <PortfolioCard key={portfolio.slug} item={portfolio} />
                     ))}
                 </motion.div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 
 export default function WhatsAppFAB() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,9 +40,11 @@ export default function WhatsAppFAB() {
             className="flex items-center justify-center w-[48px] h-[48px] sm:w-[50px] sm:h-[50px] bg-blue-600 rounded-full shadow-md hover:shadow-xl hover:scale-110 transition-all duration-300 relative z-10 border border-blue-400/50"
             aria-label="Tanya AI"
           >
-            <img 
+            <Image
               src="/images/icon-robot.webp" 
               alt="AI Icon" 
+              width={40}
+              height={40}
               className="w-[85%] h-[85%] object-contain drop-shadow-md" 
             />
           </button>

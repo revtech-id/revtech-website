@@ -34,29 +34,7 @@ export const fadeInVariant: Variants = {
   },
 };
 
-/**
- * Scale + fade — untuk cards, modals, floating elements.
- */
-export const scaleVariant: Variants = {
-  hidden: { opacity: 0, scale: 0.94 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: spring.snappy,
-  },
-};
 
-/**
- * Slide in dari kiri — untuk sidebar, drawer, atau featured items.
- */
-export const slideLeftVariant: Variants = {
-  hidden: { opacity: 0, x: -24 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: spring.smooth,
-  },
-};
 
 /**
  * Stagger container — untuk list items yang muncul berurutan.
@@ -73,22 +51,7 @@ export const staggerContainerVariant: Variants = {
   },
 };
 
-/**
- * Stagger container dengan delay custom — untuk section yang butuh
- * delay setelah heading selesai animasi.
- */
-export function createStaggerVariant(
-  staggerChildren = 0.08,
-  delayChildren = 0.1
-): Variants {
-  return {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren, delayChildren },
-    },
-  };
-}
+
 
 /**
  * Viewport config standar — `once: true` agar animasi tidak retrigger

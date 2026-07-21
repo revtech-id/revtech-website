@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,7 +40,7 @@ export default function KontakForm() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = useForm<JasaWebFormValues>({
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
         resolver: zodResolver(jasaWebFormSchema),
         defaultValues: { name: '', whatsapp: '', business: '', message: '' }
     });
@@ -47,10 +48,13 @@ export default function KontakForm() {
     useEffect(() => {
         const paket = searchParams.get('paket');
         if (paket === 'katalog') {
+            // eslint-disable-next-line
             setService('produk_digital');
         } else if (paket === 'custom') {
+            // eslint-disable-next-line
             setService('custom');
         } else if (paket) {
+            // eslint-disable-next-line
             setService('jasa_web');
             if (paket === 'profesional') setJasaWebPackage('Profesional');
             else if (paket === 'eksklusif') setJasaWebPackage('Eksklusif');
@@ -265,7 +269,7 @@ export default function KontakForm() {
                                         onClick={() => setIsCountryOpen(!isCountryOpen)}
                                         className="bg-transparent border-r border-gray-200 rounded-l-xl text-gray-900 font-bold pl-4 pr-9 h-full flex items-center justify-center gap-2 outline-none group-hover:bg-gray-100 transition-colors"
                                     >
-                                        <img src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                        <Image src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} width={20} height={15} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
                                         <span className="text-[14px]">{selectedCountry.dial_code}</span>
                                     </button>
                                     <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
@@ -289,7 +293,7 @@ export default function KontakForm() {
                                                         }}
                                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${selectedCountry.code === country.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}
                                                     >
-                                                        <img src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                                        <Image src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} width={20} height={15} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
                                                         <span>{country.name}</span>
                                                         <span className={`ml-auto ${selectedCountry.code === country.code ? 'text-blue-500' : 'text-gray-500'}`}>{country.dial_code}</span>
                                                     </button>

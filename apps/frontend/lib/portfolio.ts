@@ -34,8 +34,8 @@ export function getSortedPortfoliosData(): PortfolioCaseStudyData[] {
     const matterResult = matter(fileContents);
     return {
       slug,
-      ...(matterResult.data as any),
-    } as PortfolioCaseStudyData;
+      ...(matterResult.data as Omit<PortfolioCaseStudyData, 'slug'>),
+    };
   });
 
   return allData.sort((a, b) => {

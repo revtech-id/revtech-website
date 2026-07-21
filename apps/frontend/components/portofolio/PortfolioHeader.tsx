@@ -1,8 +1,6 @@
 "use client";
 
-import { motion, Variants } from 'framer-motion';
-
-import { fadeUpVariant } from '@/lib/animations';
+import { motion } from 'framer-motion';
 
 export default function PortfolioHeader() {
     return (
