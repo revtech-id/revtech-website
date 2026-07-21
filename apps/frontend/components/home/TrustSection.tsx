@@ -2,8 +2,7 @@
 
 import { motion, Variants } from "framer-motion";
 
-import { fadeUpVariant } from '@/lib/animations';
-
+import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
 const metrics = [
   {
     id: "quality",
@@ -54,15 +53,17 @@ export default function TrustSection() {
           </div>
 
           {/* Right Column - Glowing Premium Card Grid */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+            variants={staggerContainerVariant}
+            className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 lg:gap-8"
+          >
             {metrics.map((metric, idx) => (
               <motion.div 
                 key={metric.id}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
                 variants={fadeUpVariant}
-                transition={{ delay: idx * 0.1 }} 
                 className="group relative rounded-3xl p-[1px] bg-gradient-to-br from-blue-500/15 via-transparent to-blue-500/15 hover:from-blue-500 hover:to-blue-400 hover-card block"
               >
                 <div className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 p-6 lg:p-8 rounded-[23px] text-left h-full flex flex-col justify-between min-h-[200px] lg:min-h-[220px]">
@@ -81,7 +82,7 @@ export default function TrustSection() {
                 </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
 
         </div>
       </div>

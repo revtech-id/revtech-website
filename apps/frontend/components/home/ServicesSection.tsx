@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 
-import { fadeUpVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
 
 const servicePillars = [
   {
@@ -65,7 +65,7 @@ export default function ServicesSection() {
         <motion.div 
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
+          viewport={{ once: true, amount: 0.1 }}
           variants={fadeUpVariant}
           className="max-w-3xl mb-12 md:mb-20 text-left"
         >
@@ -74,15 +74,17 @@ export default function ServicesSection() {
           <p className="text-xl text-gray-600 leading-relaxed font-medium">Kami menyediakan tiga pilar layanan utama yang dirancang khusus untuk menjawab segala kebutuhan digital Anda.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-12">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={staggerContainerVariant}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-12"
+        >
           {servicePillars.map((pillar, idx) => (
             <motion.div 
               key={pillar.id}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
               variants={fadeUpVariant}
-              transition={{ delay: idx * 0.1 }} 
               className={`group relative flex flex-col h-full bg-white rounded-3xl p-6 md:p-5 lg:p-8 border border-gray-100 hover-card`}
             >
               <div className="relative z-10 flex-1">
@@ -114,7 +116,7 @@ export default function ServicesSection() {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

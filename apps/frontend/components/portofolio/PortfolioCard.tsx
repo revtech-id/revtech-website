@@ -16,10 +16,7 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
             href={item.slug ? `/portofolio/${item.slug}` : item.liveUrl}
             target={item.slug ? "_self" : "_blank"}
             rel={item.slug ? undefined : "noreferrer"}
-             
-             
-             
-            
+            variants={fadeUpVariant}
             className="group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full"
         >
             <div className="relative overflow-hidden bg-white border-b border-gray-100">

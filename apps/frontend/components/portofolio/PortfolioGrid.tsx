@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import PortfolioCard from './PortfolioCard';
 
-import { fadeUpVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
 
 export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
     const [activeCategory, setActiveCategory] = useState("Semua");
@@ -24,11 +24,17 @@ export default function PortfolioGrid({ portfolios }: { portfolios: any[] }) {
                     <p className="text-gray-600">Kami sedang menyiapkan mahakarya selanjutnya untuk kategori ini.</p>
                 </motion.div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                <motion.div 
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.1 }}
+                    variants={staggerContainerVariant}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+                >
                     {portfolios.map((portfolio, index) => (
                         <PortfolioCard key={portfolio.slug} item={portfolio} />
                     ))}
-                </div>
+                </motion.div>
             )}
         </section>
     );

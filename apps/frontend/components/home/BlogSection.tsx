@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import BlogCard from '../blog/BlogCard';
 import { motion } from 'framer-motion';
-import { fadeUpVariant } from '@/lib/animations';
+import { fadeUpVariant, staggerContainerVariant } from '@/lib/animations';
 export default function BlogSection({ recentPosts }: { recentPosts: any[] }) {
     return (
       <section className="py-16 lg:py-24 bg-[#FAFAFC] border-t border-gray-100/80">
@@ -28,11 +28,17 @@ export default function BlogSection({ recentPosts }: { recentPosts: any[] }) {
                   </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-left">
+              <motion.div 
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1 }}
+                  variants={staggerContainerVariant}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-left"
+              >
                   {recentPosts.map((post, index) => (
                       <BlogCard key={post.slug} post={post} className={index === 2 ? 'hidden md:flex' : 'flex'} />
                   ))}
-              </div>
+              </motion.div>
           </div>
       </section>
     );
