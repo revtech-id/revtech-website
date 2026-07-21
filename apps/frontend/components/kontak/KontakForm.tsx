@@ -174,16 +174,16 @@ export default function KontakForm() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 relative z-10">
                 
                 {/* 1. Kategori Layanan */}
-                <div className="mb-10">
-                    <label className="block text-sm font-bold text-gray-700 mb-4">1. Pilih Kategori Layanan</label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-2 lg:gap-4">
+                <div className="mb-8">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">1. Pilih Kategori Layanan</label>
+                    <div className="flex flex-wrap gap-2.5">
                         <button
                             type="button"
                             onClick={() => setService('jasa_web')}
-                            className={`py-3.5 px-4 md:px-2 lg:px-4 rounded-xl border-2 font-bold text-base md:text-sm lg:text-base transition-all duration-300 ${
+                            className={`py-2 px-4 rounded-lg border text-sm font-bold transition-all duration-200 ${
                                 service === 'jasa_web' 
-                                    ? 'border-gray-900 bg-gray-900 text-white shadow-lg shadow-gray-900/20' 
-                                    : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-900'
+                                    ? 'border-gray-900 bg-gray-900 text-white shadow-md shadow-gray-900/10' 
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                         >
                             Jasa Website
@@ -191,18 +191,18 @@ export default function KontakForm() {
                         <button
                             type="button"
                             disabled
-                            className="py-3.5 px-4 md:px-2 lg:px-4 rounded-xl border-2 border-gray-100 bg-gray-50 text-gray-400 font-bold text-base md:text-sm lg:text-base flex items-center justify-center gap-2 cursor-not-allowed opacity-70"
+                            className="py-2 px-4 rounded-lg border border-gray-100 bg-gray-50 text-gray-400 text-sm font-bold flex items-center justify-center gap-1.5 cursor-not-allowed"
                         >
-                            <span className="material-symbols-outlined text-[16px] md:text-[14px] lg:text-[16px]">lock</span>
+                            <span className="material-symbols-outlined text-[14px]">lock</span>
                             Produk Digital
                         </button>
                         <button
                             type="button"
                             onClick={() => setService('custom')}
-                            className={`py-3.5 px-4 md:px-2 lg:px-4 rounded-xl border-2 font-bold text-base md:text-sm lg:text-base transition-all duration-300 ${
+                            className={`py-2 px-4 rounded-lg border text-sm font-bold transition-all duration-200 ${
                                 service === 'custom' 
-                                    ? 'border-gray-900 bg-gray-900 text-white shadow-lg shadow-gray-900/20' 
-                                    : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-900'
+                                    ? 'border-gray-900 bg-gray-900 text-white shadow-md shadow-gray-900/10' 
+                                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                         >
                             Ide Custom
