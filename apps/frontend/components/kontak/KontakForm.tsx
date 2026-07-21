@@ -291,7 +291,8 @@ export default function KontakForm() {
                                         onClick={() => setIsCountryOpen(!isCountryOpen)}
                                         className="bg-transparent border-r border-gray-200 rounded-l-xl text-gray-900 font-bold pl-4 pr-9 h-full flex items-center justify-center gap-2 outline-none group-hover:bg-gray-100 transition-colors"
                                     >
-                                        <Image src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} width={20} height={15} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
                                         <span className="text-[14px]">{selectedCountry.dial_code}</span>
                                     </button>
                                     <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
@@ -315,7 +316,8 @@ export default function KontakForm() {
                                                         }}
                                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${selectedCountry.code === country.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}
                                                     >
-                                                        <Image src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} width={20} height={15} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} loading="lazy" className="w-5 h-auto object-contain rounded-sm shadow-sm" />
                                                         <span>{country.name}</span>
                                                         <span className={`ml-auto ${selectedCountry.code === country.code ? 'text-blue-500' : 'text-gray-500'}`}>{country.dial_code}</span>
                                                     </button>
