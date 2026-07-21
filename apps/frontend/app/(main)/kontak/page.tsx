@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import KontakHeader from '@/components/kontak/KontakHeader';
 import KontakForm from '@/components/kontak/KontakForm';
 
 export const metadata: Metadata = {
@@ -10,11 +9,8 @@ export const metadata: Metadata = {
 
 export default function KontakPage() {
   return (
-    <div className="pt-32 pb-24 bg-[#FAFAFC] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <KontakHeader />
-
+    <div className="pt-28 pb-16 bg-[#FAFAFC] min-h-screen">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <Suspense fallback={<div className="text-center py-20 text-gray-500">Memuat formulir...</div>}>
             <KontakForm />
         </Suspense>
