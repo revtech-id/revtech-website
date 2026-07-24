@@ -43,10 +43,10 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
                 <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{portfolioData.date}</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {portfolioData.title}
             </h1>
-            <p className="text-sm sm:text-base md:text-xl text-gray-600 leading-relaxed font-medium max-w-3xl">
+            <p className="text-[13px] sm:text-base md:text-xl text-gray-600 leading-relaxed font-medium max-w-3xl">
                 {portfolioData.summary}
             </p>
         </header>
@@ -79,7 +79,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
             </div>
             <div>
                 {portfolioData.liveUrl && (
-                    <a href={portfolioData.liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-slate-900 text-white font-bold px-6 py-3.5 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95">
+                    <a href={portfolioData.liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-slate-900 text-white text-[13px] sm:text-base font-bold px-6 py-3.5 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95">
                         Lihat Live Demo <span className="material-symbols-outlined text-[18px]">launch</span>
                     </a>
                 )}
@@ -102,10 +102,10 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
         {/* CTA Bawah */}
         <div className="mt-24 py-16 px-8 bg-slate-900 rounded-[2.5rem] text-center shadow-2xl">
             <h3 className="text-3xl font-black text-white mb-4 tracking-tight">Siap Membangun Sesuatu yang Hebat?</h3>
-            <p className="text-gray-300 mb-10 max-w-2xl mx-auto text-lg leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
                 Mari wujudkan sistem impian Anda. Konsultasikan kebutuhan digital Anda dengan tim kami hari ini juga.
             </p>
-            <Link href="/kontak" className="inline-flex items-center justify-center px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-gray-100 transition-colors shadow-lg active:scale-95">
+            <Link href="/kontak" className="bg-white text-blue-950 hover:bg-blue-50 font-black text-[13px] sm:text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full shadow-lg active:scale-95 inline-flex items-center justify-center gap-2 transition-colors">
                 Mulai Konsultasi Gratis
             </Link>
         </div>

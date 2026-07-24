@@ -23,7 +23,7 @@ export default function BlogList({ posts }: { posts: BlogPostData[] }) {
                             <span className="material-symbols-outlined text-4xl">edit_document</span>
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900 mb-3">Blog Sedang Disiapkan</h3>
-                        <p className="text-gray-500 font-medium text-lg max-w-md mx-auto">
+                        <p className="text-gray-500 font-medium text-sm sm:text-base md:text-lg max-w-md mx-auto">
                             Kami sedang meracik artikel-artikel menarik seputar teknologi dan bisnis digital. Nantikan update dari kami!
                         </p>
                     </div>

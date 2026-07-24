@@ -66,7 +66,7 @@ export default async function BlogPost({ params }: Props) {
 
         {/* Header Artikel */}
         <header className="mb-12 text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {postData.title}
             </h1>
         </header>

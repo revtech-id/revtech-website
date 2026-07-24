@@ -19,7 +19,7 @@ export default function Harga() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 lg:pb-24 relative z-10">
                 <div className="text-center mb-12 lg:mb-16">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight mb-4">
-                        Jelajahi Pilihan <span className="text-blue-600">Paket Kami</span>
+                        Jelajahi Pilihan <span className="block md:inline text-blue-600">Paket Kami</span>
                     </h1>
                     <p className="text-sm sm:text-base md:text-lg text-gray-600 font-medium">Temukan solusi digital yang paling tepat untuk kebutuhan Anda. Fitur lengkap, harga transparan.</p>
                 </div>

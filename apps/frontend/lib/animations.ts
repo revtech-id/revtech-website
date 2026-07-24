@@ -59,5 +59,5 @@ export const staggerContainerVariant: Variants = {
  */
 export const defaultViewport = {
   once: true,
-  amount: 0.15,
+  amount: 0.02,
 } as const;

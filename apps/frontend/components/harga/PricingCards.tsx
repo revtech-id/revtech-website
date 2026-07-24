@@ -55,7 +55,7 @@ export default function PricingCards() {
                             )}
                             <div className={`rounded-[29px] p-8 sm:p-10 md:p-5 lg:p-10 h-full flex flex-col ${plan.popular ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'}`}>
                                 <h4 className="text-2xl md:text-xl lg:text-2xl font-black mb-3 md:mb-2 lg:mb-3 mt-2 tracking-tight">{plan.name}</h4>
-                                <p className={`text-[13px] sm:text-sm md:text-[13px] lg:text-sm mb-8 md:mb-5 lg:mb-8 font-medium leading-relaxed ${plan.popular ? 'text-blue-100' : 'text-gray-500'}`}>{plan.description}</p>
+                                <p className={`text-xs sm:text-[13px] md:text-[13px] lg:text-sm mb-8 md:mb-5 lg:mb-8 font-medium leading-relaxed ${plan.popular ? 'text-blue-100' : 'text-gray-500'}`}>{plan.description}</p>
 
                                 <div className="mb-8 md:mb-5 lg:mb-8 flex flex-col gap-1 h-[48px] justify-end">
                                     {plan.originalPrice && (

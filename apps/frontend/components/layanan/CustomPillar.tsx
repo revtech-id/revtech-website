@@ -41,7 +41,7 @@ export default function CustomPillar() {
           </div>
         </div>
         
-        <Button asChild size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-black shadow-md">
+        <Button asChild size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-black shadow-md text-[13px] sm:text-sm md:text-base">
           <Link href="/kontak?paket=custom">
             Ceritakan Ide Anda <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
           </Link>

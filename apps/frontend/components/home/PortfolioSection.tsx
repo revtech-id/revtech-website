@@ -15,8 +15,8 @@ export default function PortfolioSection({ portfolios }: { portfolios: Portfolio
                       <p className="text-sm sm:text-base md:text-base lg:text-xl text-gray-500 font-medium leading-relaxed">Beberapa proyek digital yang telah kami selesaikan dengan hasil terbaik.</p>
                   </div>
                   <div className="flex-shrink-0 mb-2">
-                      <Link href="/portofolio" className="inline-flex items-center gap-2 text-gray-900 font-bold hover:text-blue-600 transition-colors group">
-                          Lihat Selengkapnya <span className="material-symbols-outlined text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                      <Link href="/portofolio" className="inline-flex items-center gap-2 text-sm sm:text-base text-gray-900 font-bold hover:text-blue-600 transition-colors group">
+                          Lihat Selengkapnya <span className="material-symbols-outlined text-[13px] sm:text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
                       </Link>
                   </div>
               </div>

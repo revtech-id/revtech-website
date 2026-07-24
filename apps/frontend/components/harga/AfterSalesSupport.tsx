@@ -30,7 +30,7 @@ export default function AfterSalesSupport() {
             </div>
             <button 
               onClick={() => setIsOpen(true)}
-              className="shrink-0 inline-flex items-center justify-center px-6 py-3.5 bg-slate-900 text-white font-bold rounded-xl hover-btn"
+              className="shrink-0 inline-flex items-center justify-center px-6 py-3.5 bg-slate-900 text-white text-[13px] sm:text-sm md:text-base font-bold rounded-xl hover-btn"
             >
               Lihat Katalog Harga
             </button>

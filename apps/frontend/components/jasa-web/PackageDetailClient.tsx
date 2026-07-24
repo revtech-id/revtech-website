@@ -180,7 +180,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                                 </span>
                             </div>
                         <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
-                            <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-sm shadow-md hover:shadow-lg">
+                            <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg">
                                 Lihat Live Demo 
                                 <ExternalLink className="w-4 h-4" />
                             </button>

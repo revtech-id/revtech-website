@@ -78,8 +78,8 @@ export default function WorkflowSteps() {
                     {index + 1}
                   </div>
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3">{step.title}</h4>
-                <p className="text-sm text-gray-600 leading-relaxed font-medium">{step.description}</p>
+                <h4 className="text-[17px] sm:text-xl font-bold text-gray-900 mb-3">{step.title}</h4>
+                <p className="text-[13px] sm:text-sm text-gray-600 leading-relaxed font-medium">{step.description}</p>
               </motion.div>
             );
           })}

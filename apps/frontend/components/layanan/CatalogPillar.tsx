@@ -60,7 +60,7 @@ export default function CatalogPillar() {
           </div>
         </div>
         
-        <Button asChild size="lg" className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 shadow-md">
+        <Button asChild size="lg" className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 shadow-md text-[13px] sm:text-sm md:text-base">
           <Link href="/katalog">
             Lihat Semua Katalog <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
           </Link>
