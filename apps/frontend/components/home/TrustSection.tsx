@@ -45,7 +45,7 @@ export default function TrustSection() {
           <div className="lg:col-span-5 lg:sticky lg:top-28 text-left space-y-6">
             <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Keunggulan</h2>
             <h2 className="text-3xl sm:text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-              Kenapa Memilih <br className="hidden md:block" />
+              Kenapa Memilih <br />
               <span className="text-blue-600">RevTech?</span>
             </h2>
             <p className="text-base sm:text-lg md:text-[17px] lg:text-lg text-gray-500 font-medium leading-relaxed max-w-lg">

@@ -15,7 +15,7 @@ export default function AICtaBanner() {
         </div>
 
         {/* Text Content */}
-        <div className="w-full md:w-[60%] p-8 pt-12 md:py-12 pl-8 md:pl-10 lg:pl-24 flex flex-col justify-center items-start relative z-20">
+        <div className="w-full md:w-[60%] p-8 pt-12 md:py-12 pl-8 md:pl-10 lg:pl-24 flex flex-col justify-center items-center md:items-start text-center md:text-left relative z-20">
           <h2 className="text-3xl md:text-[2.2rem] lg:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
             Masih Ragu atau <br className="hidden lg:block"/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Punya Pertanyaan?</span>
@@ -25,9 +25,9 @@ export default function AICtaBanner() {
           </p>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-speed-dial"))}
-            className="w-full sm:w-auto bg-white text-blue-950 hover:bg-blue-50 font-black text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-xl hover-btn inline-flex items-center justify-center gap-2 relative z-20"
+            className="bg-white text-blue-950 hover:bg-blue-50 font-black text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full hover-btn inline-flex items-center justify-center gap-2 relative z-20"
           >
-            <span className="material-symbols-outlined text-[18px] lg:text-[20px]">forum</span> Mulai Konsultasi Sekarang
+            Mulai Konsultasi Sekarang
           </button>
         </div>
 
@@ -45,14 +45,14 @@ export default function AICtaBanner() {
         </div>
 
         {/* Image — Mobile only, lazy loaded */}
-        <div className="relative w-full h-[220px] pointer-events-none flex items-end justify-end z-10 mt-2 md:hidden overflow-hidden rounded-b-[2rem]">
+        <div className="relative w-full h-[220px] pointer-events-none flex items-end justify-center z-10 mt-2 md:hidden overflow-hidden rounded-b-[2rem]">
           <Image
             src="/images/robot-ai.webp"
             alt="AI Assistant Robot"
             width={260}
             height={260}
             loading="lazy"
-            className="absolute bottom-0 right-0 w-auto object-contain object-bottom translate-y-[2px]"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto object-contain object-bottom translate-y-[2px]"
             style={{ height: '100%' }}
           />
         </div>

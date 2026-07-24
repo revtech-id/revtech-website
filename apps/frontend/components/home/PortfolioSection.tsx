@@ -21,9 +21,16 @@ export default function PortfolioSection({ portfolios }: { portfolios: Portfolio
                   </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              <div 
+                  className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 md:pb-0 md:grid md:grid-cols-3 md:gap-6 lg:gap-8" 
+                  style={{ scrollbarWidth: 'none' }}
+              >
                   {portfolios.slice(0, 3).map((item) => (
-                      <PortfolioCard key={item.slug} item={item} />
+                      <PortfolioCard 
+                          key={item.slug} 
+                          item={item} 
+                          className="w-[85vw] sm:w-[350px] flex-shrink-0 snap-center md:w-auto md:flex-shrink-1" 
+                      />
                   ))}
               </div>
           </div>

@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { fadeUpVariant } from '@/lib/animations';
 
 import type { BlogPostData } from '@/lib/blog';
 
@@ -12,7 +10,7 @@ interface BlogCardProps {
 
 export default function BlogCard({ post, className = "" }: BlogCardProps) {
     return (
-        <motion.div variants={fadeUpVariant} className={className}>
+        <div className={className}>
             <Link 
                 href={`/blog/${post.slug}`} 
                 className="group bg-white rounded-[1.5rem] overflow-hidden border border-gray-200 shadow-sm hover-card flex flex-col h-full"
@@ -42,6 +40,6 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 }

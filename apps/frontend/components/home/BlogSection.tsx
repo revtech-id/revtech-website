@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import BlogCard from '../blog/BlogCard';
 import { motion } from 'framer-motion';
-import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+import { fadeUpVariant, defaultViewport } from '@/lib/animations';
 import type { BlogPostData } from '@/lib/blog';
 
 export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData[] }) {
@@ -29,17 +29,18 @@ export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData
                   </div>
               </div>
               
-              <motion.div 
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={defaultViewport}
-                  variants={staggerContainerVariant}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-left"
+              <div 
+                  className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 md:pb-0 md:grid md:grid-cols-3 md:gap-8 mb-12 text-left"
+                  style={{ scrollbarWidth: 'none' }}
               >
                   {recentPosts.map((post, index) => (
-                      <BlogCard key={post.slug} post={post} className={index === 2 ? 'hidden md:flex' : 'flex'} />
+                      <BlogCard 
+                          key={post.slug} 
+                          post={post} 
+                          className="w-[85vw] sm:w-[350px] flex-shrink-0 snap-center md:w-auto md:flex-shrink-1 flex h-full" 
+                      />
                   ))}
-              </motion.div>
+              </div>
           </div>
       </section>
     );

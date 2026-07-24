@@ -1,23 +1,21 @@
 "use client";
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 
-import { fadeUpVariant } from '@/lib/animations';
 import { PortfolioCaseStudyData } from '@/lib/portfolio';
 
 interface PortfolioCardProps {
     item: PortfolioCaseStudyData;
+    className?: string;
 }
 
-export default function PortfolioCard({ item }: PortfolioCardProps) {
+export default function PortfolioCard({ item, className = "" }: PortfolioCardProps) {
     return (
-        <motion.a 
+        <a 
             href={item.slug ? `/portofolio/${item.slug}` : item.liveUrl}
             target={item.slug ? "_self" : "_blank"}
             rel={item.slug ? undefined : "noreferrer"}
-            variants={fadeUpVariant}
-            className="group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full"
+            className={`group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full ${className}`}
         >
             <div className="relative overflow-hidden bg-white border-b border-gray-100">
                 <Image 
@@ -41,6 +39,6 @@ export default function PortfolioCard({ item }: PortfolioCardProps) {
                     </span>
                 </div>
             </div>
-        </motion.a>
+        </a>
     );
 }
