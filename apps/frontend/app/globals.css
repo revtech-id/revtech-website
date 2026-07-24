@@ -113,6 +113,7 @@
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
     overflow-x: hidden;
+    scroll-behavior: smooth;
   }
   
   html::-webkit-scrollbar, body::-webkit-scrollbar {

@@ -30,9 +30,10 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumb & Navigation */}
-        <div className="mb-10">
-            <Link href="/portofolio" className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors font-medium text-sm">
-                <span className="material-symbols-outlined text-sm">arrow_back</span> Kembali ke Portofolio
+        <div className="flex justify-start mb-10 w-full">
+            <Link href="/portofolio" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                Kembali
             </Link>
         </div>
 

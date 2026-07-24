@@ -14,8 +14,9 @@ export default function Navbar() {
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (pathname === '/') {
       e.preventDefault();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
     }
+    setIsMobileMenuOpen(false);
   };
 
   const getLinkClass = (path: string) => {

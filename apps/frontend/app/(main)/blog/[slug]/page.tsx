@@ -57,9 +57,10 @@ export default async function BlogPost({ params }: Props) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumb & Navigation */}
-        <div className="mb-10">
-            <Link href="/blog" className="inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors font-medium text-sm">
-                <span className="material-symbols-outlined text-sm">arrow_back</span> Kembali ke Blog
+        <div className="flex justify-start mb-10 w-full">
+            <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                Kembali
             </Link>
         </div>
 
