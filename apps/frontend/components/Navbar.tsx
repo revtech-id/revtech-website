@@ -11,6 +11,13 @@ export default function Navbar() {
 
   if (pathname === '/playground') return null;
 
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === '/') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const getLinkClass = (path: string) => {
     const isActive = pathname === path;
     return isActive 
@@ -28,7 +35,7 @@ export default function Navbar() {
     return (
         <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-300" id="navbar">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2 group">
+                <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group">
                     <Image src="/assets/logo.webp" alt="RevTech Logo" width={150} height={60} className="h-8 sm:h-10 md:h-12 w-auto mix-blend-multiply object-contain" />
                 </Link>
 

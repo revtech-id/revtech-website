@@ -42,8 +42,8 @@ export default function HeroSection() {
               variants={fadeUpVariant}
               className="text-4xl sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]"
             >
-              Wadah Solusi <br/>
-              <span className="text-primary">Digital.</span>
+              <span className="block">Wadah Solusi</span>
+              <span className="block text-primary">Digital.</span>
             </motion.h1>
             
             <motion.p 
