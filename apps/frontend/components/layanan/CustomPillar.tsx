@@ -36,7 +36,7 @@ export default function CustomPillar() {
           <div className="flex-1">
             <h4 className="font-bold text-gray-900 mb-1 sm:mb-2 uppercase tracking-wide text-xs sm:text-sm">Mari Diskusi Santai!</h4>
             <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-              Ceritakan ide kasarnya. Kami akan petakan alurnya, rumuskan solusinya, dan bangun sistemnya sampai siap digunakan.
+              Ceritakan ide nya kami akan kasih solusinya dan bangun sistemnya sampai siap di gunakan
             </p>
           </div>
         </div>

@@ -8,7 +8,7 @@ export default function PortfolioSection({ portfolios }: { portfolios: Portfolio
     return (
       <section className="py-16 lg:py-24 bg-white overflow-hidden border-t border-gray-100/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+              <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-16 gap-8">
                   <div className="max-w-2xl text-left">
                       <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-3">Portofolio</h2>
                       <h3 className="text-3xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-5 tracking-tight">Hasil <span className="text-blue-600">Pekerjaan.</span></h3>

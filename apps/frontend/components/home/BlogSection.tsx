@@ -10,7 +10,7 @@ export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData
     return (
       <section className="py-16 lg:py-24 bg-[#FAFAFC] border-t border-gray-100/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+              <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 md:mb-16 gap-8">
                   <motion.div 
                       initial="hidden"
                       whileInView="visible"
