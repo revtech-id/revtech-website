@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function TestimonialsSection({ testimonials }: { testimonials: any[] }) {
+import type { Testimonial, TestimonialMessage } from "@/data/testimonials";
+
+export default function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
   const [activeId, setActiveId] = useState(testimonials[0]?.id || 1);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const activeChat = testimonials.find(t => t.id === activeId) || testimonials[0];
@@ -120,7 +122,7 @@ export default function TestimonialsSection({ testimonials }: { testimonials: an
                   transition={{ type: 'spring', stiffness: 200, damping: 28, mass: 0.5 }}
                   className="space-y-3 md:space-y-4"
                 >
-                  {activeChat.messages.map((msg: any, idx: number) => {
+                  {activeChat.messages.map((msg: TestimonialMessage, idx: number) => {
                     const isMe = msg.sender === "me";
                     return (
                       <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>

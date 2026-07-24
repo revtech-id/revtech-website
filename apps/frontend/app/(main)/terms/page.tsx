@@ -25,7 +25,7 @@ export default function TermsOfService() {
 
         <article className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
           <p>
-            Dengan menggunakan layanan RevTech — baik Jasa Pembuatan Website, Katalog Produk Digital, maupun Solusi Ide Custom — Anda ("Klien") menyetujui seluruh ketentuan yang tercantum di bawah ini. Harap membaca dokumen ini dengan saksama sebelum menyetujui kontrak kerja atau melakukan pembayaran.
+            Dengan menggunakan layanan RevTech — baik Jasa Pembuatan Website, Katalog Produk Digital, maupun Solusi Ide Custom — Anda (&quot;Klien&quot;) menyetujui seluruh ketentuan yang tercantum di bawah ini. Harap membaca dokumen ini dengan saksama sebelum menyetujui kontrak kerja atau melakukan pembayaran.
           </p>
 
           <hr className="my-8 border-slate-100" />

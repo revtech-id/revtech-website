@@ -3,8 +3,10 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { fadeUpVariant } from '@/lib/animations';
 
+import type { BlogPostData } from '@/lib/blog';
+
 interface BlogCardProps {
-    post: any;
+    post: BlogPostData;
     className?: string;
 }
 

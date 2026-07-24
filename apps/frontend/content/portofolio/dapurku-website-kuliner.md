@@ -4,7 +4,7 @@ category: "Katalog UMKM WA"
 client: "Dapurku"
 service: "Paket Usaha"
 date: "Februari 2024"
-coverImage: "/portfolio/dapurku.webp"
+coverImage: "/images/portfolio/dapurku.webp"
 liveUrl: "https://dapurku-website.vercel.app"
 summary: "Mendigitalkan operasional UMKM kuliner melalui landing page interaktif dan sistem keranjang belanja yang terintegrasi penuh dengan WhatsApp."
 ---

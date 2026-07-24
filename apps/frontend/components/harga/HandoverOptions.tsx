@@ -2,6 +2,24 @@
 
 import { motion } from 'framer-motion';
 
+interface HandoverSimulation {
+    label: string;
+    value: string;
+    total?: boolean;
+}
+
+interface HandoverOption {
+    title: string;
+    desc: string;
+    simulations?: HandoverSimulation[];
+    simNote?: string;
+    price?: string;
+    subprice?: string;
+    border: string;
+    badge?: string;
+    bgSim?: string;
+}
+
 export default function HandoverOptions() {
     return (
         <section className="py-16 lg:py-24 bg-gray-50/50">
@@ -49,7 +67,7 @@ export default function HandoverOptions() {
                             simNote: '*Bebas tagihan rutin dari kami. Server dikelola mandiri.',
                             border: 'border-gray-200 shadow-sm'
                         }
-                    ] as any[]).map((opt, i) => (
+                    ] as HandoverOption[]).map((opt, i) => (
                         <motion.div
                             
                             
@@ -77,7 +95,7 @@ export default function HandoverOptions() {
                                     <div>
                                         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Simulasi Biaya</p>
                                         <div className={`p-4 rounded-xl border ${opt.bgSim || 'bg-gray-50 border-gray-100'} space-y-3`}>
-                                            {opt.simulations.map((sim: any, idx: number) => (
+                                            {opt.simulations.map((sim: HandoverSimulation, idx: number) => (
                                                 <div key={idx} className={`flex justify-between items-center text-[13px] ${sim.total ? 'pt-3 mt-3 border-t border-black/10' : ''}`}>
                                                     <span className={sim.total ? 'font-bold text-gray-900' : 'text-gray-500 font-medium'}>{sim.label}</span>
                                                     <span className={sim.total ? 'font-black text-gray-900' : 'text-gray-900 font-bold'}>{sim.value}</span>

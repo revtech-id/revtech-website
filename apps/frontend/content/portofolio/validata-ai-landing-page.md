@@ -4,7 +4,7 @@ category: "Sistem Custom AI"
 client: "Validata AI"
 service: "Layanan Solusi Ide Custom"
 date: "Januari 2024"
-coverImage: "/portfolio/validata.webp"
+coverImage: "/images/portfolio/validata.webp"
 liveUrl: "https://validata-ai.vercel.app"
 summary: "Mengembangkan arsitektur sistem kecerdasan buatan (AI) untuk mengekstraksi dan memvalidasi teks dari gambar dokumen secara instan menggunakan Large Language Models."
 ---

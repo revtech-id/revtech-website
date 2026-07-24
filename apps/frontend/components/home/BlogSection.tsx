@@ -1,12 +1,12 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
 import BlogCard from '../blog/BlogCard';
 import { motion } from 'framer-motion';
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+import type { BlogPostData } from '@/lib/blog';
 
-export default function BlogSection({ recentPosts }: { recentPosts: any[] }) {
+export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData[] }) {
     return (
       <section className="py-16 lg:py-24 bg-[#FAFAFC] border-t border-gray-100/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

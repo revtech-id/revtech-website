@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "RevTech",
     images: [
       {
-        url: "/assets/mockup-hero-section.webp",
+        url: "/assets/revtech-bg.webp",
         width: 1200,
         height: 630,
         alt: "RevTech Hero Section",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "RevTech - Wadah Solusi Digital",
     description: "Partner teknologi terbaik Anda untuk arsitektur website, produk digital, dan sistem kustom.",
-    images: ["/assets/mockup-hero-section.webp"],
+    images: ["/assets/revtech-bg.webp"],
   },
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 export default function Error({
@@ -29,7 +30,7 @@ export default function Error({
           Coba Lagi
         </Button>
         <Button variant="outline" asChild>
-          <a href="/">Kembali ke Beranda</a>
+          <Link href="/">Kembali ke Beranda</Link>
         </Button>
       </div>
     </div>

@@ -1,4 +1,21 @@
-export const testimonialsData = [
+export interface TestimonialMessage {
+  sender: 'me' | 'client';
+  text: string;
+  time: string;
+}
+
+export interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  initials: string;
+  service: string;
+  avatarBg: string;
+  lastSeen: string;
+  messages: TestimonialMessage[];
+}
+
+export const testimonialsData: Testimonial[] = [
   {
     id: 1,
     name: "Pak Dani (Minara)",

@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
 
         <article className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
           <p>
-            RevTech ("kami", "milik kami", atau "Perusahaan") menghargai privasi Anda dan berkomitmen penuh untuk melindungi data pribadi serta aset digital Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi Anda saat Anda menggunakan layanan kami, baik Jasa Web, Katalog Produk Digital, maupun Solusi Ide Custom.
+            RevTech (&quot;kami&quot;, &quot;milik kami&quot;, atau &quot;Perusahaan&quot;) menghargai privasi Anda dan berkomitmen penuh untuk melindungi data pribadi serta aset digital Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi Anda saat Anda menggunakan layanan kami, baik Jasa Web, Katalog Produk Digital, maupun Solusi Ide Custom.
           </p>
           <p>
             Dengan menggunakan layanan kami, Anda menyetujui praktik pengumpulan dan penggunaan data yang dijelaskan dalam dokumen ini.
@@ -48,7 +48,7 @@ export default function PrivacyPolicy() {
             <li><strong>Pelaksanaan Proyek:</strong> Membangun, menguji, dan meluncurkan produk digital, website, atau sistem <em>custom</em> yang Anda pesan.</li>
             <li><strong>Komunikasi:</strong> Mengirimkan pembaruan progres kerja, <em>Invoice</em>, pemberitahuan teknis, atau meminta persetujuan revisi.</li>
             <li><strong>Keamanan Ekosistem:</strong> Mendeteksi, mencegah, dan menangani masalah teknis atau indikasi kecurangan/penipuan (<em>fraud</em>).</li>
-            <li><strong>Pemeliharaan (Managed Service):</strong> Jika Anda menggunakan opsi "Terima Beres", kami menggunakan akses yang ada untuk melakukan <em>patch</em> keamanan bulanan dan pemeliharaan server.</li>
+            <li><strong>Pemeliharaan (Managed Service):</strong> Jika Anda menggunakan opsi &quot;Terima Beres&quot;, kami menggunakan akses yang ada untuk melakukan <em>patch</em> keamanan bulanan dan pemeliharaan server.</li>
           </ul>
 
           <h2>3. Komitmen Kerahasiaan (Non-Disclosure &amp; Kredensial)</h2>

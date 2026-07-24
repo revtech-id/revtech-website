@@ -7,9 +7,9 @@ import { useState } from 'react';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (pathname === '/playground') return null;
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getLinkClass = (path: string) => {
     const isActive = pathname === path;
@@ -28,9 +28,9 @@ export default function Navbar() {
     return (
         <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-300" id="navbar">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                <a href="/" className="flex items-center gap-2 group">
+                <Link href="/" className="flex items-center gap-2 group">
                     <Image src="/assets/logo.webp" alt="RevTech Logo" width={150} height={60} className="h-8 sm:h-10 md:h-12 w-auto mix-blend-multiply object-contain" />
-                </a>
+                </Link>
 
                 <div className="hidden lg:flex items-center space-x-1 bg-white/50 px-4 py-2 rounded-full border border-white/60 shadow-sm">
                     <Link className={getLinkClass('/')} href="/">Beranda</Link>

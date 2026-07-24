@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
-import { fadeUpVariant, fadeInVariant, defaultViewport } from '@/lib/animations';
+import { fadeUpVariant } from '@/lib/animations';
 
 // Stagger container khusus untuk Hero — children muncul berurutan
 const heroContainerVariant = {

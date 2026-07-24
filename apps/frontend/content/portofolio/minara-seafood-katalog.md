@@ -4,7 +4,7 @@ category: "Sistem Custom"
 client: "Minara"
 service: "Paket Usaha + Request Fitur"
 date: "Oktober 2023"
-coverImage: "/portfolio/minara.webp"
+coverImage: "/images/portfolio/minara.webp"
 liveUrl: "https://ikan-segar-minara.vercel.app/"
 summary: "Membangun sistem etalase digital dengan manajemen stok real-time yang terintegrasi langsung dengan pemesanan via Instagram, menggunakan infrastruktur tanpa biaya bulanan."
 ---

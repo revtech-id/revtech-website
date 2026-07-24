@@ -1,13 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { motion, Variants } from 'framer-motion';
 import PortfolioCard from '@/components/portofolio/PortfolioCard';
+import type { PortfolioCaseStudyData } from '@/lib/portfolio';
 
-import { fadeUpVariant } from '@/lib/animations';
-
-export default function PortfolioSection({ portfolios }: { portfolios: any[] }) {
+export default function PortfolioSection({ portfolios }: { portfolios: PortfolioCaseStudyData[] }) {
     return (
       <section className="py-16 lg:py-24 bg-white overflow-hidden border-t border-gray-100/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment } from 'react';
 import AffiliateBox from './AffiliateBox';
 import AffiliateRecap from './AffiliateRecap';
 

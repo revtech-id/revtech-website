@@ -11,7 +11,19 @@ import PortfolioSection from '@/components/home/PortfolioSection';
 import BlogSection from '@/components/home/BlogSection';
 import CtaSection from '@/components/home/CtaSection';
 
-export default function HomeClient({ recentPosts, portfolios, testimonials }: { recentPosts: any[], portfolios: any[], testimonials: any[] }) {
+import type { BlogPostData } from '@/lib/blog';
+import type { PortfolioCaseStudyData } from '@/lib/portfolio';
+import type { Testimonial } from '@/data/testimonials';
+
+export default function HomeClient({ 
+  recentPosts, 
+  portfolios, 
+  testimonials 
+}: { 
+  recentPosts: BlogPostData[]; 
+  portfolios: PortfolioCaseStudyData[]; 
+  testimonials: Testimonial[]; 
+}) {
   return (
     <>
       <HeroSection />
