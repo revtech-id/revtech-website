@@ -40,10 +40,10 @@ export default function HeroSection() {
           >
             <motion.h1 
               variants={fadeUpVariant}
-              className="text-4xl sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]"
+              className="text-[2rem] sm:text-5xl md:text-[4rem] lg:text-[5rem] font-black tracking-tight leading-[1.15] md:leading-[1.05] text-[#111827]"
             >
-              <span className="block">Wadah Solusi</span>
-              <span className="block text-primary">Digital.</span>
+              <span className="block whitespace-nowrap">Wadah Solusi</span>
+              <span className="block text-primary whitespace-nowrap">Digital.</span>
             </motion.h1>
             
             <motion.p 
