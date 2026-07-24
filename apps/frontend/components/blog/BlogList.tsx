@@ -10,7 +10,7 @@ export default function BlogList({ posts }: { posts: BlogPostData[] }) {
                 <h1 className="text-4xl md:text-[2.5rem] lg:text-6xl font-black text-gray-900 tracking-tight mb-6">
                     Blog & <span className="text-blue-600">Insight</span>
                 </h1>
-                <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">
+                <p className="text-sm sm:text-base md:text-xl text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">
                     Kumpulan artikel, panduan praktis, dan wawasan mendalam seputar dunia teknologi, pengembangan web, serta tren digital terkini.
                 </p>
             </div>

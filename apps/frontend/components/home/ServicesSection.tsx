@@ -72,7 +72,7 @@ export default function ServicesSection() {
         >
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Layanan Kami</h2>
           <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight"><span className="block">Tiga Pilar Solusi</span><span className="block text-blue-600">Digital Anda.</span></h3>
-          <p className="text-xl text-gray-600 leading-relaxed font-medium">Kami menyediakan tiga pilar layanan utama yang dirancang khusus untuk menjawab segala kebutuhan digital Anda.</p>
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 leading-relaxed font-medium">Kami menyediakan tiga pilar layanan utama yang dirancang khusus untuk menjawab segala kebutuhan digital Anda.</p>
         </motion.div>
 
         <motion.div 

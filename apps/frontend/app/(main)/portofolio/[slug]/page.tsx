@@ -46,7 +46,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {portfolioData.title}
             </h1>
-            <p className="text-xl text-gray-600 leading-relaxed font-medium max-w-3xl">
+            <p className="text-sm sm:text-base md:text-xl text-gray-600 leading-relaxed font-medium max-w-3xl">
                 {portfolioData.summary}
             </p>
         </header>
@@ -87,7 +87,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
         </div>
 
         {/* Konten Markdown HTML (CMS Ready) */}
-        <article className="prose prose-lg prose-gray max-w-none text-gray-700">
+        <article className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700">
             {/* Styling standar Typography untuk render konten dari CMS */}
             <div 
                 className="[&>h2]:text-3xl [&>h2]:font-black [&>h2]:text-gray-900 [&>h2]:mt-16 [&>h2]:mb-6 [&>h2]:tracking-tight

@@ -16,7 +16,7 @@ export default function TestimonialsSection({ testimonials }: { testimonials: Te
         <div className="text-center max-w-3xl mx-auto mb-16 md:mb-16 lg:mb-24 relative z-10">
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Testimoni</h2>
           <h3 className="text-3xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">Apa Kata <span className="text-blue-600">Mereka?</span></h3>
-          <p className="text-xl md:text-lg lg:text-xl text-gray-600 leading-relaxed font-medium">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 leading-relaxed font-medium">
             Bukan sekadar janji teknis, tapi dampak nyata dari produk digital yang kami hasilkan, layaknya obrolan nyata bersama klien kami.
           </p>
         </div>

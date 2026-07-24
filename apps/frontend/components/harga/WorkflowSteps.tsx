@@ -41,7 +41,7 @@ export default function WorkflowSteps() {
         >
           <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-4">Langkah Mudah Memulai</h2>
           <h3 className="text-3xl md:text-[2.5rem] lg:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">Cara Kerja & Pembayaran</h3>
-          <p className="text-lg text-gray-600 font-medium">Proses transparan dan anti-ribet. Dari pemilihan paket hingga website siap mengudara, semuanya jelas sejak awal!</p>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600 font-medium">Proses transparan dan anti-ribet. Dari pemilihan paket hingga website siap mengudara, semuanya jelas sejak awal!</p>
         </motion.div>
 
         <motion.div

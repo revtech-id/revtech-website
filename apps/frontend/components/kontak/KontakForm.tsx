@@ -112,7 +112,7 @@ export default function KontakForm() {
                     <span className="material-symbols-outlined text-[40px]">check_circle</span>
                 </div>
                 <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Pesanan Berhasil Diterima!</h2>
-                <p className="text-gray-500 text-base md:text-lg font-medium leading-relaxed max-w-md mb-8">
+                <p className="text-gray-500 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-md mb-8">
                     Terima kasih telah memilih RevTech. Tim kami sedang meninjau detail kebutuhan Anda dan akan segera menghubungi via WhatsApp.
                 </p>
 
@@ -177,7 +177,7 @@ export default function KontakForm() {
         >
             <div className="mb-10 pb-8 border-b border-gray-100 text-center md:text-left">
                 <h2 className="text-3xl font-black text-gray-900 mb-2">Formulir Pemesanan</h2>
-                <p className="text-gray-500 font-medium">Pilih kategori layanan dan lengkapi detail pesanan Anda. Kami akan merespons cepat via WhatsApp.</p>
+                <p className="text-gray-500 text-sm sm:text-base font-medium">Pilih kategori layanan dan lengkapi detail pesanan Anda. Kami akan merespons cepat via WhatsApp.</p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 relative z-10">

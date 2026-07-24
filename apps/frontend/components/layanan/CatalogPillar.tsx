@@ -25,7 +25,7 @@ export default function CatalogPillar() {
           </div>
           Katalog Produk Digital
         </h2>
-        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-base sm:text-lg font-medium">
+        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base font-medium">
           Eksplorasi beragam produk digital siap pakai di etalase kami. Temukan solusi instan yang praktis dan langsung bisa diterapkan untuk mendukung segala aktivitas dan proyek Anda hari ini juga.
         </p>
         

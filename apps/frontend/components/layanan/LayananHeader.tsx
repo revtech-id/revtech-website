@@ -11,7 +11,7 @@ export default function LayananHeader() {
         Tiga Pilar Solusi <br className="hidden sm:block"/>
         <span className="text-blue-600">Digital Anda.</span>
       </h1>
-      <p className="text-lg md:text-xl text-gray-600 leading-relaxed font-medium">
+      <p className="text-sm sm:text-base md:text-xl text-gray-600 leading-relaxed font-medium">
         Kami hadir dengan tiga layanan utama yang dirancang khusus untuk mempermudah langkah Anda di era digital, apa pun kebutuhan dan tujuan Anda.
       </p>
     </motion.div>

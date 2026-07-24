@@ -25,7 +25,7 @@ export default function CustomPillar() {
           </div>
           Solusi Ide Custom
         </h2>
-        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-base sm:text-lg font-medium">
+        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base font-medium">
           Wujudkan ide inovatif Anda menjadi nyata. Ceritakan kebutuhan unik Anda, dan kami akan merancang sistem digital khusus yang 100% disesuaikan dengan alur kerja yang Anda inginkan.
         </p>
         

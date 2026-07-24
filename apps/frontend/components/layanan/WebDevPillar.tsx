@@ -25,7 +25,7 @@ export default function WebDevPillar() {
           </div>
           Pembuatan Website
         </h2>
-        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-base sm:text-lg font-medium">
+        <p className="text-gray-600 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base font-medium">
           Tingkatkan kredibilitas online Anda dengan website profesional. Solusi tepat untuk segala kebutuhan, mulai dari Profil Pribadi, Landing Page, hingga platform berskala besar dengan performa tinggi.
         </p>
         

@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
           <p className="text-slate-500 text-sm">Pembaruan Terakhir: 28 Juni 2026</p>
         </div>
 
-        <article className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
+        <article className="prose prose-sm sm:prose-base md:prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
           <p>
             RevTech (&quot;kami&quot;, &quot;milik kami&quot;, atau &quot;Perusahaan&quot;) menghargai privasi Anda dan berkomitmen penuh untuk melindungi data pribadi serta aset digital Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi Anda saat Anda menggunakan layanan kami, baik Jasa Web, Katalog Produk Digital, maupun Solusi Ide Custom.
           </p>

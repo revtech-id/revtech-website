@@ -20,7 +20,7 @@ export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData
                   >
                       <h2 className="text-blue-600 font-bold tracking-wider uppercase text-xs mb-3">Insight & Edukasi</h2>
                       <h3 className="text-3xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-5 tracking-tight">Wawasan <span className="text-blue-600">Terbaru.</span></h3>
-                      <p className="text-lg md:text-base lg:text-xl text-gray-500 font-medium leading-relaxed">Temukan inspirasi, tips, dan wawasan terbaru seputar pengembangan produk digital dan teknologi.</p>
+                      <p className="text-sm sm:text-base md:text-base lg:text-xl text-gray-500 font-medium leading-relaxed">Temukan inspirasi, tips, dan wawasan terbaru seputar pengembangan produk digital dan teknologi.</p>
                   </motion.div>
                   <div className="flex-shrink-0 mb-2">
                       <Link href="/blog" className="inline-flex items-center gap-2 text-gray-900 font-bold hover:text-blue-600 transition-colors group">

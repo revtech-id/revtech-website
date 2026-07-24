@@ -23,7 +23,7 @@ export default function TermsOfService() {
           <p className="text-slate-500 text-sm">Pembaruan Terakhir: 28 Juni 2026</p>
         </div>
 
-        <article className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
+        <article className="prose prose-sm sm:prose-base md:prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-p:leading-relaxed prose-p:text-slate-600 prose-li:text-slate-600">
           <p>
             Dengan menggunakan layanan RevTech — baik Jasa Pembuatan Website, Katalog Produk Digital, maupun Solusi Ide Custom — Anda (&quot;Klien&quot;) menyetujui seluruh ketentuan yang tercantum di bawah ini. Harap membaca dokumen ini dengan saksama sebelum menyetujui kontrak kerja atau melakukan pembayaran.
           </p>

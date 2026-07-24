@@ -37,7 +37,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                     <h1 className="text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">
                         Paket <span className="text-blue-600">{plan.name.replace('Paket ', '')}</span>
                     </h1>
-                    <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl">
+                    <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl">
                         {plan.longDescription || plan.description}
                     </p>
                 </motion.div>
@@ -66,7 +66,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                                     className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm"
                                 >
                                     <h3 className="text-lg font-bold text-gray-900 mb-3">{exp.title}</h3>
-                                    <p className="text-gray-600 leading-relaxed text-sm md:text-base">
+                                    <p className="text-gray-600 leading-relaxed text-[13px] sm:text-sm md:text-base">
                                         {exp.description}
                                     </p>
                                 </motion.div>
@@ -157,7 +157,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                                             <XCircle className="w-5 h-5 text-gray-300" />
                                         )}
                                     </div>
-                                    <span className={`text-sm md:text-base ${feature.included ? 'text-gray-800 font-medium' : 'text-gray-400 line-through'}`}>
+                                    <span className={`text-[13px] sm:text-sm md:text-base ${feature.included ? 'text-gray-800 font-medium' : 'text-gray-400 line-through'}`}>
                                         {feature.name}
                                     </span>
                                 </div>

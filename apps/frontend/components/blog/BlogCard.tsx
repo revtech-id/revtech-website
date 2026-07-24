@@ -28,7 +28,7 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                 </div>
                 <div className="p-6 md:p-8 flex flex-col flex-1">
                     <h4 className="text-[17px] md:text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">{post.title}</h4>
-                    <p className="text-[14.5px] text-gray-500 line-clamp-2 leading-relaxed font-medium mb-6">{post.description}</p>
+                    <p className="text-[13px] sm:text-[14.5px] text-gray-500 line-clamp-2 leading-relaxed font-medium mb-6">{post.description}</p>
                     
                     <div className="mt-auto flex items-center justify-between pt-5 border-t border-gray-100">
                         <span className="text-[13px] font-bold text-gray-900 group-hover:text-blue-600 transition-colors">

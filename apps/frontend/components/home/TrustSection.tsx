@@ -48,7 +48,7 @@ export default function TrustSection() {
               Kenapa Memilih <br />
               <span className="text-blue-600">RevTech?</span>
             </h2>
-            <p className="text-base sm:text-lg md:text-[17px] lg:text-lg text-gray-500 font-medium leading-relaxed max-w-lg">
+            <p className="text-sm sm:text-base md:text-[17px] lg:text-lg text-gray-500 font-medium leading-relaxed max-w-lg">
               Kami tidak hanya membangun platform digital, tetapi mewujudkan ide-ide Anda dengan standar teknologi mutakhir dan transparansi penuh.
             </p>
           </div>

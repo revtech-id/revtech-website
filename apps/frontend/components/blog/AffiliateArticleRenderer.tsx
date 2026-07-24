@@ -15,7 +15,7 @@ export default function AffiliateArticleRenderer({ htmlContent }: AffiliateArtic
 
     return (
         <div 
-          className="prose prose-lg prose-gray max-w-none text-gray-700 
+          className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700 
             [&_h2]:text-3xl [&_h2]:font-black [&_h2]:text-gray-900 [&_h2]:mt-16 [&_h2]:mb-6 [&_h2]:tracking-tight
             [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-10 [&_h3]:mb-4 [&_h3]:tracking-tight
             [&_p]:mb-6 [&_p]:leading-relaxed

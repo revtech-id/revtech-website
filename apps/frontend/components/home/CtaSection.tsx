@@ -27,7 +27,7 @@ export default function CtaSection() {
             Siap Mewujudkan <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Transformasi Digital?</span>
           </h2>
-          <p className="text-blue-100/80 text-base md:text-sm lg:text-lg mb-6 lg:mb-8 max-w-[320px] lg:max-w-[400px] leading-relaxed font-medium">
+          <p className="text-blue-100/80 text-sm md:text-sm lg:text-lg mb-6 lg:mb-8 max-w-[320px] lg:max-w-[400px] leading-relaxed font-medium">
             Mari diskusikan ide Anda bersama Asisten Pintar kami, atau hubungi tim ahli kami via WhatsApp untuk konsultasi mendalam.
           </p>
           <button
