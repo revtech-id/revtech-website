@@ -2,10 +2,10 @@
 
 import { useState, useEffect, createContext, useContext } from "react";
 import { AdminSidebar, VerticalNav } from "@/components/admin/AdminSidebar";
-import { CommandPalette } from "@/components/admin/CommandPalette";
+
 import { usePathname } from "next/navigation";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Sun, Moon, Search } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AdminDateRangePicker } from "@/components/admin/AdminDateRangePicker";
 import { AdminNotificationPopover } from "@/components/admin/AdminNotificationPopover";
@@ -69,7 +69,7 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [cmdOpen, setCmdOpen] = useState(false);
+
   const [dark, setDark] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
@@ -77,17 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pageTitle = PAGE_TITLES[pathname] ?? "Admin";
   const today = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-  // Ctrl+K global handler
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCmdOpen((o) => !o);
-      }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+
 
   // Persist dark mode preference
   useEffect(() => {
@@ -157,29 +147,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* Right actions */}
             <div className="flex items-center gap-3 sm:gap-5">
-              {/* Command palette */}
-              <button
-                id="topbar-cmd-palette"
-                onClick={() => setCmdOpen(true)}
-                className={`hidden md:flex items-center gap-2.5 px-4 py-2 w-48 rounded-full transition-all group ${
-                  dark
-                    ? "bg-slate-800/60 hover:bg-slate-800 border-slate-700/50"
-                    : "bg-slate-100 hover:bg-slate-200/70 border-transparent"
-                } border`}
-              >
-                <Search className={`w-4 h-4 stroke-[2.5] transition-colors ${dark ? "text-slate-400 group-hover:text-slate-300" : "text-slate-400 group-hover:text-slate-600"}`} />
-                <span className={`flex-1 text-left text-[13.5px] font-medium transition-colors ${dark ? "text-slate-400 group-hover:text-slate-300" : "text-slate-500 group-hover:text-slate-700"}`}>Cari...</span>
-              </button>
 
-              {/* Mobile search */}
-              <button
-                id="topbar-cmd-mobile"
-                onClick={() => setCmdOpen(true)}
-                className="md:hidden p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors"
-                aria-label="Cari"
-              >
-                <Search className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              </button>
 
               {/* Dark mode toggle */}
               <ThemeToggle dark={dark} onToggle={toggleDark} />
@@ -192,7 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="p-4 sm:p-5 lg:p-6">{children}</div>
         </main>
 
-        <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+
       </div>
     </ThemeContext.Provider>
   );
