@@ -1,0 +1,476 @@
+import { cn } from "@/lib/utils";
+
+// ── StatCard ──────────────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: string;
+  iconColor?: string;
+  iconBg?: string;
+  trend?: "up" | "down" | "neutral";
+  trendLabel?: string;
+}
+
+export function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  iconColor = "#2563EB",
+  iconBg,
+  trend,
+  trendLabel,
+}: StatCardProps) {
+  const defaultIconBg = iconBg ?? `${iconColor}18`;
+  return (
+    <div
+      style={{
+        background: "var(--adm-card)",
+        border: "1px solid var(--adm-border)",
+        boxShadow: "var(--adm-shadow)",
+      }}
+      className="rounded-2xl p-5 transition-all duration-200 hover:shadow-lg"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-2)" }}>
+          {label}
+        </p>
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: defaultIconBg }}
+        >
+          <span
+            className="material-symbols-outlined text-[17px]"
+            style={{ fontVariationSettings: "'FILL' 1", color: iconColor }}
+          >
+            {icon}
+          </span>
+        </div>
+      </div>
+      <p className="text-2xl font-bold leading-tight" style={{ color: "var(--adm-text)" }}>
+        {value}
+      </p>
+      {sub && (
+        <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>
+          {sub}
+        </p>
+      )}
+      {trend && trendLabel && (
+        <div className="flex items-center gap-1 mt-2">
+          <span
+            className="material-symbols-outlined text-[13px]"
+            style={{
+              color:
+                trend === "up"
+                  ? "var(--adm-success)"
+                  : trend === "down"
+                  ? "var(--adm-danger)"
+                  : "var(--adm-text-3)",
+            }}
+          >
+            {trend === "up" ? "trending_up" : trend === "down" ? "trending_down" : "trending_flat"}
+          </span>
+          <span
+            className="text-xs font-semibold"
+            style={{
+              color:
+                trend === "up"
+                  ? "var(--adm-success)"
+                  : trend === "down"
+                  ? "var(--adm-danger)"
+                  : "var(--adm-text-3)",
+            }}
+          >
+            {trendLabel}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DonutStatCard ─────────────────────────────────────────────────────────────
+
+interface DonutSegment {
+  value: number;
+  color: string;
+  label: string;
+}
+
+interface DonutStatCardProps {
+  label: string;
+  value: string | number;
+  sub?: string;
+  segments: DonutSegment[];
+  trend?: "up" | "down" | "neutral";
+  trendLabel?: string;
+}
+
+function DonutChart({ segments, size = 64 }: { segments: DonutSegment[]; size?: number }) {
+  const radius = (size - 10) / 2;
+  const circ = 2 * Math.PI * radius;
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  let offset = 0;
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--adm-border)" strokeWidth={8} />
+      {segments.map((seg, i) => {
+        const pct = seg.value / total;
+        const dash = pct * circ;
+        const gap = circ - dash;
+        const el = (
+          <circle
+            key={i}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={8}
+            strokeDasharray={`${dash} ${gap}`}
+            strokeDashoffset={-offset * circ}
+            strokeLinecap="round"
+          />
+        );
+        offset += pct;
+        return el;
+      })}
+    </svg>
+  );
+}
+
+export function DonutStatCard({
+  label,
+  value,
+  sub,
+  segments,
+  trend,
+  trendLabel,
+}: DonutStatCardProps) {
+  return (
+    <div
+      style={{
+        background: "var(--adm-card)",
+        border: "1px solid var(--adm-border)",
+        boxShadow: "var(--adm-shadow)",
+      }}
+      className="rounded-2xl p-5 transition-all duration-200 hover:shadow-lg"
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "var(--adm-text-2)" }}>
+            {label}
+          </p>
+          <p className="text-2xl font-bold leading-tight" style={{ color: "var(--adm-text)" }}>
+            {value}
+          </p>
+          {sub && (
+            <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>
+              {sub}
+            </p>
+          )}
+          {trend && trendLabel && (
+            <div className="flex items-center gap-1 mt-2">
+              <span
+                className="material-symbols-outlined text-[13px]"
+                style={{ color: trend === "up" ? "var(--adm-success)" : trend === "down" ? "var(--adm-danger)" : "var(--adm-text-3)" }}
+              >
+                {trend === "up" ? "trending_up" : trend === "down" ? "trending_down" : "trending_flat"}
+              </span>
+              <span className="text-xs font-semibold" style={{ color: trend === "up" ? "var(--adm-success)" : trend === "down" ? "var(--adm-danger)" : "var(--adm-text-3)" }}>
+                {trendLabel}
+              </span>
+            </div>
+          )}
+          {/* Legend */}
+          <div className="mt-3 flex flex-col gap-1">
+            {segments.map((seg) => (
+              <div key={seg.label} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
+                <span className="text-[10px]" style={{ color: "var(--adm-text-3)" }}>{seg.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <DonutChart segments={segments} size={68} />
+      </div>
+    </div>
+  );
+}
+
+// ── ProgressRingCard ──────────────────────────────────────────────────────────
+
+interface ProgressRingCardProps {
+  label: string;
+  value: string;
+  sub?: string;
+  percent: number;
+  color: string;
+  badge?: string;
+  badgeColor?: string;
+}
+
+function ProgressRing({ percent, color, size = 80 }: { percent: number; color: string; size?: number }) {
+  const r = (size - 12) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (percent / 100) * circ;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--adm-border)" strokeWidth={10} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={10}
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dasharray 0.5s ease" }}
+      />
+    </svg>
+  );
+}
+
+export function ProgressRingCard({ label, value, sub, percent, color, badge, badgeColor }: ProgressRingCardProps) {
+  return (
+    <div
+      style={{
+        background: "var(--adm-card)",
+        border: "1px solid var(--adm-border)",
+        boxShadow: "var(--adm-shadow)",
+      }}
+      className="rounded-2xl p-5 transition-all duration-200 hover:shadow-lg"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-2)" }}>
+          {label}
+        </p>
+        {badge && (
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: `${badgeColor ?? color}22`, color: badgeColor ?? color }}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          <ProgressRing percent={percent} color={color} size={80} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs font-bold" style={{ color: "var(--adm-text)" }}>{percent}%</span>
+          </div>
+        </div>
+        <div>
+          <p className="text-xl font-bold" style={{ color: "var(--adm-text)" }}>{value}</p>
+          {sub && <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── StatusBadge ───────────────────────────────────────────────────────────────
+
+type BadgeVariant = "emerald" | "amber" | "indigo" | "rose" | "slate" | "blue" | "purple";
+
+const BADGE_COLORS: Record<BadgeVariant, { bg: string; text: string; border: string }> = {
+  emerald: { bg: "rgba(16,185,129,0.12)", text: "#059669", border: "rgba(16,185,129,0.25)" },
+  amber:   { bg: "rgba(245,158,11,0.12)", text: "#D97706", border: "rgba(245,158,11,0.25)" },
+  indigo:  { bg: "rgba(99,102,241,0.12)", text: "#6366F1", border: "rgba(99,102,241,0.25)" },
+  rose:    { bg: "rgba(239,68,68,0.12)",  text: "#DC2626", border: "rgba(239,68,68,0.25)" },
+  slate:   { bg: "rgba(100,116,139,0.1)", text: "#64748B", border: "rgba(100,116,139,0.2)" },
+  blue:    { bg: "rgba(59,130,246,0.12)", text: "#2563EB", border: "rgba(59,130,246,0.25)" },
+  purple:  { bg: "rgba(139,92,246,0.12)", text: "#7C3AED", border: "rgba(139,92,246,0.25)" },
+};
+
+interface StatusBadgeProps {
+  label: string;
+  variant: BadgeVariant;
+}
+
+export function StatusBadge({ label, variant }: StatusBadgeProps) {
+  const c = BADGE_COLORS[variant];
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+      style={{ background: c.bg, color: c.text, borderColor: c.border }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ── PageHeader ────────────────────────────────────────────────────────────────
+
+interface PageHeaderProps {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  icon?: string;
+}
+
+export function PageHeader({ title, description, action, icon }: PageHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-center gap-3">
+        {icon && (
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "var(--adm-accent)" }}
+          >
+            <span className="material-symbols-outlined text-white text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {icon}
+            </span>
+          </div>
+        )}
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "var(--adm-text)" }}>{title}</h1>
+          {description && <p className="text-sm mt-0.5" style={{ color: "var(--adm-text-2)" }}>{description}</p>}
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+// ── AdminTable ────────────────────────────────────────────────────────────────
+
+interface Column<T> {
+  key: keyof T | string;
+  label: string;
+  render?: (row: T) => React.ReactNode;
+  className?: string;
+}
+
+interface AdminTableProps<T> {
+  columns: Column<T>[];
+  data: T[];
+  keyField: keyof T;
+  onRowClick?: (row: T) => void;
+  emptyMessage?: string;
+}
+
+export function AdminTable<T extends object>({
+  columns,
+  data,
+  keyField,
+  onRowClick,
+  emptyMessage = "Tidak ada data",
+}: AdminTableProps<T>) {
+  return (
+    <div
+      style={{ background: "var(--adm-card)", border: "1px solid var(--adm-border)", boxShadow: "var(--adm-shadow)" }}
+      className="rounded-2xl overflow-hidden"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--adm-border)", background: "var(--adm-bg)" }}>
+              {columns.map((col) => (
+                <th
+                  key={String(col.key)}
+                  className={cn("px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide", col.className)}
+                  style={{ color: "var(--adm-text-3)" }}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm" style={{ color: "var(--adm-text-3)" }}>
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              data.map((row) => (
+                <tr
+                  key={String(row[keyField as keyof T])}
+                  onClick={() => onRowClick?.(row)}
+                  style={{ borderBottom: "1px solid var(--adm-border)" }}
+                  className={cn("transition-colors", onRowClick ? "cursor-pointer" : "")}
+                  onMouseEnter={(e) => { if (onRowClick) e.currentTarget.style.background = "var(--adm-card-hover)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={String(col.key)}
+                      className={cn("px-4 py-3.5", col.className)}
+                      style={{ color: "var(--adm-text)" }}
+                    >
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key as string] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── AdminCard ─────────────────────────────────────────────────────────────────
+
+interface AdminCardProps {
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+  action?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+export function AdminCard({ children, className, title, action, style }: AdminCardProps) {
+  return (
+    <div
+      className={cn("rounded-2xl overflow-hidden", className)}
+      style={{
+        background: "var(--adm-card)",
+        border: "1px solid var(--adm-border)",
+        boxShadow: "var(--adm-shadow)",
+        ...style,
+      }}
+    >
+      {(title || action) && (
+        <div className="flex items-center justify-between px-5 pt-5 pb-3" style={{ borderBottom: title ? "1px solid var(--adm-border)" : undefined }}>
+          {title && <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>{title}</h3>}
+          {action && <div>{action}</div>}
+        </div>
+      )}
+      <div>{children}</div>
+    </div>
+  );
+}
+
+// ── EmptyState ────────────────────────────────────────────────────────────────
+
+interface EmptyStateProps {
+  icon: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}
+
+export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+        style={{ background: "var(--adm-bg)" }}
+      >
+        <span className="material-symbols-outlined text-[32px]" style={{ color: "var(--adm-text-3)" }}>{icon}</span>
+      </div>
+      <h3 className="text-base font-semibold" style={{ color: "var(--adm-text)" }}>{title}</h3>
+      {description && <p className="text-sm mt-1.5 max-w-xs" style={{ color: "var(--adm-text-2)" }}>{description}</p>}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
