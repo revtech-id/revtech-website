@@ -1,0 +1,51 @@
+[
+  {
+    "id": "ACT-001",
+    "type": "order_created",
+    "description": "Pesanan baru dari Dr. Anita Rahayu (Website Klinik)",
+    "timestamp": "2026-07-22T14:30:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-002",
+    "type": "invoice_paid",
+    "description": "Invoice INV-2026-005 lunas dari Salon Kecantikan Dewi",
+    "timestamp": "2026-07-18T10:15:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-003",
+    "type": "order_status",
+    "description": "Status ORD-002 diubah ke Revisi oleh Superadmin",
+    "timestamp": "2026-07-15T09:00:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-004",
+    "type": "client_added",
+    "description": "Klien baru ditambahkan: Salon Kecantikan Dewi",
+    "timestamp": "2026-07-18T09:55:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-005",
+    "type": "order_completed",
+    "description": "Pesanan ORD-005 selesai & handover ke Rumah Makan Sederhana",
+    "timestamp": "2026-06-30T16:00:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-006",
+    "type": "login",
+    "description": "Login dari Chrome / Windows",
+    "timestamp": "2026-07-24T07:30:00Z",
+    "user": "Superadmin"
+  },
+  {
+    "id": "ACT-007",
+    "type": "studio_export",
+    "description": "Dokumen spesifikasi diekspor ke Antigravity untuk proyek ORD-001",
+    "timestamp": "2026-07-12T11:00:00Z",
+    "user": "Superadmin"
+  }
+]

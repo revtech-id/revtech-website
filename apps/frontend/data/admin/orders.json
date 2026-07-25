@@ -1,0 +1,98 @@
+[
+  {
+    "id": "ORD-001",
+    "client": "Toko Maju Jaya",
+    "service": "Website Toko Online",
+    "status": "pengerjaan",
+    "dp": 1500000,
+    "total": 3000000,
+    "phone": "6281234567890",
+    "createdAt": "2026-07-10",
+    "deadline": "2026-07-30",
+    "notes": "Klien minta integrasi Shopee"
+  },
+  {
+    "id": "ORD-002",
+    "client": "CV Bintang Nusantara",
+    "service": "Company Profile Premium",
+    "status": "revisi",
+    "dp": 2000000,
+    "total": 4000000,
+    "phone": "6282345678901",
+    "createdAt": "2026-07-05",
+    "deadline": "2026-07-25",
+    "notes": "Revisi 2: hero section & warna brand"
+  },
+  {
+    "id": "ORD-003",
+    "client": "Salon Kecantikan Dewi",
+    "service": "Landing Page Promo",
+    "status": "dp",
+    "dp": 750000,
+    "total": 1500000,
+    "phone": "6283456789012",
+    "createdAt": "2026-07-18",
+    "deadline": "2026-08-05",
+    "notes": "DP sudah masuk, mulai brief"
+  },
+  {
+    "id": "ORD-004",
+    "client": "PT Karya Digital",
+    "service": "Sistem ERP Custom",
+    "status": "chat",
+    "dp": 0,
+    "total": 15000000,
+    "phone": "6284567890123",
+    "createdAt": "2026-07-20",
+    "deadline": null,
+    "notes": "Masih negosiasi scope"
+  },
+  {
+    "id": "ORD-005",
+    "client": "Rumah Makan Sederhana",
+    "service": "Menu Digital QR",
+    "status": "selesai",
+    "dp": 500000,
+    "total": 1000000,
+    "phone": "6285678901234",
+    "createdAt": "2026-06-15",
+    "deadline": "2026-06-30",
+    "notes": "Selesai & sudah handover"
+  },
+  {
+    "id": "ORD-006",
+    "client": "Dr. Anita Rahayu",
+    "service": "Website Klinik",
+    "status": "inbox",
+    "dp": 0,
+    "total": 2500000,
+    "phone": "6286789012345",
+    "createdAt": "2026-07-22",
+    "deadline": null,
+    "notes": "Permintaan masuk via WA"
+  },
+  {
+    "id": "ORD-007",
+    "client": "Bengkel Motor Santoso",
+    "service": "Katalog Produk Digital",
+    "status": "pelunasan",
+    "dp": 800000,
+    "total": 1600000,
+    "phone": "6287890123456",
+    "createdAt": "2026-07-01",
+    "deadline": "2026-07-20",
+    "notes": "Menunggu pelunasan sebelum handover"
+  },
+  {
+    "id": "ORD-008",
+    "client": "Yayasan Cahaya Ilmu",
+    "service": "Website Sekolah",
+    "status": "handover",
+    "dp": 3000000,
+    "total": 6000000,
+    "phone": "6288901234567",
+    "createdAt": "2026-06-20",
+    "deadline": "2026-07-24",
+    "notes": "Handover hari ini"
+  }
+]
