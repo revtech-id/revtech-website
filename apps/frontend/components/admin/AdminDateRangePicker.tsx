@@ -44,7 +44,7 @@ export function AdminDateRangePicker() {
       <button
         id="topbar-date-picker-trigger"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-tight transition-all border border-slate-200/80 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-tight transition-all border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800"
         style={{
           background: "var(--adm-card)",
           color: "var(--adm-text-2)",

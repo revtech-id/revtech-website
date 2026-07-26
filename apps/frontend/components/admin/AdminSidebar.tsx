@@ -154,12 +154,11 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
           </div>
 
           {/* Navigation List */}
-          <div className="space-y-2.5 pt-6">
+          <div className="space-y-1.5 pt-6">
             {NAV_ITEMS.map((item) => {
-              const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
               const isActive =
-                normalizedPath === item.href ||
-                (item.href !== "/admin/dashboard" && normalizedPath.startsWith(item.href));
+                pathname === item.href ||
+                (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
               const Icon = item.icon;
 
               return (
@@ -167,16 +166,19 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
                   key={item.href}
                   asChild
                   variant="ghost"
-                  className={`w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all ${
-                    isActive 
-                      ? "bg-blue-50/60 text-slate-900 dark:bg-slate-800/80 dark:text-slate-100" 
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                  }`}
+                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                  style={{
+                    background: isActive ? "rgba(37,99,235,0.08)" : "transparent",
+                    color: "var(--adm-text)",
+                  }}
                   onClick={onItemClick}
                 >
                   <Link href={item.href}>
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {item.label}
+                    <Icon
+                      className="h-4 w-4 shrink-0"
+                      style={{ color: "var(--adm-text)" }}
+                    />
+                    <span>{item.label}</span>
                   </Link>
                 </Button>
               );

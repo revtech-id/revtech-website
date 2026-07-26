@@ -1,0 +1,9 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Backend dev server (e.g. Supabase local or Express)\"",
+    "start": "echo \"Backend start script\""
+  }
+}

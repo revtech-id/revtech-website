@@ -69,7 +69,7 @@ export function AdminNotificationPopover() {
           {/* Red Badge pinned exactly on the right shoulder */}
           {unreadCount > 0 && (
             <span
-              className="absolute top-0 right-0 flex items-center justify-center rounded-full ring-[2px] ring-white dark:ring-slate-900 shadow-xs pointer-events-none"
+              className="absolute top-0 right-0 flex items-center justify-center rounded-full pointer-events-none"
               style={{
                 background: "#ff3b30",
                 width: "15px",
