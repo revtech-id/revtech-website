@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { StatCard, ProgressRingCard, AdminCard } from "@/components/admin/ui";
+import Link from "next/link";
+import { StatCard, ProgressRingCard, AdminCard, DonutChart } from "@/components/admin/ui";
 import ordersRaw from "@/data/admin/orders.json";
 import invoicesRaw from "@/data/admin/invoices.json";
 import clientsRaw from "@/data/admin/clients.json";
@@ -129,11 +130,6 @@ function AIInsightWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const activeOrders = orders.filter((o) => o.status !== "selesai").length;
-  const paidRevenue = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amount, 0);
-  const pendingRevenue = invoices.filter((i) => i.status === "pending").reduce((s, i) => s + i.amount, 0);
-
-  // Computed data untuk digabungkan ke Insight
   const pendingInvoices = invoices.filter((i) => i.status === "pending");
   const overdueInvoices = pendingInvoices.filter((i) => {
     const d = daysUntil(i.dueDate);
@@ -154,49 +150,84 @@ function AIInsightWidget() {
     setInsight(null);
     
     setTimeout(() => {
-      let content;
       const issuesCount = urgentDeadlines.length + overdueInvoices.length + expiringDomains.length;
       
+      let content;
       if (issuesCount > 0) {
+        const issueTexts = [];
+        if (overdueInvoices.length > 0) issueTexts.push(`${overdueInvoices.length} tagihan tertunggak`);
+        if (urgentDeadlines.length > 0) issueTexts.push(`${urgentDeadlines.length} proyek kritis`);
+        if (expiringDomains.length > 0) issueTexts.push(`${expiringDomains.length} domain expired`);
+        
+        let alertSentence = "";
+        if (issueTexts.length === 1) alertSentence = issueTexts[0];
+        else if (issueTexts.length === 2) alertSentence = `${issueTexts[0]} dan ${issueTexts[1]}`;
+        else alertSentence = `${issueTexts[0]}, ${issueTexts[1]}, dan ${issueTexts[2]}`;
+
+        let theme = { 
+          bg: "bg-indigo-50 dark:bg-indigo-500/10", 
+          border: "border-indigo-200 dark:border-indigo-500/20", 
+          text: "text-indigo-600 dark:text-indigo-400", 
+          button: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm", 
+          divider: "bg-indigo-200 dark:bg-indigo-500/30", 
+          icon: "campaign" 
+        };
+        
+        if (urgentDeadlines.length > 0) {
+          theme = { 
+            bg: "bg-red-50 dark:bg-red-500/10", 
+            border: "border-red-200 dark:border-red-500/20", 
+            text: "text-red-600 dark:text-red-400", 
+            button: "bg-red-600 hover:bg-red-700 text-white shadow-sm", 
+            divider: "bg-red-200 dark:bg-red-500/30", 
+            icon: "warning" 
+          };
+        } else if (overdueInvoices.length > 0) {
+          theme = { 
+            bg: "bg-amber-50 dark:bg-amber-500/10", 
+            border: "border-amber-200 dark:border-amber-500/20", 
+            text: "text-amber-600 dark:text-amber-400", 
+            button: "bg-amber-500 hover:bg-amber-600 text-white shadow-sm", 
+            divider: "bg-amber-200 dark:bg-amber-500/30", 
+            icon: "lightbulb" 
+          };
+        } else if (expiringDomains.length > 0) {
+          theme = { 
+            bg: "bg-purple-50 dark:bg-purple-500/10", 
+            border: "border-purple-200 dark:border-purple-500/20", 
+            text: "text-purple-600 dark:text-purple-400", 
+            button: "bg-purple-600 hover:bg-purple-700 text-white shadow-sm", 
+            divider: "bg-purple-200 dark:bg-purple-500/30", 
+            icon: "domain_disabled" 
+          };
+        }
+
         content = (
-          <div>
-            <p className="text-[14px] font-bold mb-3" style={{ color: "var(--adm-text)" }}>
-              Butuh Perhatian Anda Hari Ini:
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {urgentDeadlines.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(220, 38, 38, 0.05)", border: "1px solid rgba(220, 38, 38, 0.1)" }}>
-                  <span className="material-symbols-outlined text-[18px] text-red-500">warning</span>
-                  <span className="text-[13px] font-medium text-red-600 dark:text-red-400">{urgentDeadlines.length} proyek kritis mendekati deadline</span>
-                </div>
-              )}
-              {overdueInvoices.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.1)" }}>
-                  <span className="material-symbols-outlined text-[18px] text-amber-500">pending_actions</span>
-                  <span className="text-[13px] font-medium text-amber-600 dark:text-amber-400">{overdueInvoices.length} tagihan klien tertunggak</span>
-                </div>
-              )}
-              {expiringDomains.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(139, 92, 246, 0.05)", border: "1px solid rgba(139, 92, 246, 0.1)" }}>
-                  <span className="material-symbols-outlined text-[18px] text-purple-500">domain_disabled</span>
-                  <span className="text-[13px] font-medium text-purple-600 dark:text-purple-400">{expiringDomains.length} domain segera expired</span>
-                </div>
-              )}
+          <div className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 rounded-xl w-full shadow-sm transition-colors duration-300 ${theme.bg}`}>
+            <div className={`flex items-center gap-2 shrink-0 ${theme.text}`}>
+              <span className="material-symbols-outlined text-[18px]">{theme.icon}</span>
+              <span className="text-[13px] font-bold tracking-tight">Insight Harian</span>
             </div>
+            <div className={`w-px h-4 hidden sm:block shrink-0 ${theme.divider}`}></div>
+            <p className="text-[13px] flex-1 truncate" style={{ color: "var(--adm-text)" }} title={`Mohon perhatian: Anda memiliki ${alertSentence} hari ini.`}>
+              Mohon perhatian: Anda memiliki <strong className="font-bold">{alertSentence}</strong> hari ini.
+            </p>
+            <Link href={urgentDeadlines.length > 0 ? "/admin/pesanan" : "/admin/invoice"} className={`text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 text-center shadow-sm ${theme.button}`}>
+              Selesaikan Sekarang
+            </Link>
           </div>
         );
       } else {
         content = (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg" style={{ background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.1)" }}>
-              <span className="material-symbols-outlined text-[20px] text-emerald-500 mt-0.5">verified</span>
-              <div>
-                <p className="text-[14px] font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">Semua Sistem Aman</p>
-                <p className="text-[12px] leading-relaxed" style={{ color: "var(--adm-text-2)" }}>
-                  Operasional berjalan dengan sangat lancar. Tidak ada tugas mendesak atau tagihan tertunggak hari ini.
-                </p>
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 rounded-xl w-full shadow-sm bg-emerald-50 dark:bg-emerald-500/10 transition-colors duration-300">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <span className="material-symbols-outlined text-[18px]">verified</span>
+              <span className="text-[13px] font-bold tracking-tight">Sistem Sehat</span>
             </div>
+            <div className="w-px h-4 bg-emerald-200 dark:bg-emerald-500/30 hidden sm:block shrink-0"></div>
+            <p className="text-[13px] flex-1 truncate" style={{ color: "var(--adm-text)" }}>
+              Operasional berjalan dengan sangat lancar. Tidak ada tugas mendesak atau tagihan tertunggak hari ini.
+            </p>
           </div>
         );
       }
@@ -211,47 +242,16 @@ function AIInsightWidget() {
   }, []);
 
   return (
-    <div
-      className="rounded-2xl p-5 flex flex-col relative overflow-hidden h-full"
-      style={{
-        background: "linear-gradient(145deg, var(--adm-card) 0%, rgba(99,102,241,0.02) 100%)",
-        border: "1px solid var(--adm-border)",
-        boxShadow: "var(--adm-shadow-sm)"
-      }}
-    >
-      {/* Decorative Blur Orbs */}
-      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "var(--adm-accent)" }} />
-      <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full opacity-10 blur-2xl pointer-events-none" style={{ background: "#8B5CF6" }} />
-
-
-
-      {/* Content */}
-      <div className="flex-1 relative z-10 flex flex-col md:flex-row items-center gap-6">
-        <div className="flex-1 w-full">
-          {loading ? (
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="h-2.5 rounded animate-pulse w-3/4" style={{ background: "var(--adm-border)" }} />
-              <div className="h-2.5 rounded animate-pulse w-1/2" style={{ background: "var(--adm-border)" }} />
-            </div>
-          ) : error ? (
-            <p className="text-[11px] mt-1" style={{ color: "var(--adm-danger)" }}>{error}</p>
-          ) : insight ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-[12px] mt-1.5 leading-relaxed"
-              style={{ color: "var(--adm-text-2)" }}
-            >
-              {insight}
-            </motion.div>
-          ) : null}
-        </div>
-        
-        {/* Placeholder Area Gambar Robot */}
-        <div className="hidden md:flex w-48 shrink-0 items-center justify-center min-h-[120px] rounded-xl border border-dashed opacity-50" style={{ borderColor: "var(--adm-border)" }}>
-           <span className="text-[11px] font-medium text-center px-4" style={{ color: "var(--adm-text-3)" }}>[Area Gambar Robot]</span>
-        </div>
-      </div>
+    <div className="w-full">
+      {loading ? (
+        <div className="h-[46px] w-full rounded-xl animate-pulse" style={{ background: "var(--adm-border)" }} />
+      ) : error ? (
+        <p className="text-[11px] mt-1" style={{ color: "var(--adm-danger)" }}>{error}</p>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          {insight}
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -266,6 +266,7 @@ const fadeUp = (i: number) => ({
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState<"proyek" | "server">("proyek");
   // ── Computed from real data ──
   const activeOrders = orders.filter((o) => o.status !== "selesai");
   const completedOrders = orders.filter((o) => o.status === "selesai");
@@ -285,6 +286,26 @@ export default function DashboardPage() {
 
   // Pipeline funnel data
   const pipelineData = getPipelineData();
+
+  // Server & Maintenance data
+  const activeClients = clients.filter((c) => {
+    const d = daysUntil(c.domainExpiry);
+    return d === null || d > 60;
+  });
+  const expiringClients = clients.filter((c) => {
+    const d = daysUntil(c.domainExpiry);
+    return d !== null && d >= 0 && d <= 60;
+  });
+  const expiredClients = clients.filter((c) => {
+    const d = daysUntil(c.domainExpiry);
+    return d !== null && d < 0;
+  });
+
+  const serverSegments = [
+    { label: "Sehat / Aktif", value: activeClients.length, color: "#10B981" },
+    { label: "Mendekati Expired", value: expiringClients.length, color: "#F59E0B" },
+    { label: "Kritis / Mati", value: expiredClients.length, color: "#EF4444" }
+  ];
 
   return (
     <div className="space-y-5">
@@ -310,7 +331,8 @@ export default function DashboardPage() {
                 icon="payments"
                 iconColor="#8B5CF6"
                 trend="up"
-                trendLabel="dari invoice lunas"
+                trendLabel="12% vs bulan lalu"
+                href="/admin/invoice"
               />
             </motion.div>
             <motion.div {...fadeUp(2)}>
@@ -321,7 +343,8 @@ export default function DashboardPage() {
                 icon="pending_actions"
                 iconColor={overdueInvoices.length > 0 ? "#EF4444" : "#F59E0B"}
                 trend={overdueInvoices.length > 0 ? "down" : "neutral"}
-                trendLabel={overdueInvoices.length > 0 ? `${overdueInvoices.length} overdue!` : "menunggu pembayaran"}
+                trendLabel={overdueInvoices.length > 0 ? `${overdueInvoices.length} overdue (Perhatian!)` : "menunggu pembayaran"}
+                href="/admin/invoice"
               />
             </motion.div>
             <motion.div {...fadeUp(3)}>
@@ -332,7 +355,8 @@ export default function DashboardPage() {
                 icon="work"
                 iconColor="#2563EB"
                 trend="up"
-                trendLabel="dalam pipeline"
+                trendLabel="5 pesanan baru mgg ini"
+                href="/admin/pesanan"
               />
             </motion.div>
             <motion.div {...fadeUp(4)}>
@@ -343,7 +367,8 @@ export default function DashboardPage() {
                 icon="task_alt"
                 iconColor="#10B981"
                 trend="up"
-                trendLabel="delivered ke klien"
+                trendLabel="Rasio sukses 100%"
+                href="/admin/portofolio"
               />
             </motion.div>
         </div>
@@ -375,113 +400,106 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* ── Row 2: Pipeline funnel ────────────────────────────────────────── */}
-      <motion.div {...fadeUp(6)}>
-        <AdminCard>
-          <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Pesanan</h3>
-              <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>Distribusi {orders.length} pesanan per stage</p>
+      {/* ── Baris 3: Tab Content ───────────────────────────────────────────────────── */}
+      {activeTab === "proyek" ? (
+        <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] gap-5 items-start">
+        {/* Kolom Kiri: Pipeline funnel */}
+        <motion.div {...fadeUp(6)} className="h-full">
+          <AdminCard className="h-full flex flex-col relative">
+            <div className="px-5 pt-5 pb-2 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Pesanan</h3>
+              </div>
+              <button
+                onClick={() => setActiveTab("server")}
+                className="opacity-40 hover:opacity-100 transition-opacity flex items-center justify-center"
+                title="Beralih ke Pantauan Server"
+              >
+                <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--adm-text)" }}>swap_horiz</span>
+              </button>
             </div>
-          </div>
-          <div className="px-2 pb-4" style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={pipelineData} barSize={24} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid vertical={false} stroke="var(--adm-chart-grid)" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: "var(--adm-text-3)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis hide allowDecimals={false} />
-                <Tooltip content={<PipelineTooltip />} cursor={{ fill: "var(--adm-border)", radius: 6 }} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                  {pipelineData.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminCard>
-      </motion.div>
+            <div className="flex-1 relative min-h-[220px]">
+              <div className="absolute inset-0 px-4 pb-0 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipelineData} barSize={10} margin={{ top: 30, right: 0, bottom: 0, left: 0 }}>
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 10, fill: "var(--adm-text-3)" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickMargin={12}
+                    />
+                    <YAxis hide allowDecimals={false} />
+                    <Tooltip content={<PipelineTooltip />} cursor={false} />
+                    <Bar 
+                      dataKey="count" 
+                      fill="#3B82F6" 
+                      radius={10} 
+                      background={{ fill: "rgba(59, 130, 246, 0.08)", radius: 10 }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </AdminCard>
+        </motion.div>
 
-      {/* ── Row 3: Active orders table ───────────────────────────────────── */}
-      <motion.div {...fadeUp(7)}>
-        <AdminCard>
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pesanan Aktif</h3>
-              <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>Semua proyek yang sedang berjalan</p>
+        {/* Kolom Kanan: Active orders table */}
+        <motion.div {...fadeUp(7)} className="h-full">
+          <AdminCard className="h-full flex flex-col">
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pesanan Aktif</h3>
+              </div>
+              <a
+                href="/admin/pesanan"
+                className="text-xs font-semibold hover:opacity-70 transition-opacity"
+                style={{ color: "var(--adm-text)" }}
+              >
+                Lihat semua →
+              </a>
             </div>
-            <a
-              href="/admin/pesanan"
-              className="text-xs font-semibold hover:opacity-70 transition-opacity"
-              style={{ color: "var(--adm-accent)" }}
-            >
-              Lihat semua →
-            </a>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <div className="overflow-x-auto flex-1 px-4 pb-2">
+              <table className="w-full text-xs min-w-[450px] border-separate" style={{ borderSpacing: "0 8px" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--adm-border)", background: "var(--adm-bg)" }}>
-                  {["Klien", "Layanan", "Stage", "Total", "Deadline", "Catatan"].map((h) => (
-                    <th key={h} className="px-5 py-2 text-left font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-3)" }}>{h}</th>
+                <tr>
+                  {["Klien", "Layanan", "Stage", "Total", "Deadline"].map((h, i) => (
+                    <th key={h} className={`py-1 text-left font-semibold ${i===0 ? 'px-4' : 'px-2'} ${i===4 ? 'pr-4' : ''}`} style={{ color: "var(--adm-text-3)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {activeOrders.map((o) => {
+                {activeOrders.slice(0, 5).map((o) => {
                   const style = STATUS_COLOR[o.status] ?? STATUS_COLOR.inbox;
                   const deadlineDays = daysUntil(o.deadline);
                   const isUrgent = deadlineDays !== null && deadlineDays <= 3;
                   return (
                     <tr
                       key={o.id}
-                      style={{ borderBottom: "1px solid var(--adm-border)" }}
-                      className="transition-colors cursor-pointer"
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--adm-card-hover)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      style={{ background: style.bg }}
+                      className="transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110"
                     >
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                            style={{ background: `hsl(${(o.client.charCodeAt(0) * 47) % 360}, 60%, 55%)` }}
-                          >
-                            {o.client.charAt(0)}
-                          </div>
-                          <span className="font-semibold truncate max-w-[100px]" style={{ color: "var(--adm-text)" }}>{o.client}</span>
-                        </div>
+                      <td className="px-4 py-2.5 rounded-l-full">
+                        <span className="truncate max-w-[150px] block" style={{ color: "var(--adm-text)" }}>{o.client}</span>
                       </td>
-                      <td className="px-5 py-3" style={{ color: "var(--adm-text-2)" }}>{o.service}</td>
-                      <td className="px-5 py-3">
-                        <span
-                          className="px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap"
-                          style={{ background: style.bg, color: style.text }}
-                        >
-                          {STATUS_LABEL[o.status]}
-                        </span>
+                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>{o.service}</td>
+                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>
+                        {STATUS_LABEL[o.status]}
                       </td>
-                      <td className="px-5 py-3 font-semibold" style={{ color: "var(--adm-text)" }}>
+                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>
                         {formatRp(o.total)}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-2 py-2.5 rounded-r-full pr-4">
                         {o.deadline ? (
                           <span
-                            className="font-medium"
-                            style={{ color: isUrgent ? "var(--adm-danger)" : "var(--adm-text-2)" }}
+                            className="whitespace-nowrap"
+                            style={{ color: isUrgent ? "var(--adm-danger)" : "var(--adm-text)" }}
                           >
-                            {isUrgent && "⚠️ "}{new Date(o.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                            {new Date(o.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                           </span>
                         ) : (
-                          <span style={{ color: "var(--adm-text-3)" }}>—</span>
+                          <span className="opacity-30 font-bold">—</span>
                         )}
-                      </td>
-                      <td className="px-5 py-3 max-w-[160px]">
-                        <p className="truncate text-[11px]" style={{ color: "var(--adm-text-3)" }}>{o.notes}</p>
                       </td>
                     </tr>
                   );
@@ -491,6 +509,131 @@ export default function DashboardPage() {
           </div>
         </AdminCard>
       </motion.div>
+      </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] gap-5 items-start">
+          {/* Kolom Kiri: Server Donut Chart */}
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="h-full">
+            <AdminCard className="h-full flex flex-col justify-between p-6 relative">
+              <button
+                onClick={() => setActiveTab("proyek")}
+                className="absolute top-5 right-5 opacity-40 hover:opacity-100 transition-opacity flex items-center justify-center z-10"
+                title="Beralih ke Arus Proyek"
+              >
+                <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--adm-text)" }}>swap_horiz</span>
+              </button>
+              
+              {/* Bagian Atas: Label & Total */}
+              <div>
+                <p className="text-[13px] font-bold text-left" style={{ color: "var(--adm-text-2)" }}>
+                  Kesehatan Server
+                </p>
+                <p className="text-[32px] leading-tight font-bold tracking-tight mt-2 text-left" style={{ color: "var(--adm-text)" }}>
+                  {activeClients.length + expiringClients.length + expiredClients.length}
+                </p>
+                <p className="text-[12px] mt-1 text-left font-medium" style={{ color: "var(--adm-text-3)" }}>
+                  Total Klien Maintenance
+                </p>
+              </div>
+
+              {/* Bagian Bawah: Legend & Diagram */}
+              <div className="flex items-end justify-between mt-8">
+                <div className="flex flex-col gap-2 pb-2">
+                  {serverSegments.map(s => {
+                    const total = activeClients.length + expiringClients.length + expiredClients.length;
+                    const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
+                    return (
+                      <div key={s.label} className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                        <span className="text-[10px] font-bold w-6" style={{ color: "var(--adm-text)" }}>{pct}%</span>
+                        <span className="text-[10px]" style={{ color: "var(--adm-text-3)" }}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="relative shrink-0 pr-2">
+                  <DonutChart segments={serverSegments} size={130} strokeWidth={22} />
+                  <div className="absolute inset-0 pr-2 flex items-center justify-center">
+                    <span className="text-[20px] font-bold" style={{ color: "var(--adm-text)" }}>
+                      {activeClients.length + expiringClients.length + expiredClients.length > 0 
+                        ? Math.round((activeClients.length / (activeClients.length + expiringClients.length + expiredClients.length)) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </AdminCard>
+          </motion.div>
+
+          {/* Kolom Kanan: Maintenance Clients Table */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full">
+            <AdminCard className="h-full flex flex-col">
+              <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Layanan & Domain Aktif</h3>
+                </div>
+                <a
+                  href="/admin/maintenance"
+                  className="text-xs font-semibold hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--adm-text)" }}
+                >
+                  Lihat semua →
+                </a>
+              </div>
+              <div className="overflow-x-auto flex-1 px-4 pb-2">
+                <table className="w-full text-xs min-w-[450px] border-separate" style={{ borderSpacing: "0 8px" }}>
+                  <thead>
+                    <tr>
+                      <th className="py-1 px-4 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Klien</th>
+                      <th className="py-1 px-2 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Layanan</th>
+                      <th className="py-1 px-2 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Status</th>
+                      <th className="py-1 px-4 text-left font-semibold pr-4" style={{ color: "var(--adm-text-3)" }}>Expired</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.slice(0, 5).map((c) => {
+                      const d = daysUntil(c.domainExpiry);
+                      const isCritical = d !== null && d <= 14;
+                      const isWarning = d !== null && d <= 60 && d > 14;
+                      const rowBg = isCritical ? "bg-red-50 dark:bg-red-500/10" : isWarning ? "bg-amber-50 dark:bg-amber-500/10" : "bg-emerald-50 dark:bg-emerald-500/10";
+                      const statusText = isCritical ? "Kritis" : isWarning ? "Warning" : "Sehat";
+                      
+                      return (
+                        <tr
+                          key={c.id}
+                          className={`transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110 ${rowBg}`}
+                          style={{ color: "var(--adm-text)" }}
+                        >
+                          <td className="px-4 py-2.5 rounded-l-full">
+                            <span className="truncate max-w-[150px] block">{c.name}</span>
+                          </td>
+                          <td className="px-2 py-2.5">
+                            {c.domain ? "Hosting & Domain" : "Maintenance"}
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <span className="text-[10px] uppercase tracking-wider">
+                              {statusText}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2.5 rounded-r-full pr-4">
+                            {c.domainExpiry ? (
+                              <span className="whitespace-nowrap">
+                                {new Date(c.domainExpiry).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                              </span>
+                            ) : (
+                              <span className="opacity-30 font-bold">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </AdminCard>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

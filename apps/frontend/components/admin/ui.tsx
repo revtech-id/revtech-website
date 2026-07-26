@@ -11,6 +11,8 @@ interface StatCardProps {
   iconBg?: string;
   trend?: "up" | "down" | "neutral";
   trendLabel?: string;
+  href?: string;
+  sparkline?: React.ReactNode;
 }
 
 export function StatCard({
@@ -22,33 +24,53 @@ export function StatCard({
   iconBg,
   trend,
   trendLabel,
+  href,
+  sparkline,
 }: StatCardProps) {
   const defaultIconBg = iconBg ?? `${iconColor}18`;
+  
+  const CardWrapper = href ? "a" : "div";
+  const wrapperProps = href ? { href } : {};
+
   return (
-    <div
+    <CardWrapper
+      {...wrapperProps}
       style={{
         background: "var(--adm-card)",
-        border: "1px solid var(--adm-border)",
         boxShadow: "var(--adm-shadow)",
       }}
-      className="rounded-2xl p-5 transition-all duration-200 hover:shadow-lg"
+      className="group rounded-2xl p-5 block transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-500/50 cursor-pointer relative overflow-hidden"
     >
-      <div className="flex items-start justify-between mb-3">
+      {/* Sparkline Background Placeholder */}
+      {sparkline && (
+        <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+          {sparkline}
+        </div>
+      )}
+      
+      <div className="flex items-start justify-between mb-3 relative z-10">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-2)" }}>
           {label}
         </p>
-        <div className="w-8 h-8 flex items-center justify-end shrink-0">
+        <div className="w-8 h-8 flex items-center justify-end shrink-0 relative">
           <span
-            className="material-symbols-outlined text-[20px]"
+            className="material-symbols-outlined text-[20px] transition-all duration-300 group-hover:opacity-0 group-hover:-translate-x-2"
             style={{ fontVariationSettings: "'FILL' 0, 'wght' 400", color: "var(--adm-text)" }}
           >
             {icon}
           </span>
+          <span
+            className="material-symbols-outlined text-[20px] absolute opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+            style={{ color: "var(--adm-text)" }}
+          >
+            arrow_forward
+          </span>
         </div>
       </div>
-      <p className="text-2xl font-bold leading-tight" style={{ color: "var(--adm-text)" }}>
-        {value}
-      </p>
+      <div className="relative z-10">
+        <p className="text-2xl font-bold leading-tight" style={{ color: "var(--adm-text)" }}>
+          {value}
+        </p>
       {sub && (
         <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>
           {sub}
@@ -57,7 +79,7 @@ export function StatCard({
       {trend && trendLabel && (
         <div className="flex items-center gap-1 mt-2">
           <span
-            className="material-symbols-outlined text-[13px]"
+            className="material-symbols-outlined text-[12px]"
             style={{
               color:
                 trend === "up"
@@ -70,7 +92,7 @@ export function StatCard({
             {trend === "up" ? "trending_up" : trend === "down" ? "trending_down" : "trending_flat"}
           </span>
           <span
-            className="text-xs font-semibold"
+            className="text-[11px] font-semibold"
             style={{
               color:
                 trend === "up"
@@ -84,13 +106,14 @@ export function StatCard({
           </span>
         </div>
       )}
-    </div>
+      </div>
+    </CardWrapper>
   );
 }
 
 // ── DonutStatCard ─────────────────────────────────────────────────────────────
 
-interface DonutSegment {
+export interface DonutSegment {
   value: number;
   color: string;
   label: string;
@@ -105,17 +128,17 @@ interface DonutStatCardProps {
   trendLabel?: string;
 }
 
-function DonutChart({ segments, size = 64 }: { segments: DonutSegment[]; size?: number }) {
-  const radius = (size - 10) / 2;
+export function DonutChart({ segments, size = 64, strokeWidth = 8 }: { segments: DonutSegment[]; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth - 2) / 2;
   const circ = 2 * Math.PI * radius;
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   let offset = 0;
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--adm-border)" strokeWidth={8} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--adm-border)" strokeWidth={strokeWidth} />
       {segments.map((seg, i) => {
-        const pct = seg.value / total;
+        const pct = seg.value / (total || 1);
         const dash = pct * circ;
         const gap = circ - dash;
         const el = (
@@ -126,7 +149,7 @@ function DonutChart({ segments, size = 64 }: { segments: DonutSegment[]; size?: 
             r={radius}
             fill="none"
             stroke={seg.color}
-            strokeWidth={8}
+            strokeWidth={strokeWidth}
             strokeDasharray={`${dash} ${gap}`}
             strokeDashoffset={-offset * circ}
             strokeLinecap="round"
@@ -239,7 +262,6 @@ export function ProgressRingCard({ label, value, sub, percent, color, legendMain
     <div
       style={{
         background: "var(--adm-card)",
-        border: "1px solid var(--adm-border)",
         boxShadow: "var(--adm-shadow)",
       }}
       className="rounded-2xl p-6 transition-all duration-200 hover:shadow-lg h-full flex flex-col justify-between"
@@ -312,8 +334,8 @@ export function StatusBadge({ label, variant }: StatusBadgeProps) {
   const c = BADGE_COLORS[variant];
   return (
     <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-      style={{ background: c.bg, color: c.text, borderColor: c.border }}
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+      style={{ background: c.bg, color: c.text }}
     >
       {label}
     </span>
@@ -379,13 +401,13 @@ export function AdminTable<T extends object>({
 }: AdminTableProps<T>) {
   return (
     <div
-      style={{ background: "var(--adm-card)", border: "1px solid var(--adm-border)", boxShadow: "var(--adm-shadow)" }}
+      style={{ background: "var(--adm-card)", boxShadow: "var(--adm-shadow)" }}
       className="rounded-2xl overflow-hidden"
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ borderBottom: "1px solid var(--adm-border)", background: "var(--adm-bg)" }}>
+            <tr style={{ background: "var(--adm-bg)" }}>
               {columns.map((col) => (
                 <th
                   key={String(col.key)}
@@ -409,7 +431,7 @@ export function AdminTable<T extends object>({
                 <tr
                   key={String(row[keyField as keyof T])}
                   onClick={() => onRowClick?.(row)}
-                  style={{ borderBottom: "1px solid var(--adm-border)" }}
+                  style={{}}
                   className={cn("transition-colors", onRowClick ? "cursor-pointer" : "")}
                   onMouseEnter={(e) => { if (onRowClick) e.currentTarget.style.background = "var(--adm-card-hover)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -449,13 +471,12 @@ export function AdminCard({ children, className, title, action, style }: AdminCa
       className={cn("rounded-2xl overflow-hidden", className)}
       style={{
         background: "var(--adm-card)",
-        border: "1px solid var(--adm-border)",
         boxShadow: "var(--adm-shadow)",
         ...style,
       }}
     >
       {(title || action) && (
-        <div className="flex items-center justify-between px-5 pt-5 pb-3" style={{ borderBottom: title ? "1px solid var(--adm-border)" : undefined }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
           {title && <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>{title}</h3>}
           {action && <div>{action}</div>}
         </div>

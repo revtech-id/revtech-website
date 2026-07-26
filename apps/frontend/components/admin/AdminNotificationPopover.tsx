@@ -94,13 +94,12 @@ export function AdminNotificationPopover() {
         <div
           style={{
             background: "var(--adm-card)",
-            border: "1px solid var(--adm-border)",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+            boxShadow: "var(--adm-shadow-md)",
           }}
           className="absolute right-0 top-full mt-3 w-80 sm:w-96 z-50 rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: "var(--adm-border)", background: "var(--adm-bg)" }}>
+          <div className="flex items-center justify-between px-5 py-3.5" style={{ background: "var(--adm-bg)" }}>
             <div className="flex items-center gap-2.5">
               <h3 className="text-[13px] font-bold" style={{ color: "var(--adm-text)" }}>
                 Notifikasi
@@ -179,7 +178,7 @@ export function AdminNotificationPopover() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-2.5 border-t" style={{ borderColor: "var(--adm-border)", background: "var(--adm-bg)" }}>
+          <div className="px-5 py-2.5" style={{ background: "var(--adm-bg)" }}>
             <Link
               href="/admin/team/activity"
               onClick={() => setOpen(false)}

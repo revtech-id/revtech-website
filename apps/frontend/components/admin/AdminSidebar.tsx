@@ -39,7 +39,7 @@ export function SidebarProfileSection() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <div className="p-3.5 border-t shrink-0 relative" style={{ borderColor: "var(--adm-border)" }}>
+    <div className="p-3.5 shrink-0 relative">
       {/* Backdrop for Popover */}
       {profileOpen && (
         <div
@@ -53,8 +53,7 @@ export function SidebarProfileSection() {
         <div
           style={{
             background: "var(--adm-card)",
-            border: "1px solid var(--adm-border)",
-            boxShadow: "0 12px 36px rgba(0,0,0,0.22)",
+            boxShadow: "var(--adm-shadow-md)",
           }}
           className="absolute bottom-full left-3 right-3 mb-2 z-50 rounded-2xl p-3 space-y-2 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
@@ -199,7 +198,6 @@ export function AdminSidebar({ dark }: { dark: boolean }) {
       style={{
         width: 200,
         background: "var(--adm-sidebar)",
-        borderRight: "1px solid var(--adm-border)",
         boxShadow: "var(--adm-shadow-md)",
       }}
       className="hidden lg:flex fixed left-0 top-0 bottom-0 h-full flex-col z-30 overflow-hidden"

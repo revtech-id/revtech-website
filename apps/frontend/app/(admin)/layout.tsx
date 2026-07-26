@@ -50,13 +50,13 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
         id="theme-toggle"
         onClick={onToggle}
         aria-label="Toggle dark mode"
-        className={`relative w-[32px] h-[18px] rounded-full transition-colors duration-300 focus:outline-none ${
-          dark ? "bg-slate-700" : "bg-slate-300"
+        className={`relative w-[28px] h-[16px] rounded-full transition-colors duration-300 focus:outline-none ${
+          dark ? "bg-slate-800" : "bg-slate-200"
         }`}
       >
         <span
-          className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full transition-transform duration-300 shadow-sm ${
-            dark ? "translate-x-[14px]" : "translate-x-0"
+          className={`absolute top-[2px] left-[2px] w-[12px] h-[12px] bg-blue-500 rounded-full transition-transform duration-300 shadow-sm ${
+            dark ? "translate-x-[12px]" : "translate-x-0"
           }`}
         />
       </button>
@@ -82,13 +82,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Persist dark mode preference
   useEffect(() => {
     const saved = localStorage.getItem("adm-dark");
-    if (saved === "true") setDark(true);
+    if (saved === "true") {
+      setDark(true);
+      document.documentElement.classList.add("admin-dark");
+      document.documentElement.classList.remove("admin-light");
+    } else {
+      document.documentElement.classList.add("admin-light");
+      document.documentElement.classList.remove("admin-dark");
+    }
   }, []);
 
   function toggleDark() {
     setDark((d) => {
-      localStorage.setItem("adm-dark", String(!d));
-      return !d;
+      const newVal = !d;
+      localStorage.setItem("adm-dark", String(newVal));
+      if (newVal) {
+        document.documentElement.classList.add("admin-dark");
+        document.documentElement.classList.remove("admin-light");
+      } else {
+        document.documentElement.classList.add("admin-light");
+        document.documentElement.classList.remove("admin-dark");
+      }
+      return newVal;
     });
   }
 
