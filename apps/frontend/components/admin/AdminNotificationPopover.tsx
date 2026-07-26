@@ -60,7 +60,7 @@ export function AdminNotificationPopover() {
       <button
         id="topbar-notifications"
         onClick={() => setOpen((o) => !o)}
-        className="relative p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all group inline-flex items-center justify-center"
+        className="relative p-1.5 rounded-xl hover:bg-[var(--adm-border)] transition-all group inline-flex items-center justify-center"
         aria-label="Pemberitahuan"
       >
         <div className="relative">
@@ -100,13 +100,13 @@ export function AdminNotificationPopover() {
           className="absolute right-0 top-full mt-3 w-80 sm:w-96 z-50 rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: "var(--adm-border)", background: "var(--adm-bg)" }}>
             <div className="flex items-center gap-2.5">
-              <h3 className="text-[13px] font-bold text-slate-800 dark:text-slate-100">
+              <h3 className="text-[13px] font-bold" style={{ color: "var(--adm-text)" }}>
                 Notifikasi
               </h3>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-md font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400 border border-blue-200 dark:border-blue-800" style={{ fontSize: '9px' }}>
+                <span className="px-1.5 py-0.5 rounded-md font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20" style={{ fontSize: '9px' }}>
                   {unreadCount} Baru
                 </span>
               )}
@@ -115,14 +115,16 @@ export function AdminNotificationPopover() {
             {unreadCount > 0 ? (
               <button
                 onClick={markAllRead}
-                className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                className="text-[10px] font-semibold transition-colors opacity-70 hover:opacity-100"
+                style={{ color: "var(--adm-text)" }}
               >
                 Tandai dibaca
               </button>
             ) : notifs.length > 0 ? (
               <button
                 onClick={() => setNotifs([])}
-                className="text-[10px] font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                className="text-[10px] font-semibold transition-colors opacity-70 hover:opacity-100"
+                style={{ color: "var(--adm-danger)" }}
               >
                 Bersihkan
               </button>
@@ -133,11 +135,11 @@ export function AdminNotificationPopover() {
           <div className="max-h-[320px] overflow-y-auto custom-scrollbar py-2 pl-2 pr-2.5 space-y-2">
             {notifs.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-3">
-                  <Bell className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3" style={{ background: "var(--adm-bg)" }}>
+                  <Bell className="w-5 h-5" style={{ color: "var(--adm-text-3)" }} />
                 </div>
-                <p className="text-[12px] font-bold text-slate-600 dark:text-slate-300">Belum ada aktivitas</p>
-                <p className="text-[10px] text-slate-400 mt-1">Anda sudah melihat semuanya.</p>
+                <p className="text-[12px] font-bold" style={{ color: "var(--adm-text)" }}>Belum ada aktivitas</p>
+                <p className="text-[10px] mt-1" style={{ color: "var(--adm-text-2)" }}>Anda sudah melihat semuanya.</p>
               </div>
             ) : (
               notifs.map((item) => (
@@ -149,10 +151,9 @@ export function AdminNotificationPopover() {
                     );
                   }}
                   className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                    item.unread
-                      ? "bg-blue-50/60 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      : "opacity-60 hover:opacity-100 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    item.unread ? "bg-blue-500/5 hover:bg-blue-500/10" : "opacity-60 hover:opacity-100"
                   }`}
+                  style={{ backgroundColor: !item.unread ? "transparent" : "" }}
                 >
                   {item.unread ? (
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -161,14 +162,14 @@ export function AdminNotificationPopover() {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className={`text-[12px] truncate transition-colors ${item.unread ? "font-bold text-slate-900 dark:text-slate-100" : "font-medium text-slate-600 dark:text-slate-400"}`}>
+                      <p className={`text-[12px] truncate transition-colors ${item.unread ? "font-bold" : "font-medium"}`} style={{ color: "var(--adm-text)" }}>
                         {item.title}
                       </p>
-                      <span className="font-medium shrink-0 text-slate-400 dark:text-slate-500" style={{ fontSize: '9px' }}>
+                      <span className="font-medium shrink-0" style={{ fontSize: '9px', color: "var(--adm-text-3)" }}>
                         {item.time}
                       </span>
                     </div>
-                    <p className={`text-[11px] leading-snug line-clamp-2 mt-0.5 transition-colors ${item.unread ? "text-slate-600 dark:text-slate-400 font-medium" : "text-slate-500 dark:text-slate-500"}`}>
+                    <p className={`text-[11px] leading-snug line-clamp-2 mt-0.5 transition-colors ${item.unread ? "font-medium" : ""}`} style={{ color: item.unread ? "var(--adm-text-2)" : "var(--adm-text-3)" }}>
                       {item.desc}
                     </p>
                   </div>
@@ -178,11 +179,12 @@ export function AdminNotificationPopover() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="px-5 py-2.5 border-t" style={{ borderColor: "var(--adm-border)", background: "var(--adm-bg)" }}>
             <Link
               href="/admin/team/activity"
               onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-semibold transition-colors hover:opacity-100 opacity-70"
+              style={{ color: "var(--adm-text)" }}
             >
               Lihat Semua Aktivitas Sistem
             </Link>

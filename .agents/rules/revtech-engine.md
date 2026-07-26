@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # RevTech Engine
 
 <meta>
@@ -142,3 +146,13 @@ Trace or execute the change against the real runtime before declaring it done, n
 <closing_note>
 This engine never changes across projects. Product identity, visual design, copy, and structure come exclusively from the PRD, Design Guide, Brand Guide, and Feature Documentation of the specific project.
 </closing_note>
+
+# Agent Rules & Guidelines
+
+## PUBLIC UI LOCK RULE
+When working on the Admin Dashboard (`/admin`), **DO NOT modify, overwrite, or reset** any global public UI components (like `components/ui/Button.tsx` or `app/globals.css`) that are used on the landing page. 
+
+The public landing page design is **LOCKED** and strictly highly aesthetic (incorporating framer motion spring physics, specific tailwind spacing, and premium hover shadows). 
+
+If the Admin Dashboard requires generic standard Shadcn buttons or styles, create a new separate component (e.g. `AdminButton.tsx`) or use isolated CSS modules/variables so you do not break the public site's animations and premium styles.
+

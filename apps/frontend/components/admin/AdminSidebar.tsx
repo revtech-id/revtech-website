@@ -86,7 +86,7 @@ export function SidebarProfileSection() {
                   key={opt.href}
                   href={opt.href}
                   onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-[var(--adm-card-hover)]"
                   style={{ color: "var(--adm-text)" }}
                 >
                   <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--adm-text)" }} />
@@ -111,7 +111,7 @@ export function SidebarProfileSection() {
       <button
         id="sidebar-profile-button"
         onClick={() => setProfileOpen((o) => !o)}
-        className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all text-left group"
+        className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--adm-card-hover)] transition-all text-left group"
       >
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm"
@@ -138,7 +138,7 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 pt-8 pb-4">
+      <ScrollArea className="flex-1 pt-12 pb-4">
         <div className="px-3.5 space-y-3">
           {/* Brand Header */}
           <div className="flex items-center gap-2.5 px-1 py-1 mb-1">
@@ -166,7 +166,7 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
                   key={item.href}
                   asChild
                   variant="ghost"
-                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-[var(--adm-card-hover)]"
                   style={{
                     background: isActive ? "rgba(37,99,235,0.08)" : "transparent",
                     color: "var(--adm-text)",

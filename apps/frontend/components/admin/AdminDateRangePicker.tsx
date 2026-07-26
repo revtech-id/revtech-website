@@ -44,7 +44,7 @@ export function AdminDateRangePicker() {
       <button
         id="topbar-date-picker-trigger"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-tight transition-all border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-tight transition-all border border-transparent hover:bg-[var(--adm-border)]"
         style={{
           background: "var(--adm-card)",
           color: "var(--adm-text-2)",
@@ -76,25 +76,30 @@ export function AdminDateRangePicker() {
               <button
                 key={item.id}
                 onClick={() => handleSelect(item.id, item.start, item.end)}
-                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-all text-left ${
+                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-all text-left hover:bg-[var(--adm-card-hover)] ${
                   isSelected
-                    ? "font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10"
-                    : "font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80"
+                    ? "font-bold bg-blue-500/10"
+                    : "font-medium"
                 }`}
+                style={{
+                  color: "var(--adm-text)",
+                  backgroundColor: !isSelected ? "transparent" : "",
+                }}
               >
                 <span>{item.text}</span>
-                {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                {isSelected && <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--adm-accent)" }} />}
               </button>
             );
           })}
 
           <button
             onClick={() => setShowCustom((c) => !c)}
-            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-all text-left ${
+            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-all text-left hover:bg-[var(--adm-card-hover)] ${
               preset === "custom"
-                ? "font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10"
-                : "font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80"
+                ? "font-bold bg-blue-500/10"
+                : "font-medium"
             }`}
+            style={{ color: "var(--adm-text)" }}
           >
             <span>Kustom...</span>
             <ChevronDown
@@ -114,8 +119,13 @@ export function AdminDateRangePicker() {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2 py-1 rounded-xl text-[11px] font-mono border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    style={{ color: "var(--adm-text)" }}
+                    className="w-full px-2 py-1.5 rounded-xl text-[11px] font-mono border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    style={{ 
+                      background: "var(--adm-bg)",
+                      borderColor: "var(--adm-border)",
+                      color: "var(--adm-text)",
+                      colorScheme: "var(--adm-color-scheme)"
+                    }}
                   />
                 </div>
                 <div>
@@ -126,8 +136,13 @@ export function AdminDateRangePicker() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2 py-1 rounded-xl text-[11px] font-mono border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    style={{ color: "var(--adm-text)" }}
+                    className="w-full px-2 py-1.5 rounded-xl text-[11px] font-mono border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    style={{ 
+                      background: "var(--adm-bg)",
+                      borderColor: "var(--adm-border)",
+                      color: "var(--adm-text)",
+                      colorScheme: "var(--adm-color-scheme)"
+                    }}
                   />
                 </div>
               </div>

@@ -44,24 +44,24 @@ const PAGE_TITLES: Record<string, string> = {
 function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   return (
     <div className="flex items-center gap-1.5">
-      <Sun className={`h-[18px] w-[18px] stroke-[2] transition-colors ${!dark ? "text-slate-800" : "text-slate-400"}`} />
+      <Sun className={`h-[15px] w-[15px] stroke-[2] transition-colors ${!dark ? "text-slate-800" : "text-slate-400"}`} />
       
       <button
         id="theme-toggle"
         onClick={onToggle}
         aria-label="Toggle dark mode"
-        className={`relative w-[38px] h-[22px] rounded-full transition-colors duration-300 focus:outline-none ${
+        className={`relative w-[32px] h-[18px] rounded-full transition-colors duration-300 focus:outline-none ${
           dark ? "bg-slate-700" : "bg-slate-300"
         }`}
       >
         <span
-          className={`absolute top-[3px] left-[3px] w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm ${
-            dark ? "translate-x-[16px]" : "translate-x-0"
+          className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full transition-transform duration-300 shadow-sm ${
+            dark ? "translate-x-[14px]" : "translate-x-0"
           }`}
         />
       </button>
 
-      <Moon className={`h-[18px] w-[18px] stroke-[2] transition-colors ${dark ? "text-slate-200" : "text-slate-400"}`} />
+      <Moon className={`h-[15px] w-[15px] stroke-[2] transition-colors ${dark ? "text-slate-200" : "text-slate-400"}`} />
     </div>
   );
 }
@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               background: "transparent",
               borderBottom: "none",
             }}
-            className="sticky top-0 z-20 px-6 sm:px-8 pt-8 pb-4 flex items-center gap-3"
+            className="sticky top-0 z-20 px-6 sm:px-10 lg:px-14 xl:px-16 pt-12 pb-6 flex items-center gap-3"
           >
             {/* Mobile Sheet Trigger */}
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -132,22 +132,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </SheetContent>
             </Sheet>
 
-            {/* Page title + interactive date picker */}
-            <div className="flex-1 min-w-0 flex items-center gap-5 sm:gap-6">
-              <h2
-                className="text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"
-                style={{ color: "var(--adm-text)" }}
-              >
-                {pageTitle}
-              </h2>
-              <div className="hidden sm:block shrink-0">
-                <AdminDateRangePicker />
-              </div>
+            {/* Page title / Greeting */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              {pageTitle === "Dashboard" ? (
+                <div className="animate-fade-in-up overflow-hidden">
+                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight truncate" style={{ color: "var(--adm-text)", fontFamily: "var(--font-heading)" }} title="Selamat Datang, Superadmin!">Selamat Datang, Superadmin!</h1>
+                  <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--adm-text-3)" }}>Berikut adalah ringkasan operasional dan performa bisnis hari ini.</p>
+                </div>
+              ) : (
+                <h2
+                  className="text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"
+                  style={{ color: "var(--adm-text)" }}
+                >
+                  {pageTitle}
+                </h2>
+              )}
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-3 sm:gap-5">
-
+            <div className="flex items-center gap-3 sm:gap-5 self-start mt-1.5">
+              <div className="hidden sm:block shrink-0">
+                <AdminDateRangePicker />
+              </div>
 
               {/* Dark mode toggle */}
               <ThemeToggle dark={dark} onToggle={toggleDark} />
@@ -157,7 +163,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
 
-          <div className="p-4 sm:p-5 lg:p-6">{children}</div>
+          <div className="px-6 sm:px-10 lg:px-14 xl:px-16 pb-16 pt-2">{children}</div>
         </main>
 
 

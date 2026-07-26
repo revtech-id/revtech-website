@@ -5,7 +5,8 @@
   --color-primary: #0052ff;
   
   /* I'll use next/font for font, so standard sans is fine, but I can override it */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-main), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
   
   --animate-float: float 6s ease-in-out infinite;
   --animate-levitate: levitate 8s ease-in-out infinite;
@@ -52,8 +53,8 @@
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes fadeInUp {
-    from { opacity: 0; transform: translate(-50%, 20px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 
@@ -171,6 +172,7 @@
     --adm-topbar:      rgba(255,255,255,0.92);
     --adm-chart-grid:  #F1F5F9;
     --adm-scrollbar:   #CBD5E1;
+    --adm-color-scheme: light;
   }
 
   .admin-dark {
@@ -193,6 +195,7 @@
     --adm-topbar:      rgba(26,26,46,0.92);
     --adm-chart-grid:  #252538;
     --adm-scrollbar:   #2E2E48;
+    --adm-color-scheme: dark;
   }
 }
 

@@ -37,13 +37,10 @@ export function StatCard({
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-2)" }}>
           {label}
         </p>
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: defaultIconBg }}
-        >
+        <div className="w-8 h-8 flex items-center justify-end shrink-0">
           <span
-            className="material-symbols-outlined text-[17px]"
-            style={{ fontVariationSettings: "'FILL' 1", color: iconColor }}
+            className="material-symbols-outlined text-[20px]"
+            style={{ fontVariationSettings: "'FILL' 0, 'wght' 400", color: "var(--adm-text)" }}
           >
             {icon}
           </span>
@@ -209,24 +206,26 @@ interface ProgressRingCardProps {
   sub?: string;
   percent: number;
   color: string;
+  legendMain?: string;
+  legendSub?: string;
   badge?: string;
   badgeColor?: string;
 }
 
-function ProgressRing({ percent, color, size = 80 }: { percent: number; color: string; size?: number }) {
-  const r = (size - 12) / 2;
+function ProgressRing({ percent, color, size = 80, strokeWidth = 10 }: { percent: number; color: string; size?: number, strokeWidth?: number }) {
+  const r = (size - strokeWidth - 2) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (percent / 100) * circ;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--adm-border)" strokeWidth={10} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--adm-border)" strokeWidth={strokeWidth} />
       <circle
         cx={size / 2}
         cy={size / 2}
         r={r}
         fill="none"
         stroke={color}
-        strokeWidth={10}
+        strokeWidth={strokeWidth}
         strokeDasharray={`${dash} ${circ - dash}`}
         strokeLinecap="round"
         style={{ transition: "stroke-dasharray 0.5s ease" }}
@@ -235,7 +234,7 @@ function ProgressRing({ percent, color, size = 80 }: { percent: number; color: s
   );
 }
 
-export function ProgressRingCard({ label, value, sub, percent, color, badge, badgeColor }: ProgressRingCardProps) {
+export function ProgressRingCard({ label, value, sub, percent, color, legendMain, legendSub, badge, badgeColor }: ProgressRingCardProps) {
   return (
     <div
       style={{
@@ -243,31 +242,47 @@ export function ProgressRingCard({ label, value, sub, percent, color, badge, bad
         border: "1px solid var(--adm-border)",
         boxShadow: "var(--adm-shadow)",
       }}
-      className="rounded-2xl p-5 transition-all duration-200 hover:shadow-lg"
+      className="rounded-2xl p-6 transition-all duration-200 hover:shadow-lg h-full flex flex-col justify-between"
     >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--adm-text-2)" }}>
-          {label}
-        </p>
-        {badge && (
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: `${badgeColor ?? color}22`, color: badgeColor ?? color }}
-          >
-            {badge}
-          </span>
-        )}
+      {/* Bagian Atas: Label & Value */}
+      <div>
+        <div className="flex items-center justify-between">
+          <p className="text-[13px] font-bold text-left" style={{ color: "var(--adm-text-2)" }}>
+            {label}
+          </p>
+          {badge && (
+            <span
+              className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+              style={{ background: `${badgeColor ?? color}15`, color: badgeColor ?? color }}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="text-[32px] leading-tight font-bold tracking-tight mt-2 text-left" style={{ color: "var(--adm-text)" }}>{value}</p>
+        {sub && <p className="text-[12px] mt-1 text-left font-medium" style={{ color: "var(--adm-text-3)" }}>{sub}</p>}
       </div>
-      <div className="flex items-center gap-4">
-        <div className="relative shrink-0">
-          <ProgressRing percent={percent} color={color} size={80} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-bold" style={{ color: "var(--adm-text)" }}>{percent}%</span>
+
+      {/* Bagian Bawah: Legend & Diagram */}
+      <div className="flex items-end justify-between mt-8">
+        <div className="flex flex-col gap-2 pb-2">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+            <span className="text-[10px] font-bold w-6" style={{ color: "var(--adm-text)" }}>{percent}%</span>
+            <span className="text-[10px]" style={{ color: "var(--adm-text-3)" }}>{legendMain || "Selesai"}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "var(--adm-border)" }} />
+            <span className="text-[10px] font-bold w-6" style={{ color: "var(--adm-text)" }}>{100 - percent}%</span>
+            <span className="text-[10px]" style={{ color: "var(--adm-text-3)" }}>{legendSub || "Sisa"}</span>
           </div>
         </div>
-        <div>
-          <p className="text-xl font-bold" style={{ color: "var(--adm-text)" }}>{value}</p>
-          {sub && <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>{sub}</p>}
+
+        <div className="relative shrink-0">
+          <ProgressRing percent={percent} color={color} size={110} strokeWidth={18} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[16px] font-bold" style={{ color: "var(--adm-text)" }}>{percent}%</span>
+          </div>
         </div>
       </div>
     </div>

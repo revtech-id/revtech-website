@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { StatCard, ProgressRingCard, AdminCard } from "@/components/admin/ui";
@@ -125,103 +125,133 @@ function PipelineTooltip({ active, payload }: { active?: boolean; payload?: Arra
 // ── AI Insight Widget ─────────────────────────────────────────────────────────
 
 function AIInsightWidget() {
-  const [insight, setInsight] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [insight, setInsight] = useState<React.ReactNode>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const activeOrders = orders.filter((o) => o.status !== "selesai").length;
   const paidRevenue = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + i.amount, 0);
   const pendingRevenue = invoices.filter((i) => i.status === "pending").reduce((s, i) => s + i.amount, 0);
 
-  async function fetchInsight() {
+  // Computed data untuk digabungkan ke Insight
+  const pendingInvoices = invoices.filter((i) => i.status === "pending");
+  const overdueInvoices = pendingInvoices.filter((i) => {
+    const d = daysUntil(i.dueDate);
+    return d !== null && d < 0;
+  });
+  const expiringDomains = clients.filter((c) => {
+    const d = daysUntil(c.domainExpiry);
+    return d !== null && d <= 60;
+  });
+  const urgentDeadlines = orders.filter((o) => o.status !== "selesai").filter((o) => {
+    const d = daysUntil(o.deadline);
+    return d !== null && d >= 0 && d <= 3;
+  });
+
+  function fetchInsight() {
     setLoading(true);
     setError("");
-    setInsight("");
-    try {
-      const res = await fetch("/api/admin/insight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stats: { activeOrders, paidRevenue, pendingRevenue, completedOrders: orders.filter((o) => o.status === "selesai").length },
-          date: new Date().toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-        }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json() as { insight: string };
-      setInsight(data.insight);
-    } catch {
-      setError("Gagal memuat insight. Pastikan Gemini API key sudah dikonfigurasi di .env.local");
-    } finally {
+    setInsight(null);
+    
+    setTimeout(() => {
+      let content;
+      const issuesCount = urgentDeadlines.length + overdueInvoices.length + expiringDomains.length;
+      
+      if (issuesCount > 0) {
+        content = (
+          <div>
+            <p className="text-[14px] font-bold mb-3" style={{ color: "var(--adm-text)" }}>
+              Butuh Perhatian Anda Hari Ini:
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {urgentDeadlines.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(220, 38, 38, 0.05)", border: "1px solid rgba(220, 38, 38, 0.1)" }}>
+                  <span className="material-symbols-outlined text-[18px] text-red-500">warning</span>
+                  <span className="text-[13px] font-medium text-red-600 dark:text-red-400">{urgentDeadlines.length} proyek kritis mendekati deadline</span>
+                </div>
+              )}
+              {overdueInvoices.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.05)", border: "1px solid rgba(245, 158, 11, 0.1)" }}>
+                  <span className="material-symbols-outlined text-[18px] text-amber-500">pending_actions</span>
+                  <span className="text-[13px] font-medium text-amber-600 dark:text-amber-400">{overdueInvoices.length} tagihan klien tertunggak</span>
+                </div>
+              )}
+              {expiringDomains.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg" style={{ background: "rgba(139, 92, 246, 0.05)", border: "1px solid rgba(139, 92, 246, 0.1)" }}>
+                  <span className="material-symbols-outlined text-[18px] text-purple-500">domain_disabled</span>
+                  <span className="text-[13px] font-medium text-purple-600 dark:text-purple-400">{expiringDomains.length} domain segera expired</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      } else {
+        content = (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg" style={{ background: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.1)" }}>
+              <span className="material-symbols-outlined text-[20px] text-emerald-500 mt-0.5">verified</span>
+              <div>
+                <p className="text-[14px] font-bold text-emerald-600 dark:text-emerald-400 mb-0.5">Semua Sistem Aman</p>
+                <p className="text-[12px] leading-relaxed" style={{ color: "var(--adm-text-2)" }}>
+                  Operasional berjalan dengan sangat lancar. Tidak ada tugas mendesak atau tagihan tertunggak hari ini.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      setInsight(content);
       setLoading(false);
-    }
+    }, 1500);
   }
+
+  useEffect(() => {
+    fetchInsight();
+  }, []);
 
   return (
     <div
-      className="rounded-2xl p-5 flex flex-col"
-      style={{ background: "var(--adm-card)", border: "1px solid var(--adm-border)", boxShadow: "var(--adm-shadow)" }}
+      className="rounded-2xl p-5 flex flex-col relative overflow-hidden h-full"
+      style={{
+        background: "linear-gradient(145deg, var(--adm-card) 0%, rgba(99,102,241,0.02) 100%)",
+        border: "1px solid var(--adm-border)",
+        boxShadow: "var(--adm-shadow-sm)"
+      }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, var(--adm-accent), var(--adm-purple))" }}
-          >
-            <span className="material-symbols-outlined text-white text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-          </div>
-          <div>
-            <p className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>AI Business Insight</p>
-            <p className="text-[10px]" style={{ color: "var(--adm-text-3)" }}>Analisis harian oleh Gemini</p>
-          </div>
-        </div>
-        <button
-          id="refresh-insight"
-          onClick={fetchInsight}
-          disabled={loading}
-          style={{ color: "var(--adm-text-3)" }}
-          className="p-1.5 rounded-lg hover:opacity-70 transition-opacity disabled:opacity-40"
-          aria-label="Refresh insight"
-        >
-          <span className={`material-symbols-outlined text-[18px] ${loading ? "animate-spin" : ""}`}>refresh</span>
-        </button>
-      </div>
+      {/* Decorative Blur Orbs */}
+      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "var(--adm-accent)" }} />
+      <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full opacity-10 blur-2xl pointer-events-none" style={{ background: "#8B5CF6" }} />
 
-      {!insight && !loading && !error && (
-        <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
-          <p className="text-sm" style={{ color: "var(--adm-text-2)" }}>
-            Berdasarkan data pesanan & invoice aktif, AI Co-Pilot akan memberikan saran prioritas kerja hari ini.
-          </p>
-          <button
-            id="generate-insight"
-            onClick={fetchInsight}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-            style={{ background: "var(--adm-accent)" }}
-          >
-            <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            Generate Insight
-          </button>
+
+
+      {/* Content */}
+      <div className="flex-1 relative z-10 flex flex-col md:flex-row items-center gap-6">
+        <div className="flex-1 w-full">
+          {loading ? (
+            <div className="flex flex-col gap-2 mt-2">
+              <div className="h-2.5 rounded animate-pulse w-3/4" style={{ background: "var(--adm-border)" }} />
+              <div className="h-2.5 rounded animate-pulse w-1/2" style={{ background: "var(--adm-border)" }} />
+            </div>
+          ) : error ? (
+            <p className="text-[11px] mt-1" style={{ color: "var(--adm-danger)" }}>{error}</p>
+          ) : insight ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-[12px] mt-1.5 leading-relaxed"
+              style={{ color: "var(--adm-text-2)" }}
+            >
+              {insight}
+            </motion.div>
+          ) : null}
         </div>
-      )}
-      {loading && (
-        <div className="flex flex-col gap-3 py-4">
-          {[95, 75, 85, 60].map((w, i) => (
-            <div key={i} className="h-3 rounded animate-pulse" style={{ width: `${w}%`, background: "var(--adm-border)" }} />
-          ))}
+        
+        {/* Placeholder Area Gambar Robot */}
+        <div className="hidden md:flex w-48 shrink-0 items-center justify-center min-h-[120px] rounded-xl border border-dashed opacity-50" style={{ borderColor: "var(--adm-border)" }}>
+           <span className="text-[11px] font-medium text-center px-4" style={{ color: "var(--adm-text-3)" }}>[Area Gambar Robot]</span>
         </div>
-      )}
-      {error && (
-        <p className="text-sm rounded-xl p-3" style={{ color: "var(--adm-danger)", background: "rgba(239,68,68,0.08)" }}>{error}</p>
-      )}
-      {insight && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-xl"
-          style={{ background: "var(--adm-accent-soft)", border: "1px solid var(--adm-border)" }}
-        >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--adm-text)" }}>{insight}</p>
-        </motion.div>
-      )}
+      </div>
     </div>
   );
 }
@@ -247,22 +277,10 @@ export default function DashboardPage() {
     ? Math.round((paidTotal / (paidTotal + pendingTotal)) * 100)
     : 0;
 
-  // Overdue invoices (pending & past due date)
+  // Overdue invoices (diperlukan untuk StatCard warning)
   const overdueInvoices = pendingInvoices.filter((i) => {
     const d = daysUntil(i.dueDate);
     return d !== null && d < 0;
-  });
-
-  // Domain expiry alerts (≤60 days)
-  const expiringDomains = clients.filter((c) => {
-    const d = daysUntil(c.domainExpiry);
-    return d !== null && d <= 60;
-  });
-
-  // Deadline urgent (≤3 days, not selesai)
-  const urgentDeadlines = activeOrders.filter((o) => {
-    const d = daysUntil(o.deadline);
-    return d !== null && d >= 0 && d <= 3;
   });
 
   // Pipeline funnel data
@@ -271,147 +289,75 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
 
-      {/* ── Alerts row ───────────────────────────────────────────────────── */}
-      {(urgentDeadlines.length > 0 || overdueInvoices.length > 0 || expiringDomains.length > 0) && (
-        <motion.div {...fadeUp(0)} className="flex flex-col gap-2">
-          {urgentDeadlines.length > 0 && (
-            <div
-              className="flex items-start gap-3 p-3.5 rounded-xl"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}
-            >
-              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5" style={{ color: "var(--adm-danger)", fontVariationSettings: "'FILL' 1" }}>alarm</span>
-              <div>
-                <p className="text-xs font-bold" style={{ color: "var(--adm-danger)" }}>Deadline Kritis</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-2)" }}>
-                  {urgentDeadlines.map((o) => {
-                    const d = daysUntil(o.deadline);
-                    return `${o.client} — ${o.service} (${d === 0 ? "hari ini!" : `${d} hari lagi`})`;
-                  }).join(" · ")}
-                </p>
-              </div>
-            </div>
-          )}
-          {overdueInvoices.length > 0 && (
-            <div
-              className="flex items-start gap-3 p-3.5 rounded-xl"
-              style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}
-            >
-              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5" style={{ color: "var(--adm-warning)", fontVariationSettings: "'FILL' 1" }}>receipt_long</span>
-              <div>
-                <p className="text-xs font-bold" style={{ color: "var(--adm-warning)" }}>Tagihan Jatuh Tempo</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-2)" }}>
-                  {overdueInvoices.map((i) => `${i.client} — ${formatRp(i.amount)}`).join(" · ")}
-                </p>
-              </div>
-            </div>
-          )}
-          {expiringDomains.length > 0 && (
-            <div
-              className="flex items-start gap-3 p-3.5 rounded-xl"
-              style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
-            >
-              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5" style={{ color: "var(--adm-purple)", fontVariationSettings: "'FILL' 1" }}>language</span>
-              <div>
-                <p className="text-xs font-bold" style={{ color: "var(--adm-purple)" }}>Domain Segera Expired</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-2)" }}>
-                  {expiringDomains.map((c) => `${c.name} — ${c.domain} (${daysUntil(c.domainExpiry)} hari)`).join(" · ")}
-                </p>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      )}
 
-      {/* ── Row 1: 4 KPI cards ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Baris 1: Sistem Insight (Full Width) ────────────────────── */}
+      <div className="mb-5">
         <motion.div {...fadeUp(1)}>
-          <StatCard
-            label="Pesanan Aktif"
-            value={activeOrders.length}
-            sub={`${completedOrders.length} proyek selesai`}
-            icon="work"
-            iconColor="#2563EB"
-            trend="up"
-            trendLabel="dalam pipeline"
-          />
-        </motion.div>
-        <motion.div {...fadeUp(2)}>
-          <StatCard
-            label="Proyek Selesai"
-            value={completedOrders.length}
-            sub="Total sepanjang waktu"
-            icon="task_alt"
-            iconColor="#10B981"
-            trend="up"
-            trendLabel="delivered ke klien"
-          />
-        </motion.div>
-        <motion.div {...fadeUp(3)}>
-          <StatCard
-            label="Pendapatan Masuk"
-            value={formatRp(paidTotal)}
-            sub="Total sudah terbayar"
-            icon="payments"
-            iconColor="#8B5CF6"
-            trend="up"
-            trendLabel="dari invoice lunas"
-          />
-        </motion.div>
-        <motion.div {...fadeUp(4)}>
-          <StatCard
-            label="Tagihan Pending"
-            value={formatRp(pendingTotal)}
-            sub={`${pendingInvoices.length} invoice belum lunas`}
-            icon="pending_actions"
-            iconColor={overdueInvoices.length > 0 ? "#EF4444" : "#F59E0B"}
-            trend={overdueInvoices.length > 0 ? "down" : "neutral"}
-            trendLabel={overdueInvoices.length > 0 ? `${overdueInvoices.length} overdue!` : "menunggu pembayaran"}
-          />
+          <AIInsightWidget />
         </motion.div>
       </div>
 
-      {/* ── Row 2: Pipeline funnel + Invoice progress ─────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Pipeline bar chart */}
-        <motion.div {...fadeUp(5)} className="lg:col-span-2">
-          <AdminCard>
-            <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Pesanan</h3>
-                <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>Distribusi {orders.length} pesanan per stage</p>
-              </div>
-            </div>
-            <div className="px-2 pb-4" style={{ height: 180 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineData} barSize={24} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid vertical={false} stroke="var(--adm-chart-grid)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10, fill: "var(--adm-text-3)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis hide allowDecimals={false} />
-                  <Tooltip content={<PipelineTooltip />} cursor={{ fill: "var(--adm-border)", radius: 6 }} />
-                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                    {pipelineData.map((s, i) => (
-                      <Cell key={i} fill={s.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </AdminCard>
-        </motion.div>
+      {/* ── Baris 2: KPI Cards (Kiri) & Progress Rings (Kanan) ────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        
+        {/* KIRI: 4 KPI Cards */}
+        <div className="grid grid-cols-2 gap-4 h-full">
+            <motion.div {...fadeUp(1)}>
+              <StatCard
+                label="Pendapatan Masuk"
+                value={formatRp(paidTotal)}
+                sub="Total sudah terbayar"
+                icon="payments"
+                iconColor="#8B5CF6"
+                trend="up"
+                trendLabel="dari invoice lunas"
+              />
+            </motion.div>
+            <motion.div {...fadeUp(2)}>
+              <StatCard
+                label="Tagihan Pending"
+                value={formatRp(pendingTotal)}
+                sub={`${pendingInvoices.length} invoice belum lunas`}
+                icon="pending_actions"
+                iconColor={overdueInvoices.length > 0 ? "#EF4444" : "#F59E0B"}
+                trend={overdueInvoices.length > 0 ? "down" : "neutral"}
+                trendLabel={overdueInvoices.length > 0 ? `${overdueInvoices.length} overdue!` : "menunggu pembayaran"}
+              />
+            </motion.div>
+            <motion.div {...fadeUp(3)}>
+              <StatCard
+                label="Pesanan Aktif"
+                value={activeOrders.length}
+                sub={`${completedOrders.length} proyek selesai`}
+                icon="work"
+                iconColor="#2563EB"
+                trend="up"
+                trendLabel="dalam pipeline"
+              />
+            </motion.div>
+            <motion.div {...fadeUp(4)}>
+              <StatCard
+                label="Proyek Selesai"
+                value={completedOrders.length}
+                sub="Total sepanjang waktu"
+                icon="task_alt"
+                iconColor="#10B981"
+                trend="up"
+                trendLabel="delivered ke klien"
+              />
+            </motion.div>
+        </div>
 
-        {/* Invoice progress rings */}
-        <motion.div {...fadeUp(6)} className="flex flex-col gap-4">
+        {/* KANAN: Progress Rings */}
+        <motion.div {...fadeUp(5)} className="grid grid-cols-2 gap-4 h-full">
           <ProgressRingCard
             label="Invoice Lunas"
             value={formatRp(paidTotal)}
             sub={`${paidInvoices.length} dari ${invoices.length} invoice`}
             percent={paidPercent}
             color="#10B981"
+            legendMain="Lunas"
+            legendSub="Belum Lunas"
             badge={`${paidPercent}%`}
             badgeColor="#10B981"
           />
@@ -421,11 +367,45 @@ export default function DashboardPage() {
             sub="Confirmed + pending"
             percent={Math.min(Math.round((activeOrders.length / Math.max(orders.length, 1)) * 100), 100)}
             color="#3B82F6"
+            legendMain="Terkonfirmasi"
+            legendSub="Tertunda"
             badge={`${activeOrders.length} aktif`}
             badgeColor="#3B82F6"
           />
         </motion.div>
       </div>
+
+      {/* ── Row 2: Pipeline funnel ────────────────────────────────────────── */}
+      <motion.div {...fadeUp(6)}>
+        <AdminCard>
+          <div className="px-5 pt-5 pb-2 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Pesanan</h3>
+              <p className="text-xs mt-0.5" style={{ color: "var(--adm-text-3)" }}>Distribusi {orders.length} pesanan per stage</p>
+            </div>
+          </div>
+          <div className="px-2 pb-4" style={{ height: 180 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pipelineData} barSize={24} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--adm-chart-grid)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "var(--adm-text-3)" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis hide allowDecimals={false} />
+                <Tooltip content={<PipelineTooltip />} cursor={{ fill: "var(--adm-border)", radius: 6 }} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {pipelineData.map((s, i) => (
+                    <Cell key={i} fill={s.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </AdminCard>
+      </motion.div>
 
       {/* ── Row 3: Active orders table ───────────────────────────────────── */}
       <motion.div {...fadeUp(7)}>
@@ -510,11 +490,6 @@ export default function DashboardPage() {
             </table>
           </div>
         </AdminCard>
-      </motion.div>
-
-      {/* ── Row 4: AI Insight ────────────────────────────────────────────── */}
-      <motion.div {...fadeUp(8)}>
-        <AIInsightWidget />
       </motion.div>
     </div>
   );
