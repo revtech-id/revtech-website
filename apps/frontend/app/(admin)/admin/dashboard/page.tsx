@@ -322,7 +322,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         
         {/* KIRI: 4 KPI Cards */}
-        <div className="grid grid-cols-2 gap-4 h-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
             <motion.div {...fadeUp(1)}>
               <StatCard
                 label="Pendapatan Masuk"
@@ -374,7 +374,7 @@ export default function DashboardPage() {
         </div>
 
         {/* KANAN: Progress Rings */}
-        <motion.div {...fadeUp(5)} className="grid grid-cols-2 gap-4 h-full">
+        <motion.div {...fadeUp(5)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
           <ProgressRingCard
             label="Invoice Lunas"
             value={formatRp(paidTotal)}
