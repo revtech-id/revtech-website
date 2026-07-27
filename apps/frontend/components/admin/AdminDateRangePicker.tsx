@@ -61,7 +61,7 @@ export function AdminDateRangePicker() {
             background: "var(--adm-card)",
             boxShadow: "var(--adm-shadow-md)",
           }}
-          className="absolute left-0 top-full mt-2 w-64 z-50 rounded-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 duration-150"
+          className="absolute -right-16 sm:right-0 top-full mt-2 w-72 z-50 rounded-2xl p-2 space-y-0.5 animate-in fade-in zoom-in-95 duration-150"
         >
           {[
             { id: "today", text: "Hari Ini", start: "2026-07-25", end: "2026-07-25" },
@@ -109,7 +109,7 @@ export function AdminDateRangePicker() {
 
           {showCustom && (
             <div className="p-2 space-y-2 pt-2 mt-1">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-semibold block mb-1 opacity-70" style={{ color: "var(--adm-text-3)" }}>
                     Mulai

@@ -109,8 +109,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <ThemeContext.Provider value={{ dark, toggle: toggleDark }}>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            try {
+              if (localStorage.getItem('adm-dark') === 'true') {
+                document.documentElement.classList.add('admin-dark');
+                document.documentElement.classList.remove('admin-light');
+              } else {
+                document.documentElement.classList.add('admin-light');
+                document.documentElement.classList.remove('admin-dark');
+              }
+            } catch (e) {}
+          `,
+        }}
+      />
       <div
-        className={dark ? "admin-dark" : "admin-light"}
         style={{ minHeight: "100svh", background: "var(--adm-bg)", color: "var(--adm-text)", transition: "background 0.3s, color 0.3s" }}
       >
         {/* Desktop Sidebar */}
