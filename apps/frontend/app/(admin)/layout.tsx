@@ -124,35 +124,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               background: "transparent",
               borderBottom: "none",
             }}
-            className="sticky top-0 z-20 px-6 sm:px-10 lg:px-14 xl:px-16 pt-12 pb-6 flex items-center gap-3"
+            className="sticky top-0 z-20 px-6 sm:px-10 lg:px-14 xl:px-16 pt-12 pb-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-4 gap-x-3"
           >
-            {/* Mobile Sheet Trigger */}
-            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden shrink-0"
-                  aria-label="Buka menu navigasi"
+            {/* 1. Mobile Sheet Trigger (Hamburger) */}
+            <div className="order-1 flex-none sm:order-none">
+              <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden shrink-0"
+                    aria-label="Buka menu navigasi"
+                  >
+                    <Menu className="h-5 w-5" style={{ color: "var(--adm-text)" }} />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-[200px] p-0 border-r"
+                  style={{ background: "var(--adm-sidebar)", borderColor: "var(--adm-border)" }}
                 >
-                  <Menu className="h-5 w-5" style={{ color: "var(--adm-text)" }} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="w-[200px] p-0 border-r"
-                style={{ background: "var(--adm-sidebar)", borderColor: "var(--adm-border)" }}
-              >
-                <VerticalNav onItemClick={() => setMobileNavOpen(false)} />
-              </SheetContent>
-            </Sheet>
+                  <VerticalNav onItemClick={() => setMobileNavOpen(false)} />
+                </SheetContent>
+              </Sheet>
+            </div>
 
-            {/* Page title / Greeting */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
+            {/* 2. Page title / Greeting */}
+            <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 flex flex-col justify-center">
               {pageTitle === "Dashboard" ? (
                 <div className="animate-fade-in-up overflow-hidden">
-                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight truncate" style={{ color: "var(--adm-text)", fontFamily: "var(--font-heading)" }} title="Selamat Datang, Superadmin!">Selamat Datang, Superadmin!</h1>
-                  <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--adm-text-3)" }}>Berikut adalah ringkasan operasional dan performa bisnis hari ini.</p>
+                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "var(--adm-text)", fontFamily: "var(--font-heading)" }} title="Selamat Datang, Superadmin!">Selamat Datang, Superadmin!</h1>
+                  <p className="text-[13px] mt-0.5" style={{ color: "var(--adm-text-3)" }}>Berikut adalah ringkasan operasional dan performa bisnis hari ini.</p>
                 </div>
               ) : (
                 <h2
@@ -164,9 +166,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             </div>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-3 sm:gap-5 self-start mt-1.5">
-              <div className="hidden sm:block shrink-0">
+            {/* 3. Right actions */}
+            <div className="order-2 flex-none flex items-center gap-3 sm:gap-5 sm:order-none sm:self-start sm:mt-1.5">
+              <div className="shrink-0">
                 <AdminDateRangePicker />
               </div>
 

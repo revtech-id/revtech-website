@@ -50,7 +50,7 @@ export function AdminDateRangePicker() {
           color: "var(--adm-text-2)",
         }}
       >
-        <span className="font-mono text-[9.5px] opacity-85">{dateDisplay}</span>
+        <span className="font-mono text-[9.5px] opacity-85 hidden sm:inline-block">{dateDisplay}</span>
         <Calendar className="h-3 w-3 opacity-60 shrink-0" style={{ color: "var(--adm-text-2)" }} />
       </button>
 

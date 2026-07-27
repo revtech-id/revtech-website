@@ -209,7 +209,7 @@ function AIInsightWidget() {
               <span className="text-[13px] font-bold tracking-tight">Insight Harian</span>
             </div>
             <div className={`w-px h-4 hidden sm:block shrink-0 ${theme.divider}`}></div>
-            <p className="text-[13px] flex-1 truncate" style={{ color: "var(--adm-text)" }} title={`Mohon perhatian: Anda memiliki ${alertSentence} hari ini.`}>
+            <p className="text-[13px] flex-1 leading-relaxed" style={{ color: "var(--adm-text)" }} title={`Mohon perhatian: Anda memiliki ${alertSentence} hari ini.`}>
               Mohon perhatian: Anda memiliki <strong className="font-bold">{alertSentence}</strong> hari ini.
             </p>
             <Link href={urgentDeadlines.length > 0 ? "/admin/pesanan" : "/admin/invoice"} className={`text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 text-center shadow-sm ${theme.button}`}>
@@ -225,7 +225,7 @@ function AIInsightWidget() {
               <span className="text-[13px] font-bold tracking-tight">Sistem Sehat</span>
             </div>
             <div className="w-px h-4 bg-emerald-200 dark:bg-emerald-500/30 hidden sm:block shrink-0"></div>
-            <p className="text-[13px] flex-1 truncate" style={{ color: "var(--adm-text)" }}>
+            <p className="text-[13px] flex-1 leading-relaxed" style={{ color: "var(--adm-text)" }}>
               Operasional berjalan dengan sangat lancar. Tidak ada tugas mendesak atau tagihan tertunggak hari ini.
             </p>
           </div>
@@ -264,6 +264,14 @@ const fadeUp = (i: number) => ({
 });
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
+
+const CustomTick = ({ x, y, payload }: any) => (
+  <g transform={`translate(${x},${y})`} className="hidden sm:block">
+    <text x={0} y={0} dy={12} textAnchor="middle" fill="var(--adm-text-3)" fontSize={10}>
+      {payload.value}
+    </text>
+  </g>
+);
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"proyek" | "server">("proyek");
@@ -424,10 +432,10 @@ export default function DashboardPage() {
                   <BarChart data={pipelineData} barSize={10} margin={{ top: 30, right: 0, bottom: 0, left: 0 }}>
                     <XAxis
                       dataKey="label"
-                      tick={{ fontSize: 10, fill: "var(--adm-text-3)" }}
+                      tick={<CustomTick />}
                       axisLine={false}
                       tickLine={false}
-                      tickMargin={12}
+                      interval={0}
                     />
                     <YAxis hide allowDecimals={false} />
                     <Tooltip content={<PipelineTooltip />} cursor={false} />
