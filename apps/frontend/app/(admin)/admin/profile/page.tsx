@@ -56,11 +56,7 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Profil Superadmin"
-        description="Kelola informasi akun, peran founder, dan keamanan"
-        icon="person"
-      />
+      <div className="pt-2"></div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Profile Card Overview */}

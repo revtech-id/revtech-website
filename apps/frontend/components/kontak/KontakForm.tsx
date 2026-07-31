@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -11,6 +11,7 @@ import { jasaWebFormSchema, type JasaWebFormValues } from '@/lib/validations/for
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { countries } from '@/lib/countries';
+import { CountrySelector } from '@/components/ui/CountrySelector';
 
 type ServiceCategory = 'jasa_web' | 'produk_digital' | 'custom';
 type JasaWebPackage = 'Usaha' | 'Profesional' | 'Eksklusif';
@@ -26,20 +27,7 @@ export default function KontakForm() {
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
     const [waLink, setWaLink] = useState<string>('');
     
-    // State untuk Custom Country Dropdown
-    const [isCountryOpen, setIsCountryOpen] = useState(false);
     const [selectedCountry, setSelectedCountry] = useState(countries[0]);
-    const countryDropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
-                setIsCountryOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
 
     const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
         resolver: zodResolver(jasaWebFormSchema),
@@ -310,47 +298,11 @@ export default function KontakForm() {
 
                         <div>
                             <div className="flex bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-gray-900 transition-all hover:border-gray-300 shadow-sm group">
-                                <div className="relative flex shrink-0" ref={countryDropdownRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCountryOpen(!isCountryOpen)}
-                                        className="bg-transparent border-r border-gray-200 rounded-l-xl text-gray-900 font-bold pl-4 pr-9 h-full flex items-center justify-center gap-2 outline-none group-hover:bg-gray-100 transition-colors"
-                                    >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`} alt={selectedCountry.code} className="w-5 h-auto object-contain rounded-sm shadow-sm" />
-                                        <span className="text-[14px]">{selectedCountry.dial_code}</span>
-                                    </button>
-                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-gray-500 pointer-events-none z-10 transition-transform ${isCountryOpen ? 'rotate-180' : ''}`}>expand_more</span>
-                                    
-                                    <AnimatePresence>
-                                        {isCountryOpen && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, y: -5 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -5 }}
-                                                transition={{ duration: 0.15 }}
-                                                className="absolute top-[calc(100%+8px)] left-0 w-64 max-h-60 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 z-50 flex flex-col p-1 custom-scrollbar"
-                                            >
-                                                {countries.map(country => (
-                                                    <button
-                                                        key={country.code}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedCountry(country);
-                                                            setIsCountryOpen(false);
-                                                        }}
-                                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${selectedCountry.code === country.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium'}`}
-                                                    >
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                        <img src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} loading="lazy" className="w-5 h-auto object-contain rounded-sm shadow-sm" />
-                                                        <span>{country.name}</span>
-                                                        <span className={`ml-auto ${selectedCountry.code === country.code ? 'text-blue-500' : 'text-gray-500'}`}>{country.dial_code}</span>
-                                                    </button>
-                                                ))}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
+                                <CountrySelector 
+                                    selected={selectedCountry} 
+                                    onSelect={setSelectedCountry} 
+                                    theme="public" 
+                                />
                                 <Input 
                                     type="tel" 
                                     {...register("whatsapp")}

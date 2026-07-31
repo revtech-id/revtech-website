@@ -84,23 +84,18 @@ export default function SystemPage() {
 
   return (
     <div>
-      <PageHeader
-        title="System"
-        description="Konfigurasi engine, integrasi API, dan pengaturan bisnis"
-        icon="settings"
-        action={
+      <div className="flex justify-end mb-4 mt-2">
           <button
             id="save-system-settings"
             onClick={save}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${saved ? "bg-emerald-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+            className={`inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${saved ? "bg-emerald-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-sm"}`}
           >
             <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               {saved ? "check_circle" : "save"}
             </span>
             {saved ? "Tersimpan!" : "Simpan Pengaturan"}
           </button>
-        }
-      />
+      </div>
 
       <div className="space-y-5">
         {SECTIONS.map((section, si) => (
@@ -157,7 +152,7 @@ export default function SystemPage() {
                   { label: "Versi OS", value: "1.0.0" },
                   { label: "Framework", value: "Next.js 16" },
                   { label: "AI Engine", value: "Gemini 2.0" },
-                  { label: "Status", value: "🟢 Aktif" },
+                  { label: "Status", value: "Aktif" },
                 ].map((info) => (
                   <div key={info.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
                     <p className="text-[10px] text-slate-400 uppercase tracking-wide">{info.label}</p>

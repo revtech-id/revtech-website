@@ -173,6 +173,7 @@
     --adm-chart-grid:  #F1F5F9;
     --adm-scrollbar:   #CBD5E1;
     --adm-color-scheme: light;
+    color-scheme: light;
   }
 
   .admin-dark {
@@ -196,6 +197,7 @@
     --adm-chart-grid:  #2A2B36;
     --adm-scrollbar:   #475569;
     --adm-color-scheme: dark;
+    color-scheme: dark;
   }
 }
 

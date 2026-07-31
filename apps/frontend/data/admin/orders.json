@@ -3,13 +3,14 @@
     "id": "ORD-001",
     "client": "Toko Maju Jaya",
     "service": "Website Toko Online",
-    "status": "pengerjaan",
+    "status": "antrean",
     "dp": 1500000,
     "total": 3000000,
     "phone": "6281234567890",
-    "createdAt": "2026-07-10",
-    "deadline": "2026-07-30",
-    "notes": "Klien minta integrasi Shopee"
+    "createdAt": "2026-07-28",
+    "deadline": "2026-08-15",
+    "notes": "Baru masuk dari Inbox, menunggu tim dev",
+    "handover": "Terima Beres (Upload Hosting)"
   },
   {
     "id": "ORD-002",
@@ -21,31 +22,31 @@
     "phone": "6282345678901",
     "createdAt": "2026-07-05",
     "deadline": "2026-07-25",
-    "notes": "Revisi 2: hero section & warna brand"
+    "notes": "Revisi 2: hero section & penambahan animasi scroll"
   },
   {
     "id": "ORD-003",
     "client": "Salon Kecantikan Dewi",
     "service": "Landing Page Promo",
-    "status": "dp",
+    "status": "pengerjaan",
     "dp": 750000,
     "total": 1500000,
     "phone": "6283456789012",
     "createdAt": "2026-07-18",
     "deadline": "2026-08-05",
-    "notes": "DP sudah masuk, mulai brief"
+    "notes": "Baru mulai slicing UI ke React"
   },
   {
     "id": "ORD-004",
     "client": "PT Karya Digital",
     "service": "Sistem ERP Custom",
-    "status": "chat",
-    "dp": 0,
+    "status": "pengerjaan",
+    "dp": 7500000,
     "total": 15000000,
     "phone": "6284567890123",
     "createdAt": "2026-07-20",
-    "deadline": null,
-    "notes": "Masih negosiasi scope"
+    "deadline": "2026-10-20",
+    "notes": "Sprint 1: Modul Keuangan"
   },
   {
     "id": "ORD-005",
@@ -57,19 +58,19 @@
     "phone": "6285678901234",
     "createdAt": "2026-06-15",
     "deadline": "2026-06-30",
-    "notes": "Selesai & sudah handover"
+    "notes": "Sudah deploy ke Vercel"
   },
   {
     "id": "ORD-006",
     "client": "Dr. Anita Rahayu",
     "service": "Website Klinik",
-    "status": "inbox",
-    "dp": 0,
+    "status": "pelunasan",
+    "dp": 1250000,
     "total": 2500000,
     "phone": "6286789012345",
-    "createdAt": "2026-07-22",
-    "deadline": null,
-    "notes": "Permintaan masuk via WA"
+    "createdAt": "2026-07-10",
+    "deadline": "2026-07-26",
+    "notes": "Tunggu transfer pelunasan hari ini"
   },
   {
     "id": "ORD-007",
@@ -81,7 +82,7 @@
     "phone": "6287890123456",
     "createdAt": "2026-07-01",
     "deadline": "2026-07-20",
-    "notes": "Menunggu pelunasan sebelum handover"
+    "notes": "Menunggu konfirmasi mutasi bank"
   },
   {
     "id": "ORD-008",
@@ -93,6 +94,6 @@
     "phone": "6288901234567",
     "createdAt": "2026-06-20",
     "deadline": "2026-07-24",
-    "notes": "Handover hari ini"
+    "notes": "Serah terima akses Cpanel & Admin WordPress"
   }
 ]

@@ -123,6 +123,14 @@ function PipelineTooltip({ active, payload }: { active?: boolean; payload?: Arra
   );
 }
 
+// ── Custom Bar Shape ──────────────────────────────────────────────────────────
+
+const CustomBarShape = (props: any) => {
+  const { x, y, width, height, fill, payload } = props;
+  if (payload.count === 0) return null;
+  return <rect x={x} y={y} width={width} height={height} fill={fill} rx={10} />;
+};
+
 // ── AI Insight Widget ─────────────────────────────────────────────────────────
 
 function AIInsightWidget() {
@@ -442,8 +450,9 @@ export default function DashboardPage() {
                     <Bar 
                       dataKey="count" 
                       fill="#3B82F6" 
-                      radius={10} 
                       background={{ fill: "rgba(59, 130, 246, 0.08)", radius: 10 }}
+                      minPointSize={2}
+                      shape={<CustomBarShape />}
                     />
                   </BarChart>
                 </ResponsiveContainer>

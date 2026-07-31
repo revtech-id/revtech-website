@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { PageHeader, StatusBadge, EmptyState } from "@/components/admin/ui";
 
@@ -71,7 +71,7 @@ function SEOPanel({ form, setForm, loading, onGenerate }: {
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
-          {loading ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span> : <span>🔮</span>}
+          {loading ? <span className="material-symbols-outlined text-[14px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
           Generate SEO
         </button>
       </div>
@@ -91,12 +91,29 @@ function SEOPanel({ form, setForm, loading, onGenerate }: {
 }
 
 export default function BlogPage() {
-  const [posts, setPosts] = useState<BlogPost[]>(MOCK_POSTS);
+  const [isClient, setIsClientState] = useState(false);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
   const [view, setView] = useState<"list" | "editor">("list");
   const [editPost, setEditPost] = useState<BlogPost | null>(null);
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
   const [contentForm, setContentForm] = useState({ title: "", category: "Edukasi", content: "" });
+
+  useEffect(() => {
+    setIsClientState(true);
+    const saved = localStorage.getItem("revtech_blog");
+    setPosts(saved ? JSON.parse(saved) : MOCK_POSTS);
+    if (!saved) localStorage.setItem("revtech_blog", JSON.stringify(MOCK_POSTS));
+  }, []);
+
+  function savePosts(updated: BlogPost[]) {
+    setPosts(updated);
+    localStorage.setItem("revtech_blog", JSON.stringify(updated));
+  }
+
+  function deletePost(id: string) {
+    savePosts(posts.filter(p => p.id !== id));
+  }
 
   function openNew() {
     setEditPost(null);
@@ -141,9 +158,7 @@ export default function BlogPage() {
       publishedAt: asDraft ? null : new Date().toISOString().split("T")[0],
       ...seoForm,
     };
-    setPosts((prev) =>
-      editPost ? prev.map((p) => p.id === editPost.id ? newPost : p) : [...prev, newPost]
-    );
+    savePosts(editPost ? posts.map(p => p.id === editPost.id ? newPost : p) : [...posts, newPost]);
     setView("list");
   }
 
@@ -152,25 +167,19 @@ export default function BlogPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Blog"
-        description="Kelola artikel edukasi & konten pemasaran"
-        icon="article"
-        action={
-          view === "list" ? (
-            <button id="new-post" onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              Artikel Baru
-            </button>
-          ) : (
-            <button id="back-to-list" onClick={() => setView("list")} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-              Kembali
-            </button>
-          )
-        }
-      />
-
+      <div className="flex justify-end mb-4 mt-2">
+        {view === "list" ? (
+          <button id="new-post" onClick={openNew} className="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            Artikel Baru
+          </button>
+        ) : (
+          <button id="back-to-list" onClick={() => setView("list")} className="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 active:scale-95 transition-all shadow-sm">
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            Kembali
+          </button>
+        )}
+      </div>
       {view === "list" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">

@@ -41,11 +41,7 @@ export default function MaintenancePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Maintenance"
-        description="Pemantauan masa aktif domain & hosting seluruh klien"
-        icon="dns"
-      />
+      <div className="pt-2"></div>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-6">

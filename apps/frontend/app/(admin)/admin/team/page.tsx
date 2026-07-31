@@ -124,11 +124,7 @@ function OrgChart() {
 export default function TeamPage() {
   return (
     <div>
-      <PageHeader
-        title="Struktur Tim"
-        description="Org chart Solo Founder & AI Co-Pilot"
-        icon="account_tree"
-      />
+      <div className="pt-2"></div>
 
       {/* Badge */}
       <div className="mb-8 flex justify-center">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Inbox,
   ShoppingBag,
   Users,
   Receipt,
@@ -26,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 
 export const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+  { label: "Inbox", icon: Inbox, href: "/admin/inbox" },
   { label: "Pesanan", icon: ShoppingBag, href: "/admin/pesanan" },
   { label: "Klien & Website", icon: Users, href: "/admin/klien" },
   { label: "Invoice", icon: Receipt, href: "/admin/invoice" },

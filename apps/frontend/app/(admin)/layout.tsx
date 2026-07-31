@@ -24,6 +24,7 @@ export const useAdminTheme = () => useContext(ThemeContext);
 
 const PAGE_TITLES: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
+  "/admin/inbox": "Inbox",
   "/admin/pesanan": "Pesanan",
   "/admin/klien": "Klien & Website",
   "/admin/invoice": "Invoice",
@@ -37,6 +38,22 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/system": "System",
   "/admin/system/integrasi": "Integrasi",
   "/admin/system/pengaturan": "Pengaturan",
+};
+
+const PAGE_DESCRIPTIONS: Record<string, string> = {
+  "/admin/dashboard": "Berikut adalah ringkasan operasional dan performa bisnis hari ini.",
+  "/admin/inbox": "Pusat penerimaan prospek klien, antrean follow-up, dan konversi CRM",
+  "/admin/pesanan": "Pipeline manajemen seluruh pesanan & proyek klien",
+  "/admin/klien": "Database klien terdaftar dan pemantauan situs aktif",
+  "/admin/invoice": "Kelola tagihan DP, pelunasan, dan status pembayaran",
+  "/admin/maintenance": "Pemantauan masa aktif domain & hosting seluruh klien",
+  "/admin/studio": "Document Generator, AI Review & Export ke Antigravity",
+  "/admin/blog": "Kelola artikel edukasi & konten pemasaran",
+  "/admin/portofolio": "Showcase studi kasus & proyek terbaik RevTech",
+  "/admin/team": "Org chart Solo Founder & AI Co-Pilot",
+  "/admin/team/activity": "Jejak rekam pergerakan sistem & login",
+  "/admin/profile": "Kelola informasi akun, peran founder, dan keamanan",
+  "/admin/system": "Konfigurasi engine, integrasi API, dan pengaturan bisnis",
 };
 
 // ── Dark mode toggle pill ─────────────────────────────────────────────────────
@@ -164,19 +181,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             {/* 2. Page title / Greeting */}
-            <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 flex flex-col justify-center">
-              {pageTitle === "Dashboard" ? (
-                <div className="animate-fade-in-up overflow-hidden">
-                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "var(--adm-text)", fontFamily: "var(--font-heading)" }} title="Selamat Datang, Superadmin!">Selamat Datang, Superadmin!</h1>
-                  <p className="text-[13px] mt-0.5" style={{ color: "var(--adm-text-3)" }}>Berikut adalah ringkasan operasional dan performa bisnis hari ini.</p>
-                </div>
-              ) : (
-                <h2
-                  className="text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"
-                  style={{ color: "var(--adm-text)" }}
-                >
-                  {pageTitle}
-                </h2>
+            <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1 min-w-0 flex flex-col justify-center animate-fade-in-up overflow-hidden">
+              <h1 
+                className={pageTitle === "Dashboard" ? "text-2xl lg:text-3xl font-bold tracking-tight" : "text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"}
+                style={pageTitle === "Dashboard" ? { color: "var(--adm-text)", fontFamily: "var(--font-heading)" } : { color: "var(--adm-text)" }}
+                title={pageTitle === "Dashboard" ? "Selamat Datang, Superadmin!" : undefined}
+              >
+                {pageTitle === "Dashboard" ? "Selamat Datang, Superadmin!" : pageTitle}
+              </h1>
+              {PAGE_DESCRIPTIONS[pathname] && (
+                <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--adm-text-3)" }}>
+                  {PAGE_DESCRIPTIONS[pathname]}
+                </p>
               )}
             </div>
 

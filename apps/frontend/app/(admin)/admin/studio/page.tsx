@@ -145,11 +145,7 @@ Mulai dengan membuat struktur project dan file utama. Konfirmasi pemahaman Anda 
 
   return (
     <div>
-      <PageHeader
-        title="RevTech Studio"
-        description="Document Generator, AI Review & Export ke Antigravity"
-        icon="auto_awesome"
-      />
+      <div className="pt-2"></div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
@@ -230,7 +226,7 @@ Mulai dengan membuat struktur project dan file utama. Konfirmasi pemahaman Anda 
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
                       {loading ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>rate_review</span>}
-                      🔮 AI Review
+                      AI Review
                     </button>
                     <button
                       id="export-to-antigravity"
@@ -264,7 +260,7 @@ Mulai dengan membuat struktur project dan file utama. Konfirmasi pemahaman Anda 
                 {!reviewResult && !loading && (
                   <div className="text-center py-12">
                     <span className="material-symbols-outlined text-slate-300 text-[48px]">rate_review</span>
-                    <p className="text-sm text-slate-400 mt-3">Isi form di tab Doc Generator, lalu klik tombol 🔮 AI Review.</p>
+                    <p className="text-sm text-slate-400 mt-3">Isi form di tab Doc Generator, lalu klik tombol <span className="inline-flex items-center gap-1 font-medium text-indigo-500"><span className="material-symbols-outlined text-[14px]">auto_awesome</span> AI Review</span>.</p>
                     <button onClick={() => setActiveTab("generator")} className="mt-4 text-sm text-blue-600 hover:underline">← Kembali ke Generator</button>
                   </div>
                 )}
