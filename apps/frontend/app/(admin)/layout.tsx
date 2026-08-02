@@ -38,6 +38,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/system": "System",
   "/admin/system/integrasi": "Integrasi",
   "/admin/system/pengaturan": "Pengaturan",
+  "/admin/trash": "Tempat Sampah",
 };
 
 const PAGE_DESCRIPTIONS: Record<string, string> = {
@@ -54,6 +55,7 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/team/activity": "Jejak rekam pergerakan sistem & login",
   "/admin/profile": "Kelola informasi akun, peran founder, dan keamanan",
   "/admin/system": "Konfigurasi engine, integrasi API, dan pengaturan bisnis",
+  "/admin/trash": "Penampungan terpusat untuk memulihkan atau menghapus permanen data yang dihapus dari berbagai modul.",
 };
 
 // ── Dark mode toggle pill ─────────────────────────────────────────────────────

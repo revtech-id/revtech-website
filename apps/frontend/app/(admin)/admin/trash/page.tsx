@@ -1,0 +1,559 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal, X, CheckSquare, SlidersHorizontal, Search, ArrowDownUp } from "lucide-react";
+
+// Tipe data berdasarkan model Inbox (sementara hanya inbox yang didukung)
+interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  company: string;
+  service: string;
+  budget: string;
+  message: string;
+  status: string;
+  createdAt: string;
+  handover?: string;
+  lastContactedAt?: string;
+  followUpNote?: string;
+  isVip?: boolean;
+  referenceLink?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
+export default function TrashPage() {
+  const [deletedLeads, setDeletedLeads] = useState<Lead[]>([]);
+  const [isClient, setIsClient] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  
+  // Modal State
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingBulk, setDeletingBulk] = useState(false);
+  const [filterKategori, setFilterKategori] = useState("Semua");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+
+  useEffect(() => {
+    setIsClient(true);
+    const savedTrash = localStorage.getItem("revtech_inbox_trash");
+    if (savedTrash) {
+      setDeletedLeads(JSON.parse(savedTrash));
+    }
+  }, []);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const restoreLead = (id: string) => {
+    const leadToRestore = deletedLeads.find((l) => l.id === id);
+    if (!leadToRestore) return;
+
+    // Remove dari trash
+    const newTrash = deletedLeads.filter((l) => l.id !== id);
+    setDeletedLeads(newTrash);
+    localStorage.setItem("revtech_inbox_trash", JSON.stringify(newTrash));
+
+    // Masukkan kembali ke inbox
+    const savedInbox = localStorage.getItem("revtech_inbox");
+    const currentInbox = savedInbox ? JSON.parse(savedInbox) : [];
+    const newInbox = [leadToRestore, ...currentInbox];
+    localStorage.setItem("revtech_inbox", JSON.stringify(newInbox));
+
+    showToast("Item berhasil dipulihkan ke Inbox Utama");
+  };
+
+  const confirmDelete = () => {
+    if (deletingBulk) {
+      const newTrash = deletedLeads.filter((l) => !selectedIds.includes(l.id));
+      setDeletedLeads(newTrash);
+      localStorage.setItem("revtech_inbox_trash", JSON.stringify(newTrash));
+      setDeletingBulk(false);
+      setSelectedIds([]);
+      showToast(`${selectedIds.length} item berhasil dihapus permanen`);
+      return;
+    }
+
+    if (!deletingId) return;
+    
+    // Hapus permanen satu per satu
+    const newTrash = deletedLeads.filter((l) => l.id !== deletingId);
+    setDeletedLeads(newTrash);
+    localStorage.setItem("revtech_inbox_trash", JSON.stringify(newTrash));
+    setDeletingId(null);
+    showToast("Item berhasil dihapus permanen");
+  };
+
+  const restoreSelected = () => {
+    if (selectedIds.length === 0) return;
+
+    const leadsToRestore = deletedLeads.filter((l) => selectedIds.includes(l.id));
+    
+    // Remove dari trash
+    const newTrash = deletedLeads.filter((l) => !selectedIds.includes(l.id));
+    setDeletedLeads(newTrash);
+    localStorage.setItem("revtech_inbox_trash", JSON.stringify(newTrash));
+
+    // Masukkan kembali ke inbox
+    const savedInbox = localStorage.getItem("revtech_inbox");
+    const currentInbox = savedInbox ? JSON.parse(savedInbox) : [];
+    const newInbox = [...leadsToRestore, ...currentInbox];
+    localStorage.setItem("revtech_inbox", JSON.stringify(newInbox));
+
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+    showToast(`${leadsToRestore.length} item berhasil dipulihkan ke Inbox Utama`);
+  };
+
+  const restoreAll = () => {
+    if (filteredLeads.length === 0) return;
+    const leadsToRestore = filteredLeads;
+    const idsToRestore = leadsToRestore.map(l => l.id);
+
+    const newTrash = deletedLeads.filter((l) => !idsToRestore.includes(l.id));
+    setDeletedLeads(newTrash);
+    localStorage.setItem("revtech_inbox_trash", JSON.stringify(newTrash));
+
+    const savedInbox = localStorage.getItem("revtech_inbox");
+    const currentInbox = savedInbox ? JSON.parse(savedInbox) : [];
+    const newInbox = [...leadsToRestore, ...currentInbox];
+    localStorage.setItem("revtech_inbox", JSON.stringify(newInbox));
+
+    showToast(`${leadsToRestore.length} item berhasil dipulihkan`);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredLeads.length && filteredLeads.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredLeads.map(l => l.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  if (!isClient) return null;
+
+  // Filter logika sementara: karena saat ini semua data berasal dari Inbox,
+  // maka jika filter "Inbox" dipilih, tampilkan semua. Jika nanti ada modul lain, logic ini akan memisahkan per modul (misal lead.module === filterKategori).
+  const filteredLeads = deletedLeads.filter(lead => {
+    // Filter Kategori
+    if (filterKategori !== "Semua" && filterKategori !== "Inbox") return false;
+    
+    // Filter Pencarian
+    if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase();
+      if (!lead.name.toLowerCase().includes(q) && !lead.company.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === "newest") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
+  });
+
+  return (
+    <div>
+      <div className="pt-2 mb-2">
+      </div>
+
+      {/* Toolbar Container */}
+      <div className="relative mb-6">
+        <AnimatePresence mode="wait">
+          {!isSelectionMode ? (
+            <motion.div
+              key="normal-toolbar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              {/* Search Bar */}
+        <div className="flex items-center flex-1 max-w-full sm:max-w-[320px] rounded-full bg-[var(--adm-card)] shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
+          <div className="relative flex-1 flex items-center">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari nama, bisnis..."
+              className="w-full bg-transparent pl-4 pr-10 py-2.5 text-sm focus:outline-none text-[var(--adm-text)] font-semibold placeholder:font-normal placeholder:text-[var(--adm-text-3)]"
+            />
+            <span className="material-symbols-outlined absolute right-3 text-[var(--adm-text-3)] text-[18px] pointer-events-none">search</span>
+          </div>
+        </div>
+
+        {/* Action Icons */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="relative">
+          <button
+            onClick={() => {
+              setIsSortOpen(false);
+              setIsFilterOpen(!isFilterOpen);
+            }}
+            className="inline-flex items-center justify-center p-1.5 rounded-lg bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+            title="Filter Kategori"
+          >
+            <SlidersHorizontal size={20} strokeWidth={2.5} />
+          </button>
+          
+          <AnimatePresence>
+            {isFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 top-full mt-2 w-48 rounded-xl bg-[var(--adm-card)] shadow-[var(--adm-shadow-md)] overflow-hidden z-50 p-1"
+                >
+                  {["Semua", "Inbox", "Klien", "Pesanan", "Invoice"].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setFilterKategori(cat);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${filterKategori === cat ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
+                    >
+                      {cat === "Semua" ? "Semua Kategori" : cat}
+                      {filterKategori === cat && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Sort Button */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setIsFilterOpen(false);
+              setIsSortOpen(!isSortOpen);
+            }}
+            className="inline-flex items-center justify-center p-1.5 rounded-lg bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+            title="Urutkan"
+          >
+            <ArrowDownUp size={20} strokeWidth={2.5} />
+          </button>
+          
+          <AnimatePresence>
+            {isSortOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsSortOpen(false)} />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 sm:left-0 top-full mt-2 w-48 rounded-xl bg-[var(--adm-card)] shadow-[var(--adm-shadow-md)] overflow-hidden z-50 p-1"
+                >
+                  <button
+                    onClick={() => {
+                      setSortBy("newest");
+                      setIsSortOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${sortBy === "newest" ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
+                  >
+                    Terbaru
+                    {sortBy === "newest" && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortBy("oldest");
+                      setIsSortOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${sortBy === "oldest" ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
+                  >
+                    Terlama
+                    {sortBy === "oldest" && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {filteredLeads.length > 0 && (
+          <div className="flex items-center gap-2 sm:gap-3 relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center p-1.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
+            >
+              <MoreHorizontal size={20} strokeWidth={2.5} />
+            </button>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isMenuOpen && !isSelectionMode && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[var(--adm-card)] shadow-[var(--adm-shadow-md)] overflow-hidden z-50 p-1"
+                  >
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setIsSelectionMode(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)] rounded-lg transition-colors"
+                    >
+                      <CheckSquare size={14} /> Pilih Beberapa
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        restoreAll();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-[var(--adm-success)] hover:bg-[var(--adm-border)] rounded-lg transition-colors"
+                    >
+                      <Undo2 size={14} /> Pulihkan Semua
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setSelectedIds(filteredLeads.map(l => l.id));
+                        setDeletingBulk(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-semibold text-[var(--adm-danger)] hover:bg-[var(--adm-border)] rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} /> Hapus Semua
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+          </div>
+        </motion.div>
+        ) : (
+          <motion.div
+            key="selection-toolbar"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--adm-accent)]/10 px-4 py-3 rounded-2xl shadow-sm"
+          >
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedIds([]);
+                }}
+                className="p-1.5 hover:bg-black/5 rounded-lg text-[var(--adm-text)] focus:outline-none transition-colors"
+                title="Batal"
+              >
+                <X size={20} strokeWidth={2.5} />
+              </button>
+              <div className="flex items-center gap-4 pl-4">
+                <span className="font-semibold text-[var(--adm-accent)] text-sm">
+                  {selectedIds.length} item dipilih
+                </span>
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--adm-text-2)]">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === filteredLeads.length && filteredLeads.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-[var(--adm-border)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)]/30 cursor-pointer hover:border-[var(--adm-accent)] transition-colors"
+                  />
+                  <span>Pilih Semua</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {selectedIds.length > 0 && (
+                <>
+                  <button onClick={restoreSelected} className="text-sm font-semibold px-2 py-2 text-[var(--adm-success)] hover:opacity-75 transition-opacity flex items-center gap-2">
+                    <Undo2 size={16} strokeWidth={2.5} /> Pulihkan
+                  </button>
+                  <button onClick={() => setDeletingBulk(true)} className="text-sm font-semibold px-2 py-2 text-[var(--adm-danger)] hover:opacity-75 transition-opacity flex items-center gap-2">
+                    <Trash2 size={16} strokeWidth={2.5} /> Hapus
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence mode="popLayout">
+        {filteredLeads.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="text-center py-20"
+          >
+            <div className="w-16 h-16 rounded-full bg-[var(--adm-border)] flex items-center justify-center mx-auto mb-4 opacity-50">
+              <Trash2 className="text-[var(--adm-text-3)]" size={32} />
+            </div>
+            <h3 className="font-bold text-[var(--adm-text)] mb-1">Tempat Sampah Kosong</h3>
+            <p className="text-sm text-[var(--adm-text-3)]">Tidak ada item yang terhapus pada kategori ini.</p>
+          </motion.div>
+        ) : (
+          <div className="space-y-3">
+            {filteredLeads.map((lead) => (
+              <motion.div
+                layout
+                key={lead.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="p-4 rounded-2xl bg-[var(--adm-card)] shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Left: Info */}
+                    <div className="flex items-center gap-3">
+                      {isSelectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(lead.id)}
+                          onChange={() => toggleSelect(lead.id)}
+                          className="w-4 h-4 rounded border-[var(--adm-border)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)]/30 mt-1 sm:mt-0 cursor-pointer shrink-0"
+                        />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-[var(--adm-text)]">{lead.name}</h3>
+                        <span className="text-[11px] px-1.5 py-0.5 bg-[var(--adm-bg)] rounded text-[var(--adm-text-2)] font-semibold">
+                          Inbox
+                        </span>
+                        </div>
+                        <p className="text-xs text-[var(--adm-text-3)] line-clamp-1">{lead.company} — {lead.service}</p>
+                      </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 sm:gap-6 shrink-0 mt-3 sm:mt-0">
+                      
+                      <div className="text-right">
+                        {lead.deletedAt ? (
+                          <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
+                            Dihapus {new Date(lead.deletedAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}<br className="hidden sm:block" />
+                            <span className="sm:hidden"> </span>oleh <span className="font-semibold text-[var(--adm-text-2)]">{lead.deletedBy || "Sistem"}</span>
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
+                            Waktu penghapusan<br className="hidden sm:block" />
+                            <span className="sm:hidden"> </span>tidak terekam
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => restoreLead(lead.id)}
+                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-success)] transition-colors focus:outline-none"
+                        title="Pulihkan"
+                      >
+                        <Undo2 size={16} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(lead.id)}
+                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
+                        title="Hapus Permanen"
+                      >
+                        <Trash2 size={16} strokeWidth={2} />
+                      </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold z-[999] flex items-center gap-2
+              ${toastMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
+                toastMessage.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 
+                'bg-blue-50 text-blue-700 border-blue-200'}
+            `}
+          >
+            {toastMessage.type === 'success' ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertTriangle size={18} className="text-red-500" />}
+            {toastMessage.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {(deletingId || deletingBulk) && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)]"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-500">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--adm-text)]">Hapus Permanen?</h3>
+                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+                    Tindakan ini tidak dapat dibatalkan. {deletingBulk ? `${selectedIds.length} data` : 'Data'} akan dihapus dari sistem selamanya.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => {
+                    setDeletingId(null);
+                    setDeletingBulk(false);
+                  }}
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] border border-[var(--adm-border)] rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                >
+                  Ya, Hapus Permanen
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}

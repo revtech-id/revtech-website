@@ -60,7 +60,7 @@ export function AdminNotificationPopover() {
       <button
         id="topbar-notifications"
         onClick={() => setOpen((o) => !o)}
-        className="relative p-1.5 rounded-xl hover:bg-[var(--adm-border)] transition-all group inline-flex items-center justify-center"
+        className="relative p-1.5 rounded-xl transition-all group inline-flex items-center justify-center"
         aria-label="Pemberitahuan"
       >
         <div className="relative">

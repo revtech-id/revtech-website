@@ -19,6 +19,7 @@ import {
   Settings,
   LogOut,
   ChevronsUpDown,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -80,6 +81,7 @@ export function SidebarProfileSection() {
               { label: "Tim", icon: GitFork, href: "/admin/team" },
               { label: "Activity Log", icon: History, href: "/admin/team/activity" },
               { label: "Pengaturan", icon: Settings, href: "/admin/system" },
+              { label: "Tempat Sampah", icon: Trash2, href: "/admin/trash" },
             ].map((opt) => {
               const Icon = opt.icon;
               return (

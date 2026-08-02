@@ -61,10 +61,15 @@ export default function KontakForm() {
     }, [searchParams]);
 
     const onSubmit = async (data: JasaWebFormValues) => {
+        let cleanWhatsApp = data.whatsapp;
+        if (selectedCountry.code === 'ID') {
+            cleanWhatsApp = cleanWhatsApp.replace(/^0+/, '');
+        }
+
         let messageText = `Halo Admin RevTech, saya ingin memesan layanan dari website.\n\n`;
         messageText += `*Detail Pemesan*\n`;
         messageText += `Nama: ${data.name}\n`;
-        messageText += `No. WA: ${selectedCountry.dial_code}${data.whatsapp}\n`;
+        messageText += `No. WA: ${selectedCountry.dial_code}${cleanWhatsApp}\n`;
         if (data.business) messageText += `Bisnis/Instansi: ${data.business}\n`;
         
         messageText += `\n*Detail Pesanan*\n`;
@@ -85,6 +90,45 @@ export default function KontakForm() {
         setWaLink(waUrl);
         setSubmittedData(data);
         
+        // Simpan otomatis ke Inbox (Local Storage simulasi)
+        try {
+            let basePrice = 0;
+            if (service === 'jasa_web') {
+                if (jasaWebPackage === 'Usaha') basePrice = 499000;
+                else if (jasaWebPackage === 'Profesional') basePrice = 1499000;
+                else if (jasaWebPackage === 'Eksklusif') basePrice = 5000000;
+            } else if (service === 'produk_digital') {
+                basePrice = 150000;
+            }
+            if (vipLane && basePrice > 0) basePrice = Math.round(basePrice * 1.3);
+            
+            const newLead = {
+                id: `LD-${Math.floor(10000 + Math.random() * 90000)}`,
+                name: data.name,
+                phone: `${selectedCountry.dial_code.replace('+', '')}${cleanWhatsApp}`,
+                company: data.business || "-",
+                service: service === 'jasa_web' ? 'Jasa Website' : service === 'produk_digital' ? 'Produk Digital' : 'Custom Project',
+                serviceDetail: service === 'jasa_web' ? `Paket ${jasaWebPackage}` : service === 'custom' ? (data.reference || "") : "",
+                budget: basePrice > 0 ? `Rp ${basePrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-",
+                message: data.message,
+                status: "new",
+                createdAt: new Date().toISOString(),
+                handover: handoverOption,
+                isVip: vipLane,
+                referenceLink: service === 'custom' ? (data.reference || "") : ""
+            };
+
+            const saved = localStorage.getItem("revtech_inbox");
+            let inboxData = [];
+            if (saved) {
+                inboxData = JSON.parse(saved);
+            }
+            inboxData.unshift(newLead);
+            localStorage.setItem("revtech_inbox", JSON.stringify(inboxData));
+        } catch (e) {
+            console.error("Failed to save to inbox:", e);
+        }
+
         // Membuka tab WA langsung
         window.open(waUrl, '_blank');
     };
@@ -126,7 +170,12 @@ export default function KontakForm() {
                         </div>
                         <div className="flex justify-between items-center gap-4">
                             <span className="text-gray-500 text-sm font-medium">No. WhatsApp</span>
-                            <span className="text-gray-900 font-bold text-sm text-right">{submittedData.whatsapp}</span>
+                            <span className="text-gray-900 font-bold text-sm text-right">
+                                {selectedCountry.code === 'ID' 
+                                    ? `0${submittedData.whatsapp.replace(/^0+/, '')}`
+                                    : `${selectedCountry.dial_code} ${submittedData.whatsapp}`
+                                }
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -307,7 +356,7 @@ export default function KontakForm() {
                                     type="tel" 
                                     {...register("whatsapp")}
                                     className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-6 px-5 rounded-l-none text-gray-900 placeholder:text-gray-400 shadow-none" 
-                                    placeholder="8123456... *" 
+                                    placeholder={selectedCountry.code === 'ID' ? "8123456... *" : "123456789... *"}  
                                 />
                             </div>
                             {errors.whatsapp && <p className="text-red-500 text-sm mt-1 font-medium">{errors.whatsapp.message}</p>}
