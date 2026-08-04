@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal, X, CheckSquare, SlidersHorizontal, Search, ArrowDownUp } from "lucide-react";
+import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal, X, CheckSquare, SlidersHorizontal, Search, ArrowDownUp, Filter } from "lucide-react";
 
 // Tipe data berdasarkan model Inbox (sementara hanya inbox yang didukung)
 interface Lead {
@@ -38,8 +38,6 @@ export default function TrashPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isSortOpen, setIsSortOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [viewingLead, setViewingLead] = useState<Lead | null>(null);
@@ -68,6 +66,21 @@ export default function TrashPage() {
         name: item.client,
         budget: item.total ? `Rp ${item.total}` : "-",
         message: item.notes || "-"
+      }))];
+    }
+
+    const savedClientsTrash = localStorage.getItem("revtech_clients_trash");
+    if (savedClientsTrash) {
+      const parsed = JSON.parse(savedClientsTrash);
+      allTrash = [...allTrash, ...parsed.map((item: any) => ({
+        ...item,
+        _module: "Klien",
+        _original: item,
+        name: item.name,
+        company: item.contact || "-",
+        budget: item.recurringFee ? `Rp ${item.recurringFee.toLocaleString('id-ID')}` : "-",
+        message: item.domain || "Tidak ada domain",
+        service: item.handover || item.service || "-"
       }))];
     }
     
@@ -174,13 +187,9 @@ export default function TrashPage() {
     } else if (restoringAction === "bulk") {
       const leadsToRestore = deletedLeads.filter((l) => selectedIds.includes(l.id));
       processRestore(leadsToRestore);
-      setSelectedIds([]);
-      setIsSelectionMode(false);
-      showToast(`${leadsToRestore.length} item berhasil dipulihkan`);
     } else if (restoringAction === "all") {
       const leadsToRestore = filteredLeads;
       processRestore(leadsToRestore);
-      showToast(`${leadsToRestore.length} item berhasil dipulihkan`);
     }
     setRestoringAction(null);
     setRestoringId(null);
@@ -260,110 +269,56 @@ export default function TrashPage() {
         </div>
 
         {/* Action Icons */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="relative">
-          <button
-            onClick={() => {
-              setIsSortOpen(false);
-              setIsFilterOpen(!isFilterOpen);
-            }}
-            className="inline-flex items-center justify-center p-1.5 rounded-lg bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
-            title="Filter Kategori"
-          >
-            <SlidersHorizontal size={20} strokeWidth={2.5} />
-          </button>
+        <div className="flex items-center gap-4 shrink-0">
           
-          <AnimatePresence>
-            {isFilterOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute left-0 top-full mt-2 w-48 rounded-xl bg-[var(--adm-card)] shadow-[var(--adm-shadow-md)] overflow-hidden z-50 p-1"
-                >
-                  {["Semua", "Inbox", "Klien", "Pesanan", "Invoice"].map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setFilterKategori(cat);
-                        setIsFilterOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${filterKategori === cat ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
-                    >
-                      {cat === "Semua" ? "Semua Kategori" : cat}
-                      {filterKategori === cat && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Sort Button */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setIsFilterOpen(false);
-              setIsSortOpen(!isSortOpen);
-            }}
-            className="inline-flex items-center justify-center p-1.5 rounded-lg bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
-            title="Urutkan"
-          >
-            <ArrowDownUp size={20} strokeWidth={2.5} />
-          </button>
-          
-          <AnimatePresence>
-            {isSortOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsSortOpen(false)} />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 sm:left-0 top-full mt-2 w-48 rounded-xl bg-[var(--adm-card)] shadow-[var(--adm-shadow-md)] overflow-hidden z-50 p-1"
-                >
-                  <button
-                    onClick={() => {
-                      setSortBy("newest");
-                      setIsSortOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${sortBy === "newest" ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
-                  >
-                    Terbaru
-                    {sortBy === "newest" && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSortBy("oldest");
-                      setIsSortOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${sortBy === "oldest" ? 'bg-[var(--adm-border)] text-[var(--adm-text)]' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-border)]'}`}
-                  >
-                    Terlama
-                    {sortBy === "oldest" && <CheckCircle2 size={14} className="text-[var(--adm-text)]" />}
-                  </button>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {filteredLeads.length > 0 && (
-          <div className="flex items-center gap-2 sm:gap-3 relative">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center p-1.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
-            >
-              <MoreHorizontal size={20} strokeWidth={2.5} />
+          {/* Filter Status */}
+          <div className="relative flex items-center justify-center shrink-0 group">
+            <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+              <Filter size={18} strokeWidth={2.5} />
             </button>
+            <select
+              dir="rtl"
+              value={filterKategori}
+              onChange={(e) => setFilterKategori(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Filter Kategori"
+            >
+              <option value="Semua" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Semua Kategori</option>
+              <option value="Inbox" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Inbox</option>
+              <option value="Klien" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Klien</option>
+              <option value="Pesanan" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Pesanan</option>
+              <option value="Invoice" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Invoice</option>
+            </select>
+          </div>
 
-            {/* Dropdown Menu */}
-            <AnimatePresence>
+          {/* Sort By */}
+          <div className="relative flex items-center justify-center shrink-0 group">
+            <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+              <SlidersHorizontal size={18} strokeWidth={2.5} />
+            </button>
+            <select
+              dir="rtl"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Urutkan"
+            >
+              <option value="newest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
+              <option value="oldest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
+            </select>
+          </div>
+
+          {filteredLeads.length > 0 && (
+            <div className="flex items-center gap-2 sm:gap-3 relative">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="inline-flex items-center justify-center p-1.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
+              >
+                <MoreHorizontal size={20} strokeWidth={2.5} />
+              </button>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
               {isMenuOpen && !isSelectionMode && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
@@ -408,7 +363,7 @@ export default function TrashPage() {
             </AnimatePresence>
           </div>
         )}
-          </div>
+        </div>
         </motion.div>
         ) : (
           <motion.div

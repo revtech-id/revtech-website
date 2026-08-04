@@ -445,12 +445,12 @@ export default function PesananPage() {
     if (handoverOrder && handoverOptionState) {
       const today = new Date();
       if (handoverOptionState.includes("Basic")) {
-        // 3 Months from now
-        today.setMonth(today.getMonth() + 3);
-        setNextBillingDateState(today.toISOString().split("T")[0]);
-      } else if (handoverOptionState.includes("Plus")) {
         // 1 Year from now
         today.setFullYear(today.getFullYear() + 1);
+        setNextBillingDateState(today.toISOString().split("T")[0]);
+      } else if (handoverOptionState.includes("Plus")) {
+        // 3 Months from now
+        today.setMonth(today.getMonth() + 3);
         setNextBillingDateState(today.toISOString().split("T")[0]);
       } else {
         // Mandiri or others = no billing

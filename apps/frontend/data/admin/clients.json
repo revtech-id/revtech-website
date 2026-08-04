@@ -13,7 +13,9 @@
     "domain": "majujaya.com",
     "domainExpiry": "2027-03-15",
     "hosting": "Niagahoster",
-    "hostingExpiry": "2027-03-15"
+    "hostingExpiry": "2027-03-15",
+    "service": "Web App",
+    "handover": "Mentahan (Source Code)"
   },
   {
     "id": "CLT-002",
@@ -28,8 +30,10 @@
     "activeProjects": 1,
     "domain": "bintangnusantara.co.id",
     "domainExpiry": "2026-09-10",
-    "hosting": "Dewaweb",
-    "hostingExpiry": "2026-09-10"
+    "hosting": "RevTech Managed",
+    "hostingExpiry": "2026-09-10",
+    "service": "Company Profile",
+    "handover": "Terima Beres (Basic)"
   },
   {
     "id": "CLT-003",
@@ -60,8 +64,10 @@
     "activeProjects": 0,
     "domain": "rmsederhana.id",
     "domainExpiry": "2026-12-01",
-    "hosting": "Hostinger",
-    "hostingExpiry": "2026-12-01"
+    "hosting": "RevTech Managed",
+    "hostingExpiry": "2026-12-01",
+    "service": "Landing Page",
+    "handover": "Terima Beres (Basic)"
   },
   {
     "id": "CLT-005",
