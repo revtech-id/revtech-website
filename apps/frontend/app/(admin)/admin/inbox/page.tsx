@@ -14,6 +14,7 @@ interface Lead {
   phone: string;
   company: string;
   service: string;
+  serviceDetail?: string;
   budget: string;
   message: string;
   status: string; // new | followup | waiting_dp | ghosting | deal (read-only, set via modal)
