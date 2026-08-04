@@ -10,7 +10,7 @@ interface Invoice {
   orderId: string;
   client: string;
   phone?: string;
-  type: "dp" | "pelunasan";
+  type: "dp" | "pelunasan" | "maintenance";
   amount: number;
   status: "paid" | "pending";
   issuedAt: string;
@@ -33,7 +33,7 @@ const fadeUp = (i: number) => ({
 });
 
 const EMPTY_FORM = {
-  client: "", phone: "", orderId: "", type: "dp" as "dp" | "pelunasan",
+  client: "", phone: "", orderId: "", type: "dp" as "dp" | "pelunasan" | "maintenance",
   amount: 0, dueDate: "", description: ""
 };
 
@@ -48,17 +48,70 @@ export default function InvoicePage() {
   useEffect(() => {
     setIsClient(true);
     const saved = localStorage.getItem("revtech_invoices");
-    setInvoiceList(saved ? JSON.parse(saved) : rawInvoices as Invoice[]);
-    if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(rawInvoices));
+    let currentInvoices: Invoice[] = saved ? JSON.parse(saved) : (rawInvoices as Invoice[]);
 
-    // Load pesanan untuk dropdown
+    // Auto-sync pesanan untuk invoice dan dropdown
     const savedOrders = localStorage.getItem("revtech_orders");
     if (savedOrders) {
-      setOrders(JSON.parse(savedOrders).map((o: any) => ({
+      const parsedOrders = JSON.parse(savedOrders);
+      setOrders(parsedOrders.map((o: any) => ({
         id: o.id, client: o.client, phone: o.phone || "",
         dp: o.dp || 0, total: o.total || 0
       })));
+      
+      let changed = false;
+      parsedOrders.forEach((o: any) => {
+        // Sync DP Invoice
+        if (o.dp > 0) {
+          const dpInvId = `INV-DP-${o.id}`;
+          const existingDp = currentInvoices.find(inv => inv.id === dpInvId);
+          const isDpPaid = ["handover", "selesai"].includes(o.status);
+          if (!existingDp) {
+            changed = true;
+            currentInvoices.push({
+              id: dpInvId, orderId: o.id, client: o.client, phone: o.phone, type: "dp",
+              amount: o.dp, status: isDpPaid ? "paid" : "pending",
+              issuedAt: o.createdAt.split("T")[0], paidAt: isDpPaid ? new Date().toISOString().split("T")[0] : null,
+              dueDate: o.deadline || o.createdAt.split("T")[0],
+              description: `DP 50% — ${o.client}`
+            });
+          } else if (existingDp.status === "pending" && isDpPaid) {
+            changed = true;
+            existingDp.status = "paid";
+            existingDp.paidAt = new Date().toISOString().split("T")[0];
+          }
+        }
+        
+        // Sync Pelunasan Invoice
+        if (o.total > o.dp) {
+          const pelInvId = `INV-PL-${o.id}`;
+          const existingPel = currentInvoices.find(inv => inv.id === pelInvId);
+          const isPelPaid = o.status === "selesai";
+          if (!existingPel) {
+            changed = true;
+            currentInvoices.push({
+              id: pelInvId, orderId: o.id, client: o.client, phone: o.phone, type: "pelunasan",
+              amount: o.total - o.dp, status: isPelPaid ? "paid" : "pending",
+              issuedAt: o.createdAt.split("T")[0], paidAt: isPelPaid ? new Date().toISOString().split("T")[0] : null,
+              dueDate: o.deadline || o.createdAt.split("T")[0],
+              description: `Pelunasan — ${o.client}`
+            });
+          } else if (existingPel.status === "pending" && isPelPaid) {
+            changed = true;
+            existingPel.status = "paid";
+            existingPel.paidAt = new Date().toISOString().split("T")[0];
+          }
+        }
+      });
+      
+      if (changed) {
+        currentInvoices.sort((a,b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
+        localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
+      }
     }
+    
+    setInvoiceList(currentInvoices);
+    if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
   }, []);
 
   function save(updated: Invoice[]) {
@@ -115,7 +168,7 @@ export default function InvoicePage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-5 mt-2">
         {view === "form" ? (
-          <button onClick={() => setView("list")} className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-slate-600">
+          <button onClick={() => setView("list")} className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors">
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Kembali
           </button>
@@ -124,7 +177,7 @@ export default function InvoicePage() {
           <button
             id="add-invoice"
             onClick={() => { setForm(EMPTY_FORM); setView("form"); }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[var(--adm-accent)] text-white text-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-[var(--adm-shadow-md)]"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             Buat Invoice
@@ -137,17 +190,17 @@ export default function InvoicePage() {
           {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
             {[
-              { label: "Total Terbayar", value: formatRp(totalPaid), icon: "check_circle", iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-              { label: "Menunggu Pembayaran", value: formatRp(totalPending), icon: "pending", iconBg: "bg-amber-50", iconColor: "text-amber-600" },
-              { label: "Jatuh Tempo", value: String(overdue.length), icon: "warning", iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+              { label: "Total Terbayar", value: formatRp(totalPaid), icon: "check_circle", iconBg: "bg-emerald-500/10", iconColor: "text-emerald-500" },
+              { label: "Menunggu Pembayaran", value: formatRp(totalPending), icon: "pending", iconBg: "bg-amber-500/10", iconColor: "text-amber-500" },
+              { label: "Jatuh Tempo", value: String(overdue.length), icon: "warning", iconBg: "bg-rose-500/10", iconColor: "text-rose-500" },
             ].map((s, i) => (
-              <motion.div key={s.label} {...fadeUp(i)} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-4">
+              <motion.div key={s.label} {...fadeUp(i)} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-4 shadow-[var(--adm-shadow)] flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
                   <span className={`material-symbols-outlined text-[20px] ${s.iconColor}`} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">{s.label}</p>
-                  <p className="text-lg font-bold text-slate-900">{s.value}</p>
+                  <p className="text-xs text-[var(--adm-text-2)]">{s.label}</p>
+                  <p className="text-lg font-bold text-[var(--adm-text)]">{s.value}</p>
                 </div>
               </motion.div>
             ))}
@@ -160,7 +213,7 @@ export default function InvoicePage() {
                 key={f}
                 id={`filter-invoice-${f}`}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === f ? "bg-blue-600 text-white" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === f ? "bg-[var(--adm-accent)] text-white" : "bg-[var(--adm-card)] text-[var(--adm-text-2)] border border-[var(--adm-border)] hover:bg-[var(--adm-bg)]"}`}
               >
                 {f === "all" ? "Semua" : f === "paid" ? "Lunas" : "Pending"}
               </button>
@@ -177,8 +230,8 @@ export default function InvoicePage() {
                   key: "id", label: "Invoice",
                   render: (inv) => (
                     <div>
-                      <p className="font-mono text-xs font-semibold text-slate-700">{inv.id}</p>
-                      <p className="text-xs text-slate-400">{inv.orderId}</p>
+                      <p className="font-mono text-xs font-semibold text-[var(--adm-text)]">{inv.id}</p>
+                      <p className="text-xs text-[var(--adm-text-3)]">{inv.orderId}</p>
                     </div>
                   ),
                 },
@@ -186,9 +239,9 @@ export default function InvoicePage() {
                   key: "client", label: "Klien",
                   render: (inv) => (
                     <div>
-                      <p className="font-medium text-slate-800">{inv.client}</p>
+                      <p className="font-medium text-[var(--adm-text)]">{inv.client}</p>
                       {inv.phone && (
-                        <a href={`https://wa.me/${inv.phone}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-600 hover:underline">{inv.phone}</a>
+                        <a href={`https://wa.me/${inv.phone}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-500 hover:underline">{inv.phone}</a>
                       )}
                     </div>
                   ),
@@ -197,19 +250,19 @@ export default function InvoicePage() {
                   key: "description", label: "Deskripsi",
                   render: (inv) => (
                     <div>
-                      <p className="text-sm text-slate-700">{inv.description}</p>
+                      <p className="text-sm text-[var(--adm-text)]">{inv.description}</p>
                       <StatusBadge label={inv.type === "dp" ? "DP" : "Pelunasan"} variant={inv.type === "dp" ? "amber" : "indigo"} />
                     </div>
                   ),
                 },
                 {
                   key: "amount", label: "Jumlah",
-                  render: (inv) => <span className="font-bold text-slate-900">{formatRp(inv.amount)}</span>,
+                  render: (inv) => <span className="font-bold text-[var(--adm-text)]">{formatRp(inv.amount)}</span>,
                 },
                 {
                   key: "dueDate", label: "Jatuh Tempo",
                   render: (inv) => (
-                    <span className={`text-xs ${isOverdue(inv.dueDate, inv.status) ? "text-rose-600 font-semibold" : "text-slate-500"}`}>
+                    <span className={`text-xs ${isOverdue(inv.dueDate, inv.status) ? "text-rose-500 font-semibold" : "text-[var(--adm-text-3)]"}`}>
                       {new Date(inv.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                       {isOverdue(inv.dueDate, inv.status) && " ⚠️"}
                     </span>
@@ -227,7 +280,7 @@ export default function InvoicePage() {
                         <button
                           id={`mark-paid-${inv.id}`}
                           onClick={(e) => { e.stopPropagation(); markPaid(inv.id); }}
-                          className="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700 transition-colors whitespace-nowrap"
+                          className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-400 transition-colors whitespace-nowrap"
                         >
                           Tandai Lunas
                         </button>
@@ -243,20 +296,20 @@ export default function InvoicePage() {
 
       {view === "form" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">Buat Invoice Baru</h2>
+          <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-6 sm:p-8 shadow-[var(--adm-shadow)]">
+            <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">Buat Invoice Baru</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Link ke Pesanan */}
               {orders.length > 0 && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Tautkan ke Pesanan (Opsional)</label>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Pesanan (Opsional)</label>
                   <select
                     onChange={(e) => handleOrderSelect(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   >
-                    <option value="">— Pilih Pesanan —</option>
+                    <option value="" className="bg-[var(--adm-card)]">— Pilih Pesanan —</option>
                     {orders.map(o => (
-                      <option key={o.id} value={o.id}>{o.id} · {o.client}</option>
+                      <option key={o.id} value={o.id} className="bg-[var(--adm-card)]">{o.id} · {o.client}</option>
                     ))}
                   </select>
                 </div>
@@ -264,42 +317,42 @@ export default function InvoicePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nama Klien *</label>
-                  <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Nama klien" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Klien *</label>
+                  <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Nama klien" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nomor WhatsApp</label>
-                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nomor WhatsApp</label>
+                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Tipe Invoice *</label>
-                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as "dp" | "pelunasan" })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    <option value="dp">DP (Down Payment)</option>
-                    <option value="pelunasan">Pelunasan</option>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tipe Invoice *</label>
+                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as "dp" | "pelunasan" })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                    <option value="dp" className="bg-[var(--adm-card)]">DP (Down Payment)</option>
+                    <option value="pelunasan" className="bg-[var(--adm-card)]">Pelunasan</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Jumlah (Rp) *</label>
-                  <input required type="number" value={form.amount} onChange={e => setForm({ ...form, amount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jumlah (Rp) *</label>
+                  <input required type="number" value={form.amount} onChange={e => setForm({ ...form, amount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Jatuh Tempo *</label>
-                <input required type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jatuh Tempo *</label>
+                <input required type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Deskripsi</label>
-                <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Cth: DP 50% Website Company Profile" />
+                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Deskripsi</label>
+                <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Cth: DP 50% Website Company Profile" />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-slate-500 hover:bg-slate-100 transition-colors text-sm">Batal</button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm text-sm">Simpan Invoice</button>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--adm-border)]">
+                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm">Batal</button>
+                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-colors shadow-sm text-sm">Simpan Invoice</button>
               </div>
             </form>
           </div>

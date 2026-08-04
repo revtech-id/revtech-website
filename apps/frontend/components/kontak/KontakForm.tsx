@@ -21,7 +21,6 @@ export default function KontakForm() {
     
     const [service, setService] = useState<ServiceCategory>('jasa_web');
     const [jasaWebPackage, setJasaWebPackage] = useState<JasaWebPackage>('Usaha');
-    const [handoverOption, setHandoverOption] = useState<string>('Terima Beres (Basic)');
     const [vipLane, setVipLane] = useState<boolean>(false);
 
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
@@ -38,7 +37,6 @@ export default function KontakForm() {
         reset();
         setService('jasa_web');
         setJasaWebPackage('Usaha');
-        setHandoverOption('Terima Beres (Basic)');
         setVipLane(false);
         setSelectedCountry(countries[0]);
     };
@@ -77,7 +75,6 @@ export default function KontakForm() {
         
         if (service === 'jasa_web') {
             messageText += `Paket: ${jasaWebPackage}\n`;
-            messageText += `Opsi: ${handoverOption}\n`;
             if (vipLane) messageText += `Jalur VIP: Ya\n`;
         }
         if (service === 'custom' && data.reference) {
@@ -113,7 +110,7 @@ export default function KontakForm() {
                 message: data.message,
                 status: "new",
                 createdAt: new Date().toISOString(),
-                handover: handoverOption,
+                handover: "",
                 isVip: vipLane,
                 referenceLink: service === 'custom' ? (data.reference || "") : ""
             };
@@ -276,19 +273,18 @@ export default function KontakForm() {
                 <AnimatePresence>
                     {service === 'jasa_web' && (
                         <motion.div 
-                             
                             animate={{ opacity: 1, height: 'auto' }} 
                             exit={{ opacity: 0, height: 0 }}
                             className="overflow-hidden mb-10"
                         >
-                            <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                                <div>
+                            <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-2">
+                                <div className="flex-1 w-full">
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Paket Website</label>
                                     <div className="relative">
                                         <select 
                                             value={jasaWebPackage}
                                             onChange={(e) => setJasaWebPackage(e.target.value as JasaWebPackage)}
-                                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer"
+                                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer shadow-sm"
                                         >
                                             <option value="Usaha">Paket Usaha</option>
                                             <option value="Profesional">Paket Profesional</option>
@@ -298,23 +294,7 @@ export default function KontakForm() {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Opsi Serah Terima</label>
-                                    <div className="relative">
-                                        <select 
-                                            value={handoverOption}
-                                            onChange={(e) => setHandoverOption(e.target.value)}
-                                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer"
-                                        >
-                                            <option value="Terima Beres (Basic)">Terima Beres (Basic)</option>
-                                            <option value="Terima Beres (Plus)">Terima Beres (Plus)</option>
-                                            <option value="Sistem Mandiri">Sistem Mandiri (Source Code)</option>
-                                        </select>
-                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
-                                    </div>
-                                </div>
-
-                                <div className="md:col-span-2 flex items-center gap-3 pt-2">
+                                <div className="flex items-center gap-3 pt-0 sm:pt-7 w-full sm:w-auto">
                                     <input 
                                         type="checkbox" 
                                         id="vipLane" 
@@ -322,8 +302,8 @@ export default function KontakForm() {
                                         onChange={(e) => setVipLane(e.target.checked)}
                                         className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
                                     />
-                                    <label htmlFor="vipLane" className="text-sm font-bold text-gray-700 cursor-pointer">
-                                        Gunakan Jalur VIP (Percepatan rilis + Biaya 30%)
+                                    <label htmlFor="vipLane" className="text-sm font-bold text-gray-700 cursor-pointer whitespace-nowrap">
+                                        Gunakan Jalur VIP
                                     </label>
                                 </div>
                             </div>

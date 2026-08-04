@@ -15,7 +15,9 @@ interface ClientRecord {
   website: string | null;
 }
 
-const clients = rawClients as ClientRecord[];
+import { useState, useEffect } from "react";
+
+// Hapus static initialization: const clients = rawClients as ClientRecord[];
 
 function daysUntil(dateStr: string | null) {
   if (!dateStr) return null;
@@ -35,9 +37,50 @@ const fadeUp = (i: number) => ({
 });
 
 export default function MaintenancePage() {
+  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const savedClients = localStorage.getItem("revtech_clients");
+    let currentClients: ClientRecord[] = savedClients ? JSON.parse(savedClients) : (rawClients as ClientRecord[]);
+    
+    // Auto-sync from finished orders
+    const savedOrders = localStorage.getItem("revtech_orders");
+    if (savedOrders) {
+      const orders = JSON.parse(savedOrders);
+      const finishedOrders = orders.filter((o: any) => o.status === "selesai");
+      
+      let changed = false;
+      finishedOrders.forEach((o: any) => {
+        if (!currentClients.find(c => c.id === o.id)) {
+          changed = true;
+          currentClients.unshift({
+            id: o.id,
+            name: o.client,
+            websiteStatus: "active",
+            website: o.handover || null,
+            domain: o.handoverOption === "Terima Beres" ? "Dikelola RevTech" : null,
+            domainExpiry: o.nextBillingDate || null,
+            hosting: o.handoverOption === "Terima Beres" ? "Dikelola RevTech" : null,
+            hostingExpiry: o.nextBillingDate || null
+          });
+        }
+      });
+      
+      if (changed) {
+        localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+      }
+    }
+    
+    setClients(currentClients);
+  }, []);
+
   const records = clients.filter((c) => c.domain !== null);
   const critical = records.filter((c) => urgency(daysUntil(c.domainExpiry)) === "critical" || urgency(daysUntil(c.hostingExpiry)) === "critical");
   const warning = records.filter((c) => urgency(daysUntil(c.domainExpiry)) === "warning" || urgency(daysUntil(c.hostingExpiry)) === "warning");
+
+  if (!isClient) return null;
 
   return (
     <div>
@@ -46,17 +89,17 @@ export default function MaintenancePage() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Domain Kritis (≤14h)", value: critical.length, iconBg: "bg-rose-50", iconColor: "text-rose-600", icon: "crisis_alert" },
-          { label: "Segera Diperbarui (≤60h)", value: warning.length, iconBg: "bg-amber-50", iconColor: "text-amber-600", icon: "warning" },
-          { label: "Total Domain Dipantau", value: records.length, iconBg: "bg-blue-50", iconColor: "text-blue-600", icon: "dns" },
+          { label: "Domain Kritis (≤14h)", value: critical.length, iconBg: "bg-rose-500/10", iconColor: "text-rose-500", icon: "crisis_alert" },
+          { label: "Segera Diperbarui (≤60h)", value: warning.length, iconBg: "bg-amber-500/10", iconColor: "text-amber-500", icon: "warning" },
+          { label: "Total Domain Dipantau", value: records.length, iconBg: "bg-blue-500/10", iconColor: "text-blue-500", icon: "dns" },
         ].map((s, i) => (
-          <motion.div key={s.label} {...fadeUp(i)} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-3">
+          <motion.div key={s.label} {...fadeUp(i)} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-4 shadow-[var(--adm-shadow)] flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
               <span className={`material-symbols-outlined text-[20px] ${s.iconColor}`} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
             </div>
             <div>
-              <p className="text-xs text-slate-500 leading-tight">{s.label}</p>
-              <p className="text-xl font-bold text-slate-900">{s.value}</p>
+              <p className="text-xs text-[var(--adm-text-2)] leading-tight">{s.label}</p>
+              <p className="text-xl font-bold text-[var(--adm-text)]">{s.value}</p>
             </div>
           </motion.div>
         ))}
@@ -78,8 +121,8 @@ export default function MaintenancePage() {
                 <div className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">{c.name}</p>
-                      <a href={c.website ?? "#"} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">{c.domain}</a>
+                      <p className="font-semibold text-[var(--adm-text)] text-sm">{c.name}</p>
+                      <a href={c.website ?? "#"} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">{c.domain}</a>
                     </div>
                     <StatusBadge
                       label={c.websiteStatus === "active" ? "Aktif" : c.websiteStatus === "pending" ? "Pending" : "Down"}
@@ -88,35 +131,35 @@ export default function MaintenancePage() {
                   </div>
 
                   {/* Domain expiry */}
-                  <div className={`flex items-center justify-between p-2.5 rounded-xl ${domainUrgency === "critical" ? "bg-rose-50" : domainUrgency === "warning" ? "bg-amber-50" : "bg-slate-50"}`}>
+                  <div className={`flex items-center justify-between p-2.5 rounded-xl ${domainUrgency === "critical" ? "bg-rose-500/10" : domainUrgency === "warning" ? "bg-amber-500/10" : "bg-[var(--adm-bg)]"}`}>
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[14px] text-slate-400">language</span>
-                      <span className="text-xs text-slate-600">Domain</span>
+                      <span className="material-symbols-outlined text-[14px] text-[var(--adm-text-3)]">language</span>
+                      <span className="text-xs text-[var(--adm-text-2)]">Domain</span>
                     </div>
                     {c.domainExpiry ? (
                       <div className="text-right">
-                        <p className={`text-xs font-semibold ${domainUrgency === "critical" ? "text-rose-700" : domainUrgency === "warning" ? "text-amber-700" : "text-slate-700"}`}>
+                        <p className={`text-xs font-semibold ${domainUrgency === "critical" ? "text-rose-500" : domainUrgency === "warning" ? "text-amber-500" : "text-[var(--adm-text)]"}`}>
                           {domainDays} hari lagi
                         </p>
-                        <p className="text-[10px] text-slate-400">{new Date(c.domainExpiry).toLocaleDateString("id-ID")}</p>
+                        <p className="text-[10px] text-[var(--adm-text-3)]">{new Date(c.domainExpiry).toLocaleDateString("id-ID")}</p>
                       </div>
-                    ) : <span className="text-xs text-slate-400">—</span>}
+                    ) : <span className="text-xs text-[var(--adm-text-3)]">—</span>}
                   </div>
 
                   {/* Hosting expiry */}
-                  <div className={`flex items-center justify-between p-2.5 rounded-xl ${hostingUrgency === "critical" ? "bg-rose-50" : hostingUrgency === "warning" ? "bg-amber-50" : "bg-slate-50"}`}>
+                  <div className={`flex items-center justify-between p-2.5 rounded-xl ${hostingUrgency === "critical" ? "bg-rose-500/10" : hostingUrgency === "warning" ? "bg-amber-500/10" : "bg-[var(--adm-bg)]"}`}>
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[14px] text-slate-400">storage</span>
-                      <span className="text-xs text-slate-600">{c.hosting}</span>
+                      <span className="material-symbols-outlined text-[14px] text-[var(--adm-text-3)]">storage</span>
+                      <span className="text-xs text-[var(--adm-text-2)]">{c.hosting}</span>
                     </div>
                     {c.hostingExpiry ? (
                       <div className="text-right">
-                        <p className={`text-xs font-semibold ${hostingUrgency === "critical" ? "text-rose-700" : hostingUrgency === "warning" ? "text-amber-700" : "text-slate-700"}`}>
+                        <p className={`text-xs font-semibold ${hostingUrgency === "critical" ? "text-rose-500" : hostingUrgency === "warning" ? "text-amber-500" : "text-[var(--adm-text)]"}`}>
                           {hostingDays} hari lagi
                         </p>
-                        <p className="text-[10px] text-slate-400">{new Date(c.hostingExpiry).toLocaleDateString("id-ID")}</p>
+                        <p className="text-[10px] text-[var(--adm-text-3)]">{new Date(c.hostingExpiry).toLocaleDateString("id-ID")}</p>
                       </div>
-                    ) : <span className="text-xs text-slate-400">—</span>}
+                    ) : <span className="text-xs text-[var(--adm-text-3)]">—</span>}
                   </div>
                 </div>
               </AdminCard>

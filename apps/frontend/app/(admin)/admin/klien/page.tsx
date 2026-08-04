@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageHeader, StatusBadge, AdminTable } from "@/components/admin/ui";
+import { PageHeader, StatusBadge, AdminTable, AdminToolbar } from "@/components/admin/ui";
+import { SlidersHorizontal, ChevronDown } from "lucide-react";
 import rawClients from "@/data/admin/clients.json";
+
+const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
 
 interface Client {
   id: string;
@@ -20,6 +23,7 @@ interface Client {
   domainExpiry: string | null;
   hosting: string | null;
   hostingExpiry: string | null;
+  service?: string;
 }
 
 function formatRp(n: number) {
@@ -39,13 +43,15 @@ const fadeUp = (i: number) => ({
 const EMPTY_FORM = {
   name: "", contact: "", phone: "", email: "",
   website: "", domain: "", domainExpiry: "",
-  hosting: "", hostingExpiry: "", websiteStatus: "active" as "active" | "pending" | "down"
+  hosting: "", hostingExpiry: "", websiteStatus: "active" as "active" | "pending" | "down", service: ""
 };
 
 export default function KlienPage() {
   const [isClient, setIsClient] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("Semua");
+  const [statusFilter, setStatusFilter] = useState("Semua");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,9 +60,48 @@ export default function KlienPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_clients");
-    setClients(saved ? JSON.parse(saved) : rawClients as Client[]);
-    if (!saved) localStorage.setItem("revtech_clients", JSON.stringify(rawClients));
+    const savedClients = localStorage.getItem("revtech_clients");
+    let currentClients: Client[] = savedClients ? JSON.parse(savedClients) : (rawClients as Client[]);
+    
+    // Auto-sync from finished orders
+    const savedOrders = localStorage.getItem("revtech_orders");
+    if (savedOrders) {
+      const orders = JSON.parse(savedOrders);
+      const finishedOrders = orders.filter((o: any) => o.status === "selesai");
+      
+      let changed = false;
+      finishedOrders.forEach((o: any) => {
+        // Cek apakah order ini sudah dimasukkan ke klien
+        // Kita gunakan id order sebagai id klien agar tidak duplikat
+        if (!currentClients.find(c => c.id === o.id)) {
+          changed = true;
+          currentClients.unshift({
+            id: o.id,
+            name: o.client,
+            contact: o.client,
+            phone: o.phone,
+            email: "",
+            website: o.handover || null,
+            websiteStatus: "active",
+            joinDate: o.createdAt.split("T")[0],
+            totalSpend: o.total || 0,
+            activeProjects: 1,
+            domain: o.handoverOption === "Terima Beres" ? "Dikelola RevTech" : null,
+            domainExpiry: o.nextBillingDate || null,
+            hosting: o.handoverOption === "Terima Beres" ? "Dikelola RevTech" : null,
+            hostingExpiry: o.nextBillingDate || null,
+            service: o.service
+          });
+        }
+      });
+      
+      if (changed) {
+        localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+      }
+    }
+    
+    setClients(currentClients);
+    if (!savedClients) localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
   }, []);
 
   function save(updated: Client[]) {
@@ -69,7 +114,7 @@ export default function KlienPage() {
       name: c.name, contact: c.contact, phone: c.phone, email: c.email,
       website: c.website || "", domain: c.domain || "",
       domainExpiry: c.domainExpiry || "", hosting: c.hosting || "",
-      hostingExpiry: c.hostingExpiry || "", websiteStatus: c.websiteStatus
+      hostingExpiry: c.hostingExpiry || "", websiteStatus: c.websiteStatus, service: c.service || ""
     });
     setEditingId(c.id);
     setSelectedClient(null);
@@ -90,7 +135,7 @@ export default function KlienPage() {
         ...c, name: form.name, contact: form.contact, phone: form.phone,
         email: form.email, website: form.website || null, domain: form.domain || null,
         domainExpiry: form.domainExpiry || null, hosting: form.hosting || null,
-        hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus
+        hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus, service: form.service || undefined
       } : c);
     } else {
       updated = [{
@@ -100,7 +145,7 @@ export default function KlienPage() {
         domainExpiry: form.domainExpiry || null, hosting: form.hosting || null,
         hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus,
         joinDate: new Date().toISOString().split("T")[0],
-        totalSpend: 0, activeProjects: 0
+        totalSpend: 0, activeProjects: 0, service: form.service || undefined
       }, ...clients];
     }
     save(updated);
@@ -109,12 +154,19 @@ export default function KlienPage() {
     setForm(EMPTY_FORM);
   }
 
-  const filtered = clients.filter(c =>
-    !search ||
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.contact.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = clients.filter(c => {
+    const matchStatus = statusFilter === "Semua" || (
+      statusFilter === "Aktif" ? c.websiteStatus === "active" :
+      statusFilter === "Pending" ? c.websiteStatus === "pending" :
+      c.websiteStatus === "down"
+    );
+    const matchService = serviceFilter === "Semua" || (c.service && c.service.includes(serviceFilter));
+    const matchSearch = !search ||
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.contact.toLowerCase().includes(search.toLowerCase()) ||
+      c.email.toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchService && matchSearch;
+  });
 
   const expiringDomains = clients.filter(c => {
     const days = daysUntil(c.domainExpiry);
@@ -126,36 +178,33 @@ export default function KlienPage() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-5 mt-2">
-        {view === "form" ? (
-          <button onClick={() => setView("list")} className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-slate-600">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Kembali
-          </button>
-        ) : (
-          <div className="relative w-full sm:w-72">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-            <input
-              id="client-search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Cari nama, email, atau kontak..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-            />
+      {/* Toolbar */}
+      <AdminToolbar
+        view={view}
+        onBack={() => setView("list")}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari nama, email, atau kontak..."
+        dropdown={
+          <div className="relative flex items-center shrink-0">
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer w-full"
+            >
+              {SERVICE_TABS.map(s => (
+                <option key={s} value={s} className="bg-[var(--adm-card)] text-[var(--adm-text)]">{s === "Semua" ? "Semua Layanan" : s}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3">
+              <ChevronDown size={14} strokeWidth={2.5} className="text-[var(--adm-text-3)]" />
+            </div>
           </div>
-        )}
-
-        {view === "list" && (
-          <button
-            id="add-client"
-            onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setView("form"); }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px]">person_add</span>
-            Tambah Klien
-          </button>
-        )}
-      </div>
+        }
+        onAdd={() => { setEditingId(null); setForm(EMPTY_FORM); setView("form"); }}
+        addLabel="Klien Baru"
+        addIcon="add"
+      />
 
       {view === "list" && (
         <>
@@ -172,6 +221,29 @@ export default function KlienPage() {
             </motion.div>
           )}
 
+          {/* Actions Row */}
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center shrink-0">
+              <div className="relative flex items-center justify-center shrink-0 group">
+                <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+                  <SlidersHorizontal size={18} strokeWidth={2.5} />
+                </button>
+                <select
+                  dir="rtl"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Filter Status"
+                >
+                  <option value="Semua" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Semua Status</option>
+                  <option value="Aktif" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Aktif</option>
+                  <option value="Pending" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Pending</option>
+                  <option value="Down" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Down</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <motion.div {...fadeUp(1)}>
             <AdminTable
               keyField="id"
@@ -183,18 +255,18 @@ export default function KlienPage() {
                   key: "name", label: "Klien",
                   render: c => (
                     <div>
-                      <p className="font-semibold text-slate-800">{c.name}</p>
-                      <p className="text-xs text-slate-400">{c.contact} · {c.phone}</p>
+                      <p className="font-semibold text-[var(--adm-text)]">{c.name}</p>
+                      <p className="text-xs text-[var(--adm-text-3)]">{c.contact} · {c.phone}</p>
                     </div>
                   ),
                 },
                 {
                   key: "website", label: "Website",
                   render: c => c.website ? (
-                    <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs" onClick={e => e.stopPropagation()}>
+                    <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs" onClick={e => e.stopPropagation()}>
                       {c.domain}
                     </a>
-                  ) : <span className="text-slate-300">—</span>,
+                  ) : <span className="text-[var(--adm-text-3)]">—</span>,
                 },
                 {
                   key: "websiteStatus", label: "Status",
@@ -220,12 +292,12 @@ export default function KlienPage() {
                 },
                 {
                   key: "totalSpend", label: "Total Belanja",
-                  render: c => <span className="text-sm font-semibold text-slate-700">{formatRp(c.totalSpend)}</span>,
+                  render: c => <span className="text-sm font-semibold text-[var(--adm-text)]">{formatRp(c.totalSpend)}</span>,
                 },
                 {
                   key: "activeProjects", label: "Proyek Aktif",
                   render: c => (
-                    <span className={`text-sm font-semibold ${c.activeProjects > 0 ? "text-blue-600" : "text-slate-400"}`}>
+                    <span className={`text-sm font-semibold ${c.activeProjects > 0 ? "text-blue-500" : "text-[var(--adm-text-3)]"}`}>
                       {c.activeProjects}
                     </span>
                   ),
@@ -239,68 +311,68 @@ export default function KlienPage() {
       {/* Form Tambah / Edit */}
       {view === "form" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">{editingId ? "Edit Data Klien" : "Tambah Klien Baru"}</h2>
+          <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-6 sm:p-8 shadow-[var(--adm-shadow)]">
+            <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">{editingId ? "Edit Data Klien" : "Tambah Klien Baru"}</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nama Bisnis / Instansi *</label>
-                  <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="CV Maju Jaya" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Bisnis / Instansi *</label>
+                  <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="CV Maju Jaya" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nama Kontak PIC *</label>
-                  <input required type="text" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Budi Santoso" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Kontak PIC *</label>
+                  <input required type="text" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Budi Santoso" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nomor WhatsApp</label>
-                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nomor WhatsApp</label>
+                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Email</label>
-                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="klien@email.com" />
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Email</label>
+                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="klien@email.com" />
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-5">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Info Website & Domain</p>
+              <div className="border-t border-[var(--adm-border)] pt-5">
+                <p className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wider mb-4">Info Website & Domain</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">URL Website</label>
-                    <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="https://klien.com" />
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">URL Website</label>
+                    <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="https://klien.com" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Status Website</label>
-                    <select value={form.websiteStatus} onChange={e => setForm({ ...form, websiteStatus: e.target.value as "active" | "pending" | "down" })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                      <option value="active">Aktif</option>
-                      <option value="pending">Pending</option>
-                      <option value="down">Down</option>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Status Website</label>
+                    <select value={form.websiteStatus} onChange={e => setForm({ ...form, websiteStatus: e.target.value as "active" | "pending" | "down" })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                      <option value="active" className="bg-[var(--adm-card)]">Aktif</option>
+                      <option value="pending" className="bg-[var(--adm-card)]">Pending</option>
+                      <option value="down" className="bg-[var(--adm-card)]">Down</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Domain</label>
-                    <input type="text" value={form.domain} onChange={e => setForm({ ...form, domain: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="klien.com" />
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Domain</label>
+                    <input type="text" value={form.domain} onChange={e => setForm({ ...form, domain: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="klien.com" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Kadaluarsa Domain</label>
-                    <input type="date" value={form.domainExpiry} onChange={e => setForm({ ...form, domainExpiry: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Kadaluarsa Domain</label>
+                    <input type="date" value={form.domainExpiry} onChange={e => setForm({ ...form, domainExpiry: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Hosting</label>
-                    <input type="text" value={form.hosting} onChange={e => setForm({ ...form, hosting: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Niagahoster / Hostinger / dll" />
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Hosting</label>
+                    <input type="text" value={form.hosting} onChange={e => setForm({ ...form, hosting: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Niagahoster / Hostinger / dll" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Kadaluarsa Hosting</label>
-                    <input type="date" value={form.hostingExpiry} onChange={e => setForm({ ...form, hostingExpiry: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Kadaluarsa Hosting</label>
+                    <input type="date" value={form.hostingExpiry} onChange={e => setForm({ ...form, hostingExpiry: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-slate-500 hover:bg-slate-100 transition-colors text-sm">Batal</button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm text-sm">{editingId ? "Simpan Perubahan" : "Tambah Klien"}</button>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--adm-border)]">
+                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm">Batal</button>
+                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-colors shadow-sm text-sm">{editingId ? "Simpan Perubahan" : "Tambah Klien"}</button>
               </div>
             </form>
           </div>
@@ -322,26 +394,26 @@ export default function KlienPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl"
+              className="absolute right-0 top-0 h-full w-full max-w-md bg-[var(--adm-card)] shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-5 border-b border-slate-100">
-                <h2 className="text-base font-bold text-slate-900">{selectedClient.name}</h2>
+              <div className="flex items-center justify-between p-5 border-b border-[var(--adm-border)]">
+                <h2 className="text-base font-bold text-[var(--adm-text)]">{selectedClient.name}</h2>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleEdit(selectedClient)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors">
+                  <button onClick={() => handleEdit(selectedClient)} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors">
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                   </button>
                   {deletingId === selectedClient.id ? (
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleDelete(selectedClient.id)} className="px-2 py-1 text-[10px] font-bold bg-red-600 text-white rounded-lg">Hapus</button>
-                      <button onClick={() => setDeletingId(null)} className="px-2 py-1 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-lg">Batal</button>
+                      <button onClick={() => handleDelete(selectedClient.id)} className="px-2 py-1 text-[10px] font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Hapus</button>
+                      <button onClick={() => setDeletingId(null)} className="px-2 py-1 text-[10px] font-bold bg-[var(--adm-bg)] text-[var(--adm-text)] rounded-lg hover:bg-[var(--adm-border)] transition-colors">Batal</button>
                     </div>
                   ) : (
-                    <button onClick={() => setDeletingId(selectedClient.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors">
+                    <button onClick={() => setDeletingId(selectedClient.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                   )}
-                  <button id="close-client-drawer" onClick={() => setSelectedClient(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+                  <button id="close-client-drawer" onClick={() => setSelectedClient(null)} className="p-1.5 rounded-lg hover:bg-[var(--adm-bg)] text-[var(--adm-text-3)] transition-colors">
                     <span className="material-symbols-outlined text-[18px]">close</span>
                   </button>
                 </div>
@@ -385,8 +457,8 @@ export default function KlienPage() {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">{label}</p>
-      <div className="bg-slate-50 rounded-xl divide-y divide-slate-100">{children}</div>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--adm-text-3)] mb-2">{label}</p>
+      <div className="bg-[var(--adm-bg)] rounded-xl divide-y divide-[var(--adm-border)]">{children}</div>
     </div>
   );
 }
@@ -394,8 +466,8 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between px-3 py-2.5">
-      <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-xs font-medium text-slate-800 text-right max-w-[60%] break-words">{value}</span>
+      <span className="text-xs text-[var(--adm-text-2)]">{label}</span>
+      <span className="text-xs font-medium text-[var(--adm-text)] text-right max-w-[60%] break-words">{value}</span>
     </div>
   );
 }

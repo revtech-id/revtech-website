@@ -510,3 +510,74 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
     </div>
   );
 }
+
+// ── AdminToolbar ─────────────────────────────────────────────────────────────
+
+interface AdminToolbarProps {
+  view: "list" | "form";
+  onBack: () => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  searchPlaceholder?: string;
+  dropdown?: React.ReactNode;
+  onAdd?: () => void;
+  addLabel?: string;
+  addIcon?: string;
+}
+
+export function AdminToolbar({
+  view,
+  onBack,
+  search,
+  onSearchChange,
+  searchPlaceholder = "Cari...",
+  dropdown,
+  onAdd,
+  addLabel = "Baru",
+  addIcon = "add",
+}: AdminToolbarProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 mt-2">
+      {view === "list" ? (
+        <>
+          <div className="flex items-center flex-1 max-w-full sm:max-w-[460px] rounded-full bg-[var(--adm-card)] shadow-[var(--adm-shadow)] transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
+            {dropdown && (
+              <>
+                {dropdown}
+                <div className="w-px h-5 bg-[var(--adm-border)] shrink-0" />
+              </>
+            )}
+            <div className="relative flex-1 flex items-center">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full bg-transparent pl-4 pr-10 py-2.5 text-sm focus:outline-none text-[var(--adm-text)] placeholder-[var(--adm-text-3)]"
+              />
+              <span className="material-symbols-outlined absolute right-3 text-[var(--adm-text-3)] text-[18px] pointer-events-none">search</span>
+            </div>
+          </div>
+          
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 px-2 py-2 text-[var(--adm-text-2)] hover:text-[var(--adm-text)] text-sm font-semibold active:scale-95 transition-all w-full sm:w-auto mt-2 sm:mt-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">{addIcon}</span>
+              <span className="hidden sm:inline">{addLabel}</span>
+            </button>
+          )}
+        </>
+      ) : (
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium transition-all text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
+        >
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          Kembali
+        </button>
+      )}
+    </div>
+  );
+}

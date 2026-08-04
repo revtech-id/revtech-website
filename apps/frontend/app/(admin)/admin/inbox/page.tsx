@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AdminCard } from "@/components/admin/ui";
+import { AdminCard, AdminToolbar } from "@/components/admin/ui";
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle } from "lucide-react";
 import inboxData from "@/data/admin/inbox.json";
 import { countries as COUNTRIES } from "@/lib/countries";
@@ -45,18 +45,20 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
     const s = lead.service.toLowerCase();
     const isVip = lead.isVip || false;
 
-    if (s.includes("usaha")) days = isVip ? 3 : 7;
-    else if (s.includes("profesional")) days = isVip ? 7 : 14;
-    else if (s.includes("eksklusif")) days = isVip ? 14 : 30;
+    if (s.includes("usaha")) days = 5;
+    else if (s.includes("profesional")) days = 14;
     else if (s.includes("digital")) days = 1;
-    else if (s.includes("custom")) days = isVip ? 20 : 30;
+    else if (s.includes("custom")) days = 30;
+    
+    // VIP = 2x lebih cepat
+    if (isVip && days > 1) {
+      days = Math.ceil(days / 2);
+    }
 
     const d = new Date();
     d.setDate(d.getDate() + days);
     return d.toISOString().split("T")[0];
   });
-
-  const [handover, setHandover] = useState(lead.handover || "");
 
   return (
     <AnimatePresence>
@@ -118,22 +120,8 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 [color-scheme:dark]"
               />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Opsi Serah Terima</label>
-              <select
-                value={handover}
-                onChange={(e) => setHandover(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-              >
-                <option value="" className="bg-[var(--adm-card)] text-[var(--adm-text)]">- Pilih Opsi -</option>
-                <option value="Terima Beres (Basic)" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terima Beres (Basic)</option>
-                <option value="Terima Beres (Plus)" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terima Beres (Plus)</option>
-                <option value="Sistem Mandiri (Source Code)" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Sistem Mandiri (Source Code)</option>
-              </select>
             </div>
           </div>
 
@@ -149,7 +137,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                 total: parseInt(total.toString().replace(/\D/g, ""), 10), 
                 dp: parseInt(dp.toString().replace(/\D/g, ""), 10), 
                 deadline, 
-                handover 
+                handover: "" 
               })}
               disabled={!total || !dp}
               className="flex-1 py-2 rounded-lg font-bold bg-[var(--adm-success)] text-white hover:opacity-90 transition-opacity text-sm shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
@@ -176,7 +164,7 @@ export default function InboxPage() {
   const [filter, setFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("Semua");
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState("oldest");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [deletedLeads, setDeletedLeads] = useState<Lead[]>([]);
   const [toastMessage, setToastMessage] = useState<{ text: string, type: "success" | "error" | "info" } | null>(null);
@@ -209,6 +197,18 @@ export default function InboxPage() {
     if (savedTrash) {
       setDeletedLeads(JSON.parse(savedTrash));
     }
+
+    // Listener for auto-updating across tabs without refreshing
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "revtech_inbox" && e.newValue) {
+        setLeads(JSON.parse(e.newValue));
+      } else if (e.key === "revtech_inbox_trash" && e.newValue) {
+        setDeletedLeads(JSON.parse(e.newValue));
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   function saveLeads(updated: Lead[]) {
@@ -403,6 +403,7 @@ export default function InboxPage() {
     const orderPayload = {
       id: orderId,
       client: lead.name,
+      company: lead.company || "",
       service: lead.service,
       status: "antrean",
       dp: data.dp,
@@ -412,6 +413,7 @@ export default function InboxPage() {
       deadline: data.deadline || null,
       notes: lead.message || "",
       handover: data.handover,
+      isVip: lead.isVip || false,
       assignedDev: "",
       progressLog: [{ date: new Date().toISOString(), note: "Proyek masuk antrean dari Inbox.", by: "Admin" }]
     };
@@ -476,67 +478,37 @@ export default function InboxPage() {
       <div className="pt-2"></div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        {view === "list" ? (
-          <>
-          <div className="flex items-center flex-1 max-w-full sm:max-w-[460px] rounded-full bg-[var(--adm-card)] shadow-[var(--adm-shadow)] transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
-            {/* Dropdown Layanan */}
-            <div className="relative flex items-center shrink-0">
-              <select
-                value={serviceFilter}
-                onChange={(e) => setServiceFilter(e.target.value)}
-                className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer w-full"
-              >
-                {SERVICE_TABS.map(s => (
-                  <option key={s} value={s} className="bg-[var(--adm-card)] text-[var(--adm-text)]">{s === "Semua" ? "Semua Layanan" : s}</option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute right-3">
-                <ChevronDown size={14} strokeWidth={2.5} className="text-slate-400" />
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-5 bg-[var(--adm-border)] shrink-0" />
-
-            {/* Search Input */}
-            <div className="relative flex-1 flex items-center">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari nama, bisnis..."
-                className="w-full bg-transparent pl-4 pr-10 py-2.5 text-sm focus:outline-none text-[var(--adm-text)]"
-              />
-              <span className="material-symbols-outlined absolute right-3 text-[var(--adm-text-3)] text-[18px] pointer-events-none">search</span>
+      <AdminToolbar
+        view={view}
+        onBack={() => setView("list")}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari nama, bisnis..."
+        dropdown={
+          <div className="relative flex items-center shrink-0">
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer w-full"
+            >
+              {SERVICE_TABS.map(s => (
+                <option key={s} value={s} className="bg-[var(--adm-card)] text-[var(--adm-text)]">{s === "Semua" ? "Semua Layanan" : s}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3">
+              <ChevronDown size={14} strokeWidth={2.5} className="text-[var(--adm-text-3)]" />
             </div>
           </div>
-          
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setSelectedCountry(COUNTRIES[0]);
-              setNewLead({ name: "", phone: "", company: "", service: "Jasa Website", serviceDetail: "", handover: "", budget: "", status: "new", message: "", followUpNote: "", isVip: false, referenceLink: "" });
-              setView("form");
-            }}
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 px-2 py-2 text-[var(--adm-text-2)] hover:text-[var(--adm-text)] text-sm font-semibold active:scale-95 transition-all w-full sm:w-auto mt-2 sm:mt-0"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span className="hidden sm:inline">Prospek Baru</span>
-          </button>
-          </>
-        ) : (
-          <button
-            onClick={() => setView("list")}
-            className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium transition-all text-[var(--adm-text-2)]"
-          >
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Kembali
-          </button>
-        )}
-
-
-      </div>
+        }
+        onAdd={() => {
+          setEditingId(null);
+          setSelectedCountry(COUNTRIES[0]);
+          setNewLead({ name: "", phone: "", company: "", service: "Jasa Website", serviceDetail: "", handover: "", budget: "", status: "new", message: "", followUpNote: "", isVip: false, referenceLink: "" });
+          setView("form");
+        }}
+        addLabel="Prospek Baru"
+        addIcon="add"
+      />
 
       {view === "list" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -573,14 +545,15 @@ export default function InboxPage() {
                   <SlidersHorizontal size={18} strokeWidth={2.5} />
                 </button>
                 <select
+                  dir="rtl"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   title="Urutkan"
                 >
-                  <option value="newest" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terbaru</option>
-                  <option value="oldest" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terlama</option>
-                  <option value="vip" className="bg-[var(--adm-card)] text-[var(--adm-text)]">VIP Prioritas</option>
+                  <option value="newest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
+                  <option value="oldest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
+                  <option value="vip" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">VIP Prioritas</option>
                 </select>
               </div>
             </div>
@@ -662,9 +635,11 @@ export default function InboxPage() {
                         <div className="flex items-baseline gap-2 mt-1.5 mb-2 pr-4 sm:pr-8 overflow-hidden">
                           {(() => {
                             const [, ...rest] = lead.service.split(" - ");
-                            const detail = rest.length > 0 ? rest.join(" - ") : lead.service;
+                            const fallbackDetail = rest.length > 0 ? rest.join(" - ") : lead.service;
+                            const displayTitle = lead.serviceDetail ? lead.serviceDetail : fallbackDetail;
+                            
                             return (
-                              <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">{detail}</h3>
+                              <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">{displayTitle}</h3>
                             );
                           })()}
                           <span className="text-[var(--adm-text-3)] hidden sm:inline">—</span>
@@ -776,7 +751,7 @@ export default function InboxPage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Nomor WhatsApp *</label>
-                    <div className="flex rounded-lg bg-transparent focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
+                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
                       <CountrySelector 
                         selected={selectedCountry} 
                         onSelect={setSelectedCountry} 
@@ -832,42 +807,31 @@ export default function InboxPage() {
                 </div>
 
                 {newLead.service === "Jasa Website" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 bg-[var(--adm-bg)] rounded-xl">
-                    <div>
-                      <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Opsi Serah Terima</label>
-                      <select value={newLead.handover} onChange={e => setNewLead({...newLead, handover: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-card)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]">
-                        <option value="" className="bg-[var(--adm-card)]">- Pilih Opsi -</option>
-                        <option value="Terima Beres (Basic)" className="bg-[var(--adm-card)]">Terima Beres (Basic)</option>
-                        <option value="Terima Beres (Plus)" className="bg-[var(--adm-card)]">Terima Beres (Plus)</option>
-                        <option value="Sistem Mandiri (Source Code)" className="bg-[var(--adm-card)]">Sistem Mandiri (Source Code)</option>
-                      </select>
-                    </div>
-                    <div className="flex items-start sm:items-center gap-3 md:pt-[22px]">
-                      <input 
-                        type="checkbox" 
-                        id="vip-check" 
-                        checked={newLead.isVip} 
-                        onChange={e => {
-                          const vip = e.target.checked;
-                          const calculated = calculateBudget(newLead.service, newLead.serviceDetail, vip);
-                          if (calculated) {
-                            setNewLead({...newLead, isVip: vip, budget: calculated});
+                  <div className="flex items-center gap-3 mt-2">
+                    <input 
+                      type="checkbox" 
+                      id="vip-check" 
+                      checked={newLead.isVip} 
+                      onChange={e => {
+                        const vip = e.target.checked;
+                        const calculated = calculateBudget(newLead.service, newLead.serviceDetail, vip);
+                        if (calculated) {
+                          setNewLead({...newLead, isVip: vip, budget: calculated});
+                        } else {
+                          const raw = parseInt(newLead.budget.replace(/[^0-9]/g, "")) || 0;
+                          if (raw > 0) {
+                            const adjusted = vip ? Math.round(raw * 1.3) : Math.round(raw / 1.3);
+                            setNewLead({...newLead, isVip: vip, budget: adjusted.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")});
                           } else {
-                            const raw = parseInt(newLead.budget.replace(/[^0-9]/g, "")) || 0;
-                            if (raw > 0) {
-                              const adjusted = vip ? Math.round(raw * 1.3) : Math.round(raw / 1.3);
-                              setNewLead({...newLead, isVip: vip, budget: adjusted.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")});
-                            } else {
-                              setNewLead({...newLead, isVip: vip});
-                            }
+                            setNewLead({...newLead, isVip: vip});
                           }
-                        }}
-                        className="w-[18px] h-[18px] mt-0.5 sm:mt-0 rounded bg-[var(--adm-bg)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)] cursor-pointer shrink-0"
-                      />
-                      <label htmlFor="vip-check" className="text-sm font-medium text-[var(--adm-text)] cursor-pointer leading-snug">
-                        Jalur VIP (+30% Biaya)
-                      </label>
-                    </div>
+                        }
+                      }}
+                      className="w-[18px] h-[18px] rounded bg-[var(--adm-bg)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)] cursor-pointer shrink-0 border-[var(--adm-border)]"
+                    />
+                    <label htmlFor="vip-check" className="text-sm font-bold text-[var(--adm-warning)] cursor-pointer leading-snug">
+                      Jalur VIP (+30% Biaya)
+                    </label>
                   </div>
                 )}
 
@@ -876,8 +840,8 @@ export default function InboxPage() {
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">
                       {newLead.service === "Produk Digital" ? "Harga Produk" : "Estimasi Budget"}
                     </label>
-                    <div className="flex rounded-lg bg-transparent focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
-                      <div className="bg-transparent rounded-l-lg text-[var(--adm-text)] font-bold text-[13px] px-4 flex items-center justify-center pointer-events-none">
+                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
+                      <div className="bg-transparent rounded-l-lg border-r border-[var(--adm-border)] text-[var(--adm-text)] font-bold text-[13px] px-4 flex items-center justify-center pointer-events-none">
                         Rp
                       </div>
                       <input 
@@ -899,6 +863,7 @@ export default function InboxPage() {
                       <option value="new" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Baru Masuk</option>
                       <option value="followup" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Tindak Lanjut</option>
                       <option value="waiting_dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Menunggu DP</option>
+                      <option value="deal" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Selesai</option>
                       <option value="ghosting" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Batal</option>
                     </select>
                   </div>
@@ -916,10 +881,13 @@ export default function InboxPage() {
                   <textarea rows={3} value={newLead.message} onChange={e => setNewLead({...newLead, message: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] resize-none" placeholder={newLead.service === "Custom Project" ? "Ceritakan ide sistem, web app, atau solusi custom yang Anda butuhkan secara singkat..." : "Tuliskan kebutuhan spesifik dari klien..."} />
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Catatan Follow-up Internal (hanya admin)</label>
-                  <input type="text" value={newLead.followUpNote} onChange={e => setNewLead({...newLead, followUpNote: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" placeholder="Cth: Klien mau diingatkan lagi Senin depan" />
-                </div>
+                {/* Progressive Disclosure: Hanya tampilkan Catatan Follow-up jika status bukan Baru Masuk */}
+                {newLead.status !== "new" && (
+                  <div className="p-4 bg-[var(--adm-warning)]/5 rounded-xl border border-[var(--adm-warning)]/20 mt-4">
+                    <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-warning)] uppercase tracking-wide">Catatan Follow-up Internal</label>
+                    <input type="text" value={newLead.followUpNote} onChange={e => setNewLead({...newLead, followUpNote: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-card)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-warning)] border border-[var(--adm-border)]" placeholder="Cth: Klien mau diingatkan lagi Senin depan" />
+                  </div>
+                )}
 
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button type="button" onClick={() => setView("list")} className="px-5 py-2 rounded-lg font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] hover:text-[var(--adm-text)] transition-colors text-sm">Batal</button>

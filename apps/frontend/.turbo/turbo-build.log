@@ -13,20 +13,43 @@
 - Environments: .env.local
 
   Creating an optimized production build ...
-✓ Compiled successfully in 67s
+✓ Compiled successfully in 15.1s
   Running TypeScript ...
-  Finished TypeScript in 67s ...
+  Finished TypeScript in 21.6s ...
   Collecting page data using 7 workers ...
-  Generating static pages using 7 workers (0/22) ...
-  Generating static pages using 7 workers (5/22) 
-  Generating static pages using 7 workers (10/22) 
-  Generating static pages using 7 workers (16/22) 
-✓ Generating static pages using 7 workers (22/22) in 13.8s
+  Generating static pages using 7 workers (0/45) ...
+  Generating static pages using 7 workers (11/45) 
+  Generating static pages using 7 workers (22/45) 
+  Generating static pages using 7 workers (33/45) 
+✓ Generating static pages using 7 workers (45/45) in 5.1s
   Finalizing page optimization ...
 
 Route (app)
 ┌ ○ /
 ├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin/blog
+├ ○ /admin/dashboard
+├ ○ /admin/inbox
+├ ○ /admin/invoice
+├ ○ /admin/klien
+├ ○ /admin/maintenance
+├ ○ /admin/pesanan
+├ ○ /admin/portofolio
+├ ○ /admin/profile
+├ ○ /admin/studio
+├ ○ /admin/studio/export
+├ ○ /admin/studio/review
+├ ○ /admin/system
+├ ○ /admin/system/integrasi
+├ ○ /admin/system/pengaturan
+├ ○ /admin/team
+├ ○ /admin/team/activity
+├ ○ /admin/trash
+├ ƒ /api/admin/insight
+├ ƒ /api/admin/seo-generate
+├ ƒ /api/admin/studio-review
+├ ƒ /api/admin/wa-draft
 ├ ƒ /api/chat
 ├ ○ /apple-icon.png
 ├ ○ /blog
