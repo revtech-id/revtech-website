@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageHeader, StatusBadge, AdminTable } from "@/components/admin/ui";
+import { PageHeader, StatusBadge, AdminToolbar } from "@/components/admin/ui";
+import { CheckCircle2, MessageSquare, Trash2, X, MoreHorizontal, ChevronDown, AlertTriangle, CircleDollarSign } from "lucide-react";
 import rawInvoices from "@/data/admin/invoices.json";
+import rawInbox from "@/data/admin/inbox.json";
 
 interface Invoice {
   id: string;
   orderId: string;
   client: string;
+  company?: string;
+  service?: string;
   phone?: string;
   type: "dp" | "pelunasan" | "maintenance";
   amount: number;
@@ -23,6 +27,17 @@ function formatRp(n: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 }
 
+function formatDateTime(isoString: string | undefined | null) {
+  if (!isoString) return "-";
+  const d = new Date(isoString);
+  const dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+  if (isoString.includes("T")) {
+    const timeStr = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    return `${dateStr} • ${timeStr}`;
+  }
+  return `${dateStr} • 09:00`; // Jam default untuk data lama
+}
+
 function isOverdue(dueDate: string, status: string) {
   return status === "pending" && new Date(dueDate) < new Date();
 }
@@ -33,17 +48,141 @@ const fadeUp = (i: number) => ({
 });
 
 const EMPTY_FORM = {
-  client: "", phone: "", orderId: "", type: "dp" as "dp" | "pelunasan" | "maintenance",
+  client: "", company: "", service: "", phone: "", orderId: "", type: "dp" as "dp" | "pelunasan" | "maintenance",
   amount: 0, dueDate: "", description: ""
 };
+
+function InvoiceCard({ 
+  inv, 
+  onMarkPaid, 
+  onDelete 
+}: { 
+  inv: Invoice, 
+  onMarkPaid: (inv: Invoice) => void, 
+  onDelete: (id: string) => void 
+}) {
+  
+  const handleChat = () => {
+    if (!inv.phone) return;
+    const text = inv.status === "pending"
+      ? `Halo Kak ${inv.client}, dari RevTech. Mengingatkan kembali terkait tagihan ${inv.description} sebesar ${formatRp(inv.amount)}. Jika sudah ditransfer, mohon konfirmasinya ya Kak 🙏`
+      : `Halo Kak ${inv.client}, dari RevTech. Terima kasih, pembayaran untuk ${inv.description} sudah kami terima.`;
+    window.open(`https://wa.me/${inv.phone}?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      layout
+      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] overflow-hidden hover:shadow-[var(--adm-shadow-md)] transition-shadow group border border-[var(--adm-border)]"
+    >
+      <div className="p-4 flex flex-col gap-2">
+        {/* Top Row: Identity & Status */}
+        <div className="flex flex-wrap justify-between items-start gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--adm-text-2)] font-medium mt-1">
+            <span className="text-sm font-semibold text-[var(--adm-text)]">{inv.company || inv.client}</span>
+            {inv.service && (
+              <span>{inv.service.split(" - ")[0]}</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-1.5 shrink-0">
+            {inv.status === "pending" && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onMarkPaid(inv); }} 
+                className="inline-flex items-center justify-center p-1.5 text-[var(--adm-success)] hover:opacity-70 transition-all active:scale-95 focus:outline-none" 
+                title="Tandai Lunas"
+              >
+                <CheckCircle2 size={18} strokeWidth={2.5} />
+              </button>
+            )}
+
+            {inv.status === "paid" ? (
+              <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0 ml-1 text-[var(--adm-success)]">
+                <span className="truncate">Lunas</span>
+                <CheckCircle2 size={13} strokeWidth={2.5} />
+              </div>
+            ) : isOverdue(inv.dueDate, inv.status) ? (
+              <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0 ml-1 text-[var(--adm-danger)]">
+                <span className="truncate">Terlambat</span>
+                <AlertTriangle size={13} strokeWidth={2.5} />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0 ml-1 text-[var(--adm-warning)]">
+                <span className="truncate">Pending</span>
+                <CircleDollarSign size={13} strokeWidth={2.5} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Middle Row: Amount */}
+        <div className="flex items-center gap-1.5 mt-1 mb-2">
+          <span className="text-[16px] font-black text-[var(--adm-text)] tracking-tight">
+            {formatRp(inv.amount)}
+          </span>
+        </div>
+
+        {/* Bottom Row: Description + Actions + Deadline */}
+        <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
+          <div className="flex items-baseline gap-2 pr-2 sm:pr-4 overflow-hidden min-w-0 flex-1">
+            <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">
+              {inv.type === "dp" ? "DP" : inv.type === "pelunasan" ? "Pelunasan" : "Maintenance"}
+            </h3>
+            <span className="text-[var(--adm-text-3)] hidden sm:inline">—</span>
+            <p className="text-[13px] text-[var(--adm-text-2)] truncate cursor-default flex-1 min-w-0">
+              "{inv.description}"
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0 ml-auto mt-2 sm:mt-0">
+            <div className="flex items-center gap-1.5">
+              {inv.phone && (
+                <button onClick={(e) => { e.stopPropagation(); handleChat(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Chat Klien">
+                  <MessageSquare size={13} strokeWidth={2} />
+                </button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); onDelete(inv.id); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
+                <Trash2 size={13} strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="w-px h-4 bg-[var(--adm-border)] hidden sm:block"></div>
+
+            <div className="flex items-center gap-2 text-[10px] font-semibold shrink-0 uppercase tracking-wider">
+              {inv.status === "paid" ? (
+                <span className="text-[var(--adm-text-3)]">
+                  {formatDateTime(inv.paidAt || inv.issuedAt)}
+                </span>
+              ) : inv.type === "maintenance" ? (
+                <span className={isOverdue(inv.dueDate, inv.status) ? "text-[var(--adm-danger)]" : "text-[var(--adm-text-3)]"}>
+                  Tempo: {new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function InvoicePage() {
   const [isClient, setIsClient] = useState(false);
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
-  const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
+  const [tabFilter, setTabFilter] = useState<"all" | "paid" | "overdue" | "pending">("all");
+  const [sortBy, setSortBy] = useState<"Terbaru" | "Terlama" | "Jatuh Tempo">("Terbaru");
+  const [typeFilter, setTypeFilter] = useState<"all" | "dp" | "pelunasan" | "maintenance">("all");
+  const [layananFilter, setLayananFilter] = useState("Semua Layanan");
+  const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "form">("list");
   const [form, setForm] = useState(EMPTY_FORM);
-  const [orders, setOrders] = useState<{ id: string; client: string; phone: string; dp: number; total: number }[]>([]);
+  const [lunasInvoice, setLunasInvoice] = useState<Invoice | null>(null);
+  const [lunasDate, setLunasDate] = useState("");
+  const [orders, setOrders] = useState<{ id: string; client: string; company: string; phone: string; dp: number; total: number; service: string }[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -55,54 +194,15 @@ export default function InvoicePage() {
     if (savedOrders) {
       const parsedOrders = JSON.parse(savedOrders);
       setOrders(parsedOrders.map((o: any) => ({
-        id: o.id, client: o.client, phone: o.phone || "",
-        dp: o.dp || 0, total: o.total || 0
+        id: o.id, client: o.client, company: o.company || "", phone: o.phone || "",
+        dp: o.dp || 0, total: o.total || 0, service: o.service || ""
       })));
       
+      const savedInbox = localStorage.getItem("revtech_inbox");
+      const parsedInbox = savedInbox ? JSON.parse(savedInbox) : rawInbox;
+      setLeads(parsedInbox);
+      
       let changed = false;
-      parsedOrders.forEach((o: any) => {
-        // Sync DP Invoice
-        if (o.dp > 0) {
-          const dpInvId = `INV-DP-${o.id}`;
-          const existingDp = currentInvoices.find(inv => inv.id === dpInvId);
-          const isDpPaid = ["handover", "selesai"].includes(o.status);
-          if (!existingDp) {
-            changed = true;
-            currentInvoices.push({
-              id: dpInvId, orderId: o.id, client: o.client, phone: o.phone, type: "dp",
-              amount: o.dp, status: isDpPaid ? "paid" : "pending",
-              issuedAt: o.createdAt.split("T")[0], paidAt: isDpPaid ? new Date().toISOString().split("T")[0] : null,
-              dueDate: o.deadline || o.createdAt.split("T")[0],
-              description: `DP 50% — ${o.client}`
-            });
-          } else if (existingDp.status === "pending" && isDpPaid) {
-            changed = true;
-            existingDp.status = "paid";
-            existingDp.paidAt = new Date().toISOString().split("T")[0];
-          }
-        }
-        
-        // Sync Pelunasan Invoice
-        if (o.total > o.dp) {
-          const pelInvId = `INV-PL-${o.id}`;
-          const existingPel = currentInvoices.find(inv => inv.id === pelInvId);
-          const isPelPaid = o.status === "selesai";
-          if (!existingPel) {
-            changed = true;
-            currentInvoices.push({
-              id: pelInvId, orderId: o.id, client: o.client, phone: o.phone, type: "pelunasan",
-              amount: o.total - o.dp, status: isPelPaid ? "paid" : "pending",
-              issuedAt: o.createdAt.split("T")[0], paidAt: isPelPaid ? new Date().toISOString().split("T")[0] : null,
-              dueDate: o.deadline || o.createdAt.split("T")[0],
-              description: `Pelunasan — ${o.client}`
-            });
-          } else if (existingPel.status === "pending" && isPelPaid) {
-            changed = true;
-            existingPel.status = "paid";
-            existingPel.paidAt = new Date().toISOString().split("T")[0];
-          }
-        }
-      });
       
       if (changed) {
         currentInvoices.sort((a,b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
@@ -114,15 +214,35 @@ export default function InvoicePage() {
     if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
   }, []);
 
+  const confirmLunas = () => {
+    if (!lunasInvoice || !lunasDate) return;
+    
+    // Gabungkan tanggal pilihan user dengan jam saat ini agar format ISO lengkap
+    const now = new Date();
+    const timeString = now.toISOString().substring(11); // ambil bagian T00:00:00.000Z
+    const fullIsoDate = `${lunasDate}T${timeString}`;
+
+    const updated = invoiceList.map((inv) =>
+      inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: fullIsoDate } : inv
+    );
+    setInvoiceList(updated);
+    localStorage.setItem("revtech_invoices", JSON.stringify(updated));
+  }
+
   function save(updated: Invoice[]) {
     setInvoiceList(updated);
     localStorage.setItem("revtech_invoices", JSON.stringify(updated));
   }
 
-  function markPaid(id: string) {
-    save(invoiceList.map(inv =>
-      inv.id === id ? { ...inv, status: "paid", paidAt: new Date().toISOString().split("T")[0] } : inv
-    ));
+  function handleQuickLunas(inv: Invoice) {
+    setLunasInvoice(inv);
+    setLunasDate(new Date().toISOString().split("T")[0]);
+  }
+
+  function handleDelete(id: string) {
+    if (window.confirm("Apakah Anda yakin ingin menghapus tagihan ini?")) {
+      save(invoiceList.filter(inv => inv.id !== id));
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -131,11 +251,13 @@ export default function InvoicePage() {
       id: `INV-${Date.now().toString().slice(-5)}`,
       orderId: form.orderId,
       client: form.client,
+      company: form.company,
+      service: form.service,
       phone: form.phone,
       type: form.type,
       amount: Number(form.amount),
       status: "pending",
-      issuedAt: new Date().toISOString().split("T")[0],
+      issuedAt: new Date().toISOString(),
       paidAt: null,
       dueDate: form.dueDate,
       description: form.description || `${form.type === "dp" ? "DP 50%" : "Pelunasan"} — ${form.client}`,
@@ -145,18 +267,80 @@ export default function InvoicePage() {
     setView("list");
   }
 
-  function handleOrderSelect(orderId: string) {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-      setForm(f => ({
-        ...f, orderId, client: order.client, phone: order.phone,
-        amount: f.type === "dp" ? order.dp : order.total - order.dp,
-        description: `${f.type === "dp" ? "DP 50%" : "Pelunasan"} — ${order.client}`
-      }));
+  function handleLinkSelect(id: string) {
+    if (form.type === "dp") {
+      const lead = leads.find(l => l.id === id);
+      if (lead) {
+        // Budget might be a string like "Rp 5.000.000", parse it if possible, else 0
+        const budgetMatch = lead.budget.match(/\d+(\.\d+)?/g);
+        const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
+        const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
+        
+        setForm(f => ({
+          ...f, orderId: id, client: lead.name, company: lead.company, service: lead.service, phone: lead.phone,
+          amount: dpAmount,
+          description: `DP 50% — ${lead.service || lead.company || lead.name}`
+        }));
+      }
+    } else {
+      const order = orders.find(o => o.id === id);
+      if (order) {
+        setForm(f => ({
+          ...f, orderId: id, client: order.client, company: order.company, service: order.service, phone: order.phone,
+          amount: order.total - order.dp,
+          description: `Pelunasan — ${order.service || order.client}`
+        }));
+      }
     }
   }
 
-  const filtered = filter === "all" ? invoiceList : invoiceList.filter(i => i.status === filter);
+  const filtered = invoiceList.filter(i => {
+    let matchTab = true;
+    if (tabFilter === "paid") {
+      matchTab = i.status === "paid";
+    } else if (tabFilter === "overdue") {
+      matchTab = isOverdue(i.dueDate, i.status);
+    } else if (tabFilter === "pending") {
+      matchTab = i.status === "pending" && !isOverdue(i.dueDate, i.status);
+    }
+
+    const matchType = typeFilter === "all" ? true : i.type === typeFilter;
+
+    const matchSearch = !search || 
+      i.client.toLowerCase().includes(search.toLowerCase()) || 
+      i.id.toLowerCase().includes(search.toLowerCase()) ||
+      i.description.toLowerCase().includes(search.toLowerCase());
+
+    let matchLayanan = true;
+    if (layananFilter !== "Semua Layanan") {
+      const order = orders.find(o => o.id === i.orderId);
+      const invService = order?.service || "";
+      if (layananFilter === "Jasa Modifikasi" && i.type === "maintenance") {
+        matchLayanan = true;
+      } else if (invService.startsWith(layananFilter)) {
+        matchLayanan = true;
+      } else {
+        matchLayanan = false;
+      }
+    }
+      
+    return matchTab && matchType && matchSearch && matchLayanan;
+  });
+
+  let sortedData = [...filtered];
+  if (sortBy === "Terlama") {
+    sortedData.sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
+  } else if (sortBy === "Jatuh Tempo") {
+    sortedData.sort((a, b) => {
+      const aTime = new Date(a.dueDate).getTime();
+      const bTime = new Date(b.dueDate).getTime();
+      return aTime - bTime;
+    });
+  } else {
+    // Terbaru
+    sortedData.sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
+  }
+
   const totalPaid = invoiceList.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = invoiceList.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
   const overdue = invoiceList.filter(i => isOverdue(i.dueDate, i.status));
@@ -166,24 +350,34 @@ export default function InvoicePage() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-5 mt-2">
-        {view === "form" ? (
-          <button onClick={() => setView("list")} className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Kembali
-          </button>
-        ) : <div />}
-        {view === "list" && (
-          <button
-            id="add-invoice"
-            onClick={() => { setForm(EMPTY_FORM); setView("form"); }}
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-[var(--adm-accent)] text-white text-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-[var(--adm-shadow-md)]"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            Buat Invoice
-          </button>
-        )}
-      </div>
+      <AdminToolbar
+        view={view}
+        onBack={() => setView("list")}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari invoice, klien..."
+        dropdown={
+          <div className="relative flex items-center shrink-0">
+            <select
+              value={layananFilter}
+              onChange={(e) => setLayananFilter(e.target.value)}
+              className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer w-full"
+            >
+              <option value="Semua Layanan" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Semua Layanan</option>
+              <option value="Jasa Website" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Jasa Website</option>
+              <option value="Produk Digital" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Produk Digital</option>
+              <option value="Custom Project" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Custom Project</option>
+              <option value="Jasa Modifikasi" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Jasa Modifikasi</option>
+            </select>
+            <div className="pointer-events-none absolute right-3">
+              <ChevronDown size={14} strokeWidth={2.5} className="text-[var(--adm-text-3)]" />
+            </div>
+          </div>
+        }
+        onAdd={() => { setForm(EMPTY_FORM); setView("form"); }}
+        addLabel="Buat Invoice"
+        addIcon="add"
+      />
 
       {view === "list" && (
         <>
@@ -206,90 +400,97 @@ export default function InvoicePage() {
             ))}
           </div>
 
-          {/* Filter */}
-          <div className="flex items-center gap-2 mb-4">
-            {(["all", "paid", "pending"] as const).map(f => (
-              <button
-                key={f}
-                id={`filter-invoice-${f}`}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === f ? "bg-[var(--adm-accent)] text-white" : "bg-[var(--adm-card)] text-[var(--adm-text-2)] border border-[var(--adm-border)] hover:bg-[var(--adm-bg)]"}`}
-              >
-                {f === "all" ? "Semua" : f === "paid" ? "Lunas" : "Pending"}
-              </button>
-            ))}
+          {/* Tabs & Actions Row */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4 sm:gap-0">
+            {/* Tabs Prioritas */}
+            <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide w-full sm:w-auto border-b border-[var(--adm-border)] sm:border-0 sm:flex-1">
+              {[
+                { id: "all", label: "Semua", count: invoiceList.length },
+                { id: "overdue", label: "Jatuh Tempo", count: overdue.length },
+                { id: "pending", label: "Belum Lunas", count: invoiceList.filter(i => i.status === "pending" && !isOverdue(i.dueDate, i.status)).length },
+                { id: "paid", label: "Lunas", count: totalPaid > 0 ? invoiceList.filter(i => i.status === "paid").length : 0 },
+              ].map((t) => {
+                const active = tabFilter === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTabFilter(t.id as any)}
+                    className={`shrink-0 pb-3 text-sm font-semibold transition-all flex items-center gap-2 border-b-2 -mb-px sm:mb-0 sm:-mb-[2px] ${
+                      active
+                        ? "border-red-500 text-red-500"
+                        : "border-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
+                    }`}
+                  >
+                    {t.label}
+                    {t.count > 0 && (
+                      <span className={`px-1.5 py-0.5 text-[10px] rounded-full ${active ? "bg-red-500 text-white" : "bg-[var(--adm-bg)] text-[var(--adm-text-2)]"}`}>
+                        {t.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Actions Row */}
+            <div className="flex items-center gap-4 shrink-0 pb-2.5 px-1 sm:px-0">
+              {/* Type Filter */}
+              <div className="relative flex items-center justify-center shrink-0 group">
+                <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+                  <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+                </button>
+                <select
+                  dir="rtl"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as any)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Filter Tipe"
+                >
+                  <option value="all" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Semua Tipe</option>
+                  <option value="dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">DP</option>
+                  <option value="pelunasan" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Pelunasan</option>
+                  <option value="maintenance" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Maintenance</option>
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div className="relative flex items-center justify-center shrink-0 group">
+                <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+                  <span className="material-symbols-outlined text-[18px]">tune</span>
+                </button>
+                <select
+                  dir="rtl"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Urutkan"
+                >
+                  <option value="Terbaru" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
+                  <option value="Terlama" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
+                  <option value="Jatuh Tempo" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Jatuh Tempo Terdekat</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <motion.div {...fadeUp(3)}>
-            <AdminTable
-              keyField="id"
-              data={filtered}
-              emptyMessage="Tidak ada invoice"
-              columns={[
-                {
-                  key: "id", label: "Invoice",
-                  render: (inv) => (
-                    <div>
-                      <p className="font-mono text-xs font-semibold text-[var(--adm-text)]">{inv.id}</p>
-                      <p className="text-xs text-[var(--adm-text-3)]">{inv.orderId}</p>
-                    </div>
-                  ),
-                },
-                {
-                  key: "client", label: "Klien",
-                  render: (inv) => (
-                    <div>
-                      <p className="font-medium text-[var(--adm-text)]">{inv.client}</p>
-                      {inv.phone && (
-                        <a href={`https://wa.me/${inv.phone}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-500 hover:underline">{inv.phone}</a>
-                      )}
-                    </div>
-                  ),
-                },
-                {
-                  key: "description", label: "Deskripsi",
-                  render: (inv) => (
-                    <div>
-                      <p className="text-sm text-[var(--adm-text)]">{inv.description}</p>
-                      <StatusBadge label={inv.type === "dp" ? "DP" : "Pelunasan"} variant={inv.type === "dp" ? "amber" : "indigo"} />
-                    </div>
-                  ),
-                },
-                {
-                  key: "amount", label: "Jumlah",
-                  render: (inv) => <span className="font-bold text-[var(--adm-text)]">{formatRp(inv.amount)}</span>,
-                },
-                {
-                  key: "dueDate", label: "Jatuh Tempo",
-                  render: (inv) => (
-                    <span className={`text-xs ${isOverdue(inv.dueDate, inv.status) ? "text-rose-500 font-semibold" : "text-[var(--adm-text-3)]"}`}>
-                      {new Date(inv.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                      {isOverdue(inv.dueDate, inv.status) && " ⚠️"}
-                    </span>
-                  ),
-                },
-                {
-                  key: "status", label: "Status",
-                  render: (inv) => (
-                    <div className="flex items-center gap-2">
-                      <StatusBadge
-                        label={inv.status === "paid" ? "Lunas" : isOverdue(inv.dueDate, inv.status) ? "Terlambat" : "Pending"}
-                        variant={inv.status === "paid" ? "emerald" : isOverdue(inv.dueDate, inv.status) ? "rose" : "amber"}
-                      />
-                      {inv.status === "pending" && (
-                        <button
-                          id={`mark-paid-${inv.id}`}
-                          onClick={(e) => { e.stopPropagation(); markPaid(inv.id); }}
-                          className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-400 transition-colors whitespace-nowrap"
-                        >
-                          Tandai Lunas
-                        </button>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-            />
+          <motion.div {...fadeUp(3)} className="flex flex-col gap-4">
+            <AnimatePresence mode="popLayout">
+              {sortedData.length > 0 ? (
+                sortedData.map(inv => (
+                  <InvoiceCard 
+                    key={inv.id} 
+                    inv={inv} 
+                    onMarkPaid={handleQuickLunas} 
+                    onDelete={handleDelete} 
+                  />
+                ))
+              ) : (
+                <div className="w-full py-20 flex flex-col items-center justify-center text-center opacity-60">
+                  <span className="material-symbols-outlined text-6xl mb-4 text-[var(--adm-text-3)]">receipt_long</span>
+                  <p className="text-lg font-medium text-[var(--adm-text-2)]">Tidak ada invoice ditemukan</p>
+                </div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </>
       )}
@@ -299,20 +500,39 @@ export default function InvoicePage() {
           <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-6 sm:p-8 shadow-[var(--adm-shadow)]">
             <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">Buat Invoice Baru</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Link ke Pesanan */}
-              {orders.length > 0 && (
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Pesanan (Opsional)</label>
-                  <select
-                    onChange={(e) => handleOrderSelect(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  >
-                    <option value="" className="bg-[var(--adm-card)]">— Pilih Pesanan —</option>
-                    {orders.map(o => (
-                      <option key={o.id} value={o.id} className="bg-[var(--adm-card)]">{o.id} · {o.client}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Link ke Data Sumber */}
+              {form.type === "dp" ? (
+                leads.length > 0 && (
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Inbox (Leads) - Opsional</label>
+                    <select
+                      value={form.orderId}
+                      onChange={(e) => handleLinkSelect(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="" className="bg-[var(--adm-card)]">— Pilih Lead —</option>
+                      {leads.map(l => (
+                        <option key={l.id} value={l.id} className="bg-[var(--adm-card)]">{l.id} · {l.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              ) : (
+                orders.length > 0 && (
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Pesanan (Opsional)</label>
+                    <select
+                      value={form.orderId}
+                      onChange={(e) => handleLinkSelect(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="" className="bg-[var(--adm-card)]">— Pilih Pesanan —</option>
+                      {orders.map(o => (
+                        <option key={o.id} value={o.id} className="bg-[var(--adm-card)]">{o.id} · {o.client}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -321,8 +541,19 @@ export default function InvoicePage() {
                   <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Nama klien" />
                 </div>
                 <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Bisnis</label>
+                  <input type="text" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Opsional (Cth: RevTech)" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nomor WhatsApp</label>
                   <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Layanan</label>
+                  <input type="text" value={form.service} onChange={e => setForm({ ...form, service: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Opsional (Cth: Jasa Website)" />
                 </div>
               </div>
 
@@ -358,6 +589,77 @@ export default function InvoicePage() {
           </div>
         </motion.div>
       )}
+
+      {/* Modal Konfirmasi Lunas */}
+      <AnimatePresence>
+        {lunasInvoice && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setLunasInvoice(null)}
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-[var(--adm-card)] rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
+            >
+              <div className="p-5 border-b border-[var(--adm-border)] flex justify-between items-center bg-[var(--adm-bg)]">
+                <h3 className="font-bold text-lg text-[var(--adm-text)] flex items-center gap-2">
+                  <CircleDollarSign className="text-[var(--adm-success)]" size={20} strokeWidth={2.5} />
+                  Konfirmasi Pelunasan
+                </h3>
+                <button onClick={() => setLunasInvoice(null)} className="text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
+                  <X size={20} strokeWidth={2.5} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="bg-[var(--adm-bg)] p-3 rounded-xl border border-[var(--adm-border)] flex justify-between items-center mb-2">
+                  <div>
+                    <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Total Tagihan</p>
+                    <p className="font-bold text-[var(--adm-text)] text-sm">{formatRp(lunasInvoice.amount)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Klien</p>
+                    <p className="font-bold text-[var(--adm-text)] text-sm">{lunasInvoice.client}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide block mb-1.5">Tanggal Pelunasan</label>
+                  <input
+                    type="date"
+                    value={lunasDate}
+                    onChange={(e) => setLunasDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-[var(--adm-border)] flex gap-3 bg-[var(--adm-bg)]">
+                <button 
+                  onClick={() => setLunasInvoice(null)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-card)] transition-colors border border-transparent hover:border-[var(--adm-border)]"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={() => {
+                    save(invoiceList.map(inv => inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: new Date(lunasDate).toISOString().split("T")[0] } : inv));
+                    setLunasInvoice(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-[var(--adm-success)] text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
+                >
+                  <CheckCircle2 size={18} strokeWidth={2.5} />
+                  Tandai Lunas
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

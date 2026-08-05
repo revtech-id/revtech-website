@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader, StatusBadge, AdminTable, AdminToolbar } from "@/components/admin/ui";
-import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Globe, Calendar, MessageSquare, Pencil, Trash2, RefreshCw, AlertCircle, Server } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Globe, Calendar, MessageSquare, Pencil, Trash2, RefreshCw, AlertCircle, Server, Wand2, MoreHorizontal, X } from "lucide-react";
 import rawClients from "@/data/admin/clients.json";
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
@@ -26,6 +26,8 @@ interface Client {
   service?: string;
   handover?: string;
   recurringFee?: number;
+  unpaidFee?: number;
+  modificationsQuota?: number;
 }
 
 function formatRp(n: number) {
@@ -46,10 +48,11 @@ const EMPTY_FORM = {
   name: "", contact: "", phone: "", email: "",
   website: "", domain: "", domainExpiry: "",
   hosting: "", hostingExpiry: "", websiteStatus: "active" as "active" | "down", service: "",
-  handover: "", recurringFee: 0
+  handover: "", recurringFee: 0, modificationsQuota: 0
 };
 
-function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick }: { client: Client; index: number; onEdit: () => void; onDelete: () => void; onRenew: () => void; onMessageClick: () => void; }) {
+function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick, onUseMod }: { client: Client; index: number; onEdit: () => void; onDelete: () => void; onRenew: () => void; onMessageClick: () => void; onUseMod: () => void; }) {
+  const [showMenu, setShowMenu] = useState(false);
   const getStatusColor = (status: string) => status === "active" ? "var(--adm-success)" : "var(--adm-danger)";
   const statusLabel = client.websiteStatus === "active" ? "Aktif" : "Down";
 
@@ -79,7 +82,7 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick }
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0, transition: { delay: index * 0.04, type: "spring", stiffness: 300, damping: 28 } }}
-      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] overflow-hidden p-5 flex flex-col gap-4 border border-[var(--adm-border)] hover:border-blue-500/30 transition-colors group"
+      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] p-5 flex flex-col gap-4 border border-[var(--adm-border)] hover:border-blue-500/30 transition-colors group"
     >
       {/* Top Row: Info */}
       <div className="flex justify-between items-start gap-4">
@@ -103,9 +106,9 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick }
         {/* Top Right: Actions, Status Badge & Tagihan */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-3">
-            {client.domainExpiry && (
-              <button onClick={(e) => { e.stopPropagation(); onRenew(); }} className="inline-flex items-center justify-center text-[var(--adm-text-3)] hover:text-[var(--adm-success)] transition-colors focus:outline-none" title="Perpanjang Layanan (+1 Tahun)">
-                <RefreshCw size={15} strokeWidth={2.5} />
+            {(client.modificationsQuota ?? 0) > 0 && (
+              <button onClick={(e) => { e.stopPropagation(); onUseMod(); }} className="inline-flex items-center justify-center text-[var(--adm-text-3)] hover:text-[var(--adm-success)] transition-colors focus:outline-none" title="Gunakan Revisi">
+                <Wand2 size={15} strokeWidth={2.5} />
               </button>
             )}
             <div className="flex items-center gap-1.5 text-[11px] font-bold" style={{ color: getStatusColor(client.websiteStatus) }}>
@@ -119,12 +122,12 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick }
 
       {/* Bottom Row: Billing Date & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[var(--adm-border)] mt-1">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="flex flex-col gap-0.5 shrink-0">
             {client.domainExpiry ? (
               <>
-                {daysText && <span className={`text-[13px] font-bold ${daysColor}`}>{daysText}</span>}
-                <span className="text-[11px] text-[var(--adm-text-2)] font-medium tracking-wide">
+                {daysText && <span className={`text-[13px] font-bold whitespace-nowrap ${daysColor}`}>{daysText}</span>}
+                <span className="text-[11px] text-[var(--adm-text-2)] font-medium tracking-wide whitespace-nowrap">
                   {new Date(client.domainExpiry).toLocaleDateString("id-ID", { day: 'numeric', month: 'numeric', year: 'numeric' })}
                 </span>
               </>
@@ -138,22 +141,78 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick }
           ) : null}
           
           {client.recurringFee ? (
-            <div className="text-[13px] text-[var(--adm-text)] font-bold">
+            <div className="text-[13px] text-[var(--adm-text)] font-bold whitespace-nowrap">
               {formatRp(client.recurringFee)}
+            </div>
+          ) : null}
+
+          {(client.unpaidFee ?? 0) > 0 ? (
+            <div className="text-[11px] font-bold text-red-500 ml-2">
+              Kurang: {formatRp(client.unpaidFee!)}
             </div>
           ) : null}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={(e) => { e.stopPropagation(); onMessageClick(); }} className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Detail & Pesan">
-            <MessageSquare size={15} strokeWidth={2} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
-            <Pencil size={15} strokeWidth={2} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
-            <Trash2 size={15} strokeWidth={2} />
+        {/* Actions Expandable Pill */}
+        <div 
+          className={`flex items-center shrink-0 overflow-hidden transition-all duration-300 ease-out ${
+            showMenu 
+              ? 'bg-[var(--adm-bg)] border border-[var(--adm-border)] shadow-sm rounded-full pl-1' 
+              : 'bg-transparent border border-transparent'
+          }`}
+        >
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "auto", opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-0.5 whitespace-nowrap"
+              >
+                {client.domainExpiry && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); onRenew(); }} 
+                    className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-success)] rounded-full transition-colors focus:outline-none shrink-0"
+                    title="Perpanjang Layanan"
+                  >
+                    <RefreshCw size={15} strokeWidth={2.5} />
+                  </button>
+                )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMessageClick(); }} 
+                  className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] rounded-full transition-colors focus:outline-none shrink-0"
+                  title="Detail & Pesan"
+                >
+                  <MessageSquare size={15} strokeWidth={2.5} />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }} 
+                  className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] rounded-full transition-colors focus:outline-none shrink-0"
+                  title="Edit Data"
+                >
+                  <Pencil size={15} strokeWidth={2.5} />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(); }} 
+                  className="inline-flex items-center justify-center p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] rounded-full transition-colors focus:outline-none shrink-0"
+                  title="Hapus"
+                >
+                  <Trash2 size={15} strokeWidth={2.5} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} 
+            className={`inline-flex items-center justify-center p-2 rounded-full transition-colors focus:outline-none shrink-0 ${
+              showMenu 
+                ? 'text-[var(--adm-text)]' 
+                : 'text-[var(--adm-text-3)] hover:text-[var(--adm-text)]'
+            }`}
+          >
+            {showMenu ? <X size={16} strokeWidth={2.5} /> : <MoreHorizontal size={18} strokeWidth={2.5} />}
           </button>
         </div>
       </div>
@@ -176,6 +235,9 @@ export default function MaintenancePage() {
   const [renewingClient, setRenewingClient] = useState<Client | null>(null);
   const [renewForm, setRenewForm] = useState<{ amountPaid: number; newExpiryDate: string }>({ amountPaid: 0, newExpiryDate: "" });
   const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  const [usingModId, setUsingModId] = useState<string | null>(null);
+  const [modNotes, setModNotes] = useState("");
+  const [modDeadline, setModDeadline] = useState("");
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -265,8 +327,30 @@ export default function MaintenancePage() {
       }
     }
     
+    // Monthly Auto-Reset Quota for Plus Clients
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const savedMonth = localStorage.getItem("revtech_last_quota_reset_month");
+    
+    if (savedMonth !== currentMonth) {
+      let resetOccurred = false;
+      currentClients = currentClients.map(c => {
+        if ((c.handover || "").toLowerCase().includes("plus")) {
+          if (c.modificationsQuota !== 1) {
+             resetOccurred = true;
+             return { ...c, modificationsQuota: 1 };
+          }
+        }
+        return c;
+      });
+      
+      localStorage.setItem("revtech_last_quota_reset_month", currentMonth);
+      if (resetOccurred || !savedClients) {
+        localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+      }
+    }
+
     setClients(currentClients);
-    if (!savedClients) localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+    if (!savedClients && savedMonth === currentMonth) localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
   }, []);
 
   function save(updated: Client[]) {
@@ -280,7 +364,8 @@ export default function MaintenancePage() {
       website: c.website || "", domain: c.domain || "",
       domainExpiry: c.domainExpiry || "", hosting: c.hosting || "",
       hostingExpiry: c.hostingExpiry || "", websiteStatus: c.websiteStatus, service: c.service || "",
-      handover: c.handover || "", recurringFee: c.recurringFee || 0
+      handover: c.handover || "", recurringFee: c.recurringFee || 0,
+      modificationsQuota: c.modificationsQuota || 0
     });
     setEditingId(c.id);
     setSelectedClient(null);
@@ -309,12 +394,17 @@ export default function MaintenancePage() {
       updatedHostingExpiry = hExpiry.toISOString().split("T")[0];
     }
 
+    const sisa = (c.recurringFee || 0) - renewForm.amountPaid;
+    const finalUnpaidFee = Math.max(0, (c.unpaidFee || 0) + sisa);
+
     const updatedClient = {
       ...c,
       domainExpiry: renewForm.newExpiryDate,
       hostingExpiry: updatedHostingExpiry,
       websiteStatus: "active" as "active", // Pastikan status aktif
       totalSpend: (c.totalSpend || 0) + renewForm.amountPaid, // Tambahkan tagihan ke total pengeluaran
+      unpaidFee: finalUnpaidFee,
+      modificationsQuota: (c.handover || "").toLowerCase().includes("plus") ? 1 : (c.modificationsQuota || 0),
     };
 
     save(clients.map(client => client.id === c.id ? updatedClient : client));
@@ -329,12 +419,67 @@ export default function MaintenancePage() {
 
   function handleDelete(id: string) {
     save(clients.filter(c => c.id !== id));
+    
+    // Cascade delete: hapus tagihan maintenance terkait
+    try {
+      const savedInvoices = localStorage.getItem("revtech_invoices");
+      if (savedInvoices) {
+        let invoiceList = JSON.parse(savedInvoices);
+        invoiceList = invoiceList.filter((i: any) => i.orderId !== id);
+        localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+      }
+    } catch (err) {
+      console.error("Failed to cascade delete invoices from maintenance", err);
+    }
+
     setDeletingId(null);
     if (selectedClient?.id === id) setSelectedClient(null);
+    showToast("Data klien beserta tagihannya berhasil dihapus");
   }
 
   function handleMessageClick(c: Client) {
     setSelectedClient(c);
+  }
+
+  function confirmUseMod() {
+    if (!usingModId) return;
+    const clientName = clients.find(c => c.id === usingModId)?.name || "Klien";
+    
+    save(clients.map(c => {
+      if (c.id === usingModId) {
+        return { ...c, modificationsQuota: Math.max(0, (c.modificationsQuota || 0) - 1) };
+      }
+      return c;
+    }));
+    
+    // Auto Create Order for tracking
+    const savedOrders = localStorage.getItem("revtech_orders");
+    const orders = savedOrders ? JSON.parse(savedOrders) : [];
+    
+    const clientData = clients.find(c => c.id === usingModId);
+    
+    const newOrder = {
+      id: `ORD-${Date.now().toString().slice(-5)}`,
+      client: clientName,
+      company: clientData?.name || "",
+      service: "Jasa Modifikasi",
+      status: "antrean",
+      dp: 0,
+      total: 0,
+      phone: clientData?.phone || "",
+      createdAt: new Date().toISOString(),
+      deadline: modDeadline || null,
+      handover: clientData?.website || clientData?.domain || "",
+      notes: modNotes || "Menggunakan kuota revisi maintenance."
+    };
+    
+    orders.unshift(newOrder);
+    localStorage.setItem("revtech_orders", JSON.stringify(orders));
+    
+    setUsingModId(null);
+    setModNotes("");
+    setModDeadline("");
+    showToast("Revisi dicatat dan masuk ke Antrean Pesanan!");
   }
 
   function updateSelectedClient(field: keyof Client, value: any) {
@@ -364,7 +509,9 @@ export default function MaintenancePage() {
         ...c, name: form.name, contact: form.contact, phone: form.phone,
         email: form.email, website: form.website || null, domain: form.domain || null,
         domainExpiry: form.domainExpiry || null, hosting: form.hosting || null,
-        hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus, service: form.service || undefined
+        hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus, service: form.service || undefined,
+        handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
+        modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : undefined
       } : c);
     } else {
       updated = [{
@@ -374,7 +521,9 @@ export default function MaintenancePage() {
         domainExpiry: form.domainExpiry || null, hosting: form.hosting || null,
         hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus,
         joinDate: new Date().toISOString().split("T")[0],
-        totalSpend: 0, activeProjects: 0, service: form.service || undefined
+        totalSpend: 0, activeProjects: 0, service: form.service || undefined,
+        handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
+        modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : ((form.handover || "").toLowerCase().includes("plus") ? 1 : 0)
       }, ...clients];
     }
     save(updated);
@@ -519,15 +668,13 @@ export default function MaintenancePage() {
                     onDelete={() => setDeletingId(c.id)}
                     onRenew={() => handleRenew(c)}
                     onMessageClick={() => handleMessageClick(c)}
+                    onUseMod={() => setUsingModId(c.id)}
                   />
               ))
             ) : (
-              <div className="py-20 flex flex-col items-center justify-center text-center px-4 bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-[var(--adm-shadow)]">
-                <div className="w-16 h-16 rounded-full bg-[var(--adm-bg)] flex items-center justify-center mb-4 text-[var(--adm-text-3)]">
-                  <span className="material-symbols-outlined text-[32px]">group_off</span>
-                </div>
-                <h3 className="text-lg font-bold text-[var(--adm-text)] mb-1">Tidak ada klien ditemukan</h3>
-                <p className="text-sm text-[var(--adm-text-2)] max-w-sm">Coba sesuaikan filter atau kata kunci pencarian Anda.</p>
+              <div className="col-span-full py-24 flex flex-col items-center justify-center text-center px-4">
+                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] mb-4">group_off</span>
+                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada klien ditemukan.</p>
               </div>
             )}
           </motion.div>
@@ -579,9 +726,15 @@ export default function MaintenancePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Serah Terima</label>
-                  <input type="text" value={form.handover || ""} onChange={e => setForm({ ...form, handover: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Terima Beres (Basic)" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Serah Terima</label>
+                    <input type="text" value={form.handover || ""} onChange={e => setForm({ ...form, handover: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Paket Plus" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jatah Revisi</label>
+                    <input type="number" min="0" value={form.modificationsQuota !== undefined ? form.modificationsQuota : ""} onChange={e => setForm({ ...form, modificationsQuota: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="0" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -753,6 +906,18 @@ export default function MaintenancePage() {
                         placeholder="0" 
                       />
                     </div>
+                    {((renewingClient.recurringFee || 0) - renewForm.amountPaid) > 0 && (
+                      <div className="mt-2 text-[11px] font-semibold text-red-500 flex items-center gap-1 w-fit">
+                        <AlertCircle size={12} strokeWidth={2.5} />
+                        Sisa tagihan: {formatRp((renewingClient.recurringFee || 0) - renewForm.amountPaid)}
+                      </div>
+                    )}
+                    {((renewingClient.recurringFee || 0) - renewForm.amountPaid) < 0 && (
+                      <div className="mt-2 text-[11px] font-semibold text-emerald-500 flex items-center gap-1 w-fit">
+                        <CheckCircle2 size={12} strokeWidth={2.5} />
+                        Kelebihan bayar: {formatRp(Math.abs((renewingClient.recurringFee || 0) - renewForm.amountPaid))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Kadaluarsa Baru</label>
@@ -842,6 +1007,75 @@ export default function MaintenancePage() {
                     className="flex-1 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 text-sm"
                   >
                     Ya, Hapus
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Use Modification Confirmation Modal */}
+      <AnimatePresence>
+        {usingModId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setUsingModId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[var(--adm-card)] max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
+            >
+              <div className="p-6 text-left">
+                <div className="w-16 h-16 rounded-full bg-[var(--adm-success)]/10 text-[var(--adm-success)] flex items-center justify-center mx-auto mb-4">
+                  <Wand2 size={32} strokeWidth={2} />
+                </div>
+                <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2 text-center">Gunakan Kuota Revisi?</h3>
+                <p className="text-[var(--adm-text-2)] text-sm mb-4 text-center">
+                  Satu (1) jatah revisi/modifikasi akan dipotong dari klien <strong className="text-[var(--adm-text)]">{clients.find(c => c.id === usingModId)?.name}</strong>.
+                </p>
+                
+                <div className="space-y-4 mb-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Detail Revisi (Opsional)</label>
+                    <textarea
+                      value={modNotes}
+                      onChange={(e) => setModNotes(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)]"
+                      placeholder="Contoh: Ubah gambar banner di halaman depan..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Deadline (Opsional)</label>
+                    <input
+                      type="date"
+                      value={modDeadline}
+                      onChange={(e) => setModDeadline(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)] [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setUsingModId(null); setModNotes(""); setModDeadline(""); }}
+                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm border border-[var(--adm-border)]"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmUseMod}
+                    className="flex-1 py-2.5 rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm"
+                  >
+                    Buat Pesanan
                   </button>
                 </div>
               </div>

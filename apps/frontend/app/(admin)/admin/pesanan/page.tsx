@@ -6,7 +6,7 @@ import { StatusBadge, AdminToolbar } from "@/components/admin/ui";
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle, CircleDollarSign, CheckSquare, Calendar } from "lucide-react";
 import rawOrders from "@/data/admin/orders.json";
 
-type OrderStatus = "antrean" | "pengerjaan" | "revisi" | "pelunasan" | "handover" | "selesai";
+type OrderStatus = "antrean" | "pengerjaan" | "revisi" | "pelunasan" | "handover" | "selesai" | "batal";
 
 interface Order {
   id: string;
@@ -29,7 +29,7 @@ interface Order {
   progressLog?: { date: string; note: string; by: string }[]; // log progress bertanggal
 }
 
-const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
+const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"];
 
 const defaultOrders: Order[] = rawOrders as Order[];
 
@@ -40,6 +40,7 @@ const PIPELINE: { status: OrderStatus; label: string; badgeVariant: "slate" | "p
   { status: "pelunasan", label: "Pelunasan", badgeVariant: "amber" },
   { status: "handover", label: "Handover", badgeVariant: "purple" },
   { status: "selesai", label: "Selesai", badgeVariant: "emerald" },
+  { status: "batal", label: "Batal", badgeVariant: "rose" },
 ];
 
 function formatRp(n: number) {
@@ -515,6 +516,44 @@ export default function PesananPage() {
     });
     
     saveOrders(newOrders);
+    
+    // Auto-update or create Pelunasan Invoice
+    if (isPaid) {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const savedInvoices = localStorage.getItem("revtech_invoices");
+        let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
+        const existingIndex = invoiceList.findIndex((i: any) => i.id === `INV-PL-${lunasOrder.id}`);
+        
+        if (existingIndex !== -1) {
+          // Update existing invoice to paid
+          invoiceList[existingIndex].status = "paid";
+          invoiceList[existingIndex].paidAt = today;
+          localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+        } else {
+          // Create new if it doesn't exist for some reason
+          const invoicePelunasan = {
+            id: `INV-PL-${lunasOrder.id}`,
+            orderId: lunasOrder.id,
+            client: lunasOrder.client,
+            company: lunasOrder.company,
+            service: lunasOrder.service,
+            phone: lunasOrder.phone,
+            type: "pelunasan",
+            amount: lunasOrder.total - lunasOrder.dp,
+            status: "paid",
+            issuedAt: today,
+            paidAt: today,
+            dueDate: today,
+            description: `Pelunasan — ${lunasOrder.service || lunasOrder.client}`,
+          };
+          localStorage.setItem("revtech_invoices", JSON.stringify([invoicePelunasan, ...invoiceList]));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     setLunasOrder(null);
     setLunasNote("");
     setLunasPayment(0);
@@ -548,6 +587,37 @@ export default function PesananPage() {
     });
     
     saveOrders(newOrders);
+
+    // Auto-generate Maintenance Invoice
+    if (handoverOptionState.includes("Terima Beres") && nextBillingDateState && recurringFeeState > 0) {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const invoiceMaint = {
+          id: `INV-MT-${handoverOrder.id}`,
+          orderId: handoverOrder.id,
+          client: handoverOrder.client,
+          company: handoverOrder.company,
+          service: handoverOrder.service,
+          phone: handoverOrder.phone,
+          type: "maintenance",
+          amount: recurringFeeState,
+          status: "pending",
+          issuedAt: new Date().toISOString(),
+          paidAt: null,
+          dueDate: nextBillingDateState,
+          description: `Maintenance (${handoverOptionState}) — ${handoverOrder.service || handoverOrder.client}`,
+        };
+        const savedInvoices = localStorage.getItem("revtech_invoices");
+        const invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
+        const existing = invoiceList.find((i: any) => i.id === invoiceMaint.id);
+        if (!existing) {
+          localStorage.setItem("revtech_invoices", JSON.stringify([invoiceMaint, ...invoiceList]));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     setHandoverOrder(null);
     setHandoverLink("");
     setHandoverNote("");
@@ -561,6 +631,21 @@ export default function PesananPage() {
     const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
     saveOrders(updated);
     showToast("Status berhasil diperbarui");
+
+    // Jika dibatalkan, hanguskan DP (biarkan Lunas) dan batalkan (hapus) tagihan pelunasan
+    if (newStatus === "batal") {
+      try {
+        const savedInvoices = localStorage.getItem("revtech_invoices");
+        if (savedInvoices) {
+          const invoiceList = JSON.parse(savedInvoices);
+          // Hapus tagihan pelunasan yang masih pending untuk order ini
+          const updatedInvoices = invoiceList.filter((i: any) => !(i.id === `INV-PL-${id}` && i.status === "pending"));
+          localStorage.setItem("revtech_invoices", JSON.stringify(updatedInvoices));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
   };
 
   const confirmDelete = () => {
@@ -577,8 +662,28 @@ export default function PesananPage() {
     
     // Remove from active
     saveOrders(orders.filter(o => o.id !== deletingId));
+
+    // Cascade delete: hapus invoice terkait
+    try {
+      const savedInvoices = localStorage.getItem("revtech_invoices");
+      if (savedInvoices) {
+        let invoiceList = JSON.parse(savedInvoices);
+        invoiceList = invoiceList.filter((i: any) => i.orderId !== deletingId);
+        localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+      }
+
+      const savedClients = localStorage.getItem("revtech_clients");
+      if (savedClients) {
+        let clientList = JSON.parse(savedClients);
+        clientList = clientList.filter((c: any) => c.id !== deletingId);
+        localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+      }
+    } catch (err) {
+      console.error("Failed to cascade delete invoices/clients", err);
+    }
+
     setDeletingId(null);
-    showToast("Pesanan dipindah ke Tempat Sampah", "error");
+    showToast("Pesanan beserta tagihan terkait dipindah ke Tempat Sampah", "error");
   };
 
   const handleAddOrder = (e: React.FormEvent) => {
@@ -673,13 +778,6 @@ export default function PesananPage() {
             </div>
           </div>
         }
-        onAdd={() => {
-          setEditingId(null);
-          setNewOrder({ client: "", phone: "", service: "Jasa Website", status: "antrean", dp: 0, total: 0, deadline: "", notes: "", handoverOption: "", handover: "" });
-          setView("form");
-        }}
-        addLabel="Pesanan Baru"
-        addIcon="add"
       />
 
       {view === "list" && (
@@ -749,9 +847,9 @@ export default function PesananPage() {
           </div>
           <div className="space-y-4">
             {filtered.length === 0 && (
-              <div className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] py-16 text-center">
-                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] block mb-2">inbox</span>
-                <p className="text-sm font-medium text-[var(--adm-text-2)]">Belum ada proyek yang sesuai dengan kriteria filter.</p>
+              <div className="py-24 flex flex-col items-center justify-center text-center px-4">
+                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] mb-4">inbox</span>
+                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada pesanan ditemukan.</p>
               </div>
             )}
 
@@ -807,12 +905,12 @@ export default function PesananPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Layanan</label>
-                  <input required type="text" value={newOrder.service} onChange={(e) => {
+                  <select required value={newOrder.service} onChange={(e) => {
                     const val = e.target.value;
                     const s = val.toLowerCase();
                     let days = 0;
-                    if (s.includes("usaha")) days = 5;
-                    else if (s.includes("profesional")) days = 14;
+                    if (s.includes("website") || s.includes("usaha")) days = 5;
+                    else if (s.includes("custom") || s.includes("profesional")) days = 14;
                     
                     let deadlineStr = newOrder.deadline;
                     if (days > 0) {
@@ -822,7 +920,12 @@ export default function PesananPage() {
                        deadlineStr = d.toISOString().split("T")[0];
                     }
                     setNewOrder({ ...newOrder, service: val, ...(days > 0 ? {deadline: deadlineStr} : {}) });
-                  }} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: Website Usaha" />
+                  }} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer">
+                    <option value="" disabled className="bg-[var(--adm-card)]">Pilih Layanan</option>
+                    {SERVICE_TABS.filter(s => s !== "Semua").map(s => (
+                      <option key={s} value={s} className="bg-[var(--adm-card)]">{s}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Status</label>

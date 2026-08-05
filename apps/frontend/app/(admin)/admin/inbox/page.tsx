@@ -252,7 +252,7 @@ export default function InboxPage() {
     { id: "ghosting",   label: "Batal",        count: leads.filter(d => d.status === "ghosting" && (serviceFilter === "Semua" || d.service.startsWith(serviceFilter))).length },
   ];
 
-  const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
+  const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"];
 
   function getWaLink(lead: Lead) {
     const msgs: Record<string, string> = {
@@ -273,11 +273,67 @@ export default function InboxPage() {
       : l
     );
     saveLeads(updated);
+
+    if (newStatus === "waiting_dp") {
+      autoGeneratePendingDP(lead);
+    } else if (["new", "followup", "ghosting"].includes(newStatus)) {
+      autoRemovePendingDP(lead.id);
+    }
+  }
+
+  function autoRemovePendingDP(leadId: string) {
+    try {
+      const savedInvoices = localStorage.getItem("revtech_invoices");
+      if (savedInvoices) {
+        const invoiceList = JSON.parse(savedInvoices);
+        // Hapus HANYA jika statusnya masih pending
+        const updatedInvoices = invoiceList.filter((i: any) => !(i.id === `INV-DP-${leadId}` && i.status === "pending"));
+        localStorage.setItem("revtech_invoices", JSON.stringify(updatedInvoices));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function autoGeneratePendingDP(lead: Lead) {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const savedInvoices = localStorage.getItem("revtech_invoices");
+      let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
+      const existingIndex = invoiceList.findIndex((i: any) => i.id === `INV-DP-${lead.id}`);
+      
+      if (existingIndex === -1) {
+        const budgetMatch = lead.budget.match(/\d+(\.\d+)?/g);
+        const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
+        const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
+        
+        if (dpAmount > 0) {
+          const invoiceDP = {
+            id: `INV-DP-${lead.id}`,
+            orderId: lead.id,
+            client: lead.name,
+            company: lead.company,
+            service: lead.service,
+            phone: lead.phone,
+            type: "dp",
+            amount: dpAmount,
+            status: "pending",
+            issuedAt: new Date().toISOString(),
+            paidAt: null,
+            dueDate: today,
+            description: `DP 50% — ${lead.service || lead.company || lead.name}`,
+          };
+          localStorage.setItem("revtech_invoices", JSON.stringify([invoiceDP, ...invoiceList]));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   function handleEdit(lead: Lead) {
     const [cat, ...rest] = lead.service.split(" - ");
-    const serviceCat = ["Jasa Website", "Produk Digital", "Custom Project"].includes(cat) ? cat : "Jasa Website";
+    const serviceCat = ["Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"].includes(cat) ? cat : "Jasa Website";
     const detail = rest.length > 0 ? rest.join(" - ") : (serviceCat !== cat ? lead.service : "");
     
     let phoneNum = lead.phone;
@@ -325,7 +381,47 @@ export default function InboxPage() {
         };
         saveLeads(leads.filter(l => l.id !== deletingId));
         saveDeletedLeads([deletedLead, ...deletedLeads]);
-        showToast("Prospek dipindahkan ke tempat sampah.");
+        
+        // Cascade delete: hapus pesanan dan invoice terkait
+        try {
+          const savedOrders = localStorage.getItem("revtech_orders");
+          let relatedOrderId = null;
+          if (savedOrders) {
+            let orderList = JSON.parse(savedOrders);
+            const relatedOrder = orderList.find((o: any) => o.phone === leadToMove.phone);
+            if (relatedOrder) {
+              relatedOrderId = relatedOrder.id;
+              // Remove from active orders
+              orderList = orderList.filter((o: any) => o.id !== relatedOrderId);
+              localStorage.setItem("revtech_orders", JSON.stringify(orderList));
+              
+              // Move to deleted_orders
+              const deletedOrderList = JSON.parse(localStorage.getItem("revtech_deleted_orders") || "[]");
+              const delOrder = { ...relatedOrder, deletedAt: new Date().toISOString(), deletedBy: "System (Cascade)" };
+              localStorage.setItem("revtech_deleted_orders", JSON.stringify([delOrder, ...deletedOrderList]));
+            }
+          }
+
+          const savedInvoices = localStorage.getItem("revtech_invoices");
+          if (savedInvoices) {
+            let invoiceList = JSON.parse(savedInvoices);
+            invoiceList = invoiceList.filter((i: any) => 
+              !(i.id === `INV-DP-${leadToMove.id}` || (relatedOrderId && i.orderId === relatedOrderId))
+            );
+            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+          }
+
+          const savedClients = localStorage.getItem("revtech_clients");
+          if (savedClients) {
+            let clientList = JSON.parse(savedClients);
+            clientList = clientList.filter((c: any) => c.phone !== leadToMove.phone);
+            localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+          }
+        } catch (err) {
+          console.error("Failed to cascade delete", err);
+        }
+
+        showToast("Prospek beserta data terkait dipindahkan ke tempat sampah.");
       }
     } else {
       saveDeletedLeads(deletedLeads.filter(l => l.id !== deletingId));
@@ -362,6 +458,8 @@ export default function InboxPage() {
 
     let updatedLeads = [...leads];
     if (editingId) {
+      const oldLead = leads.find(l => l.id === editingId);
+      
       updatedLeads = leads.map(l => l.id === editingId ? {
         ...l, name: newLead.name, phone: finalPhone, company: newLead.company,
         service: serviceFull, budget: finalBudget || "-",
@@ -369,6 +467,67 @@ export default function InboxPage() {
         handover: newLead.handover, followUpNote: newLead.followUpNote,
         isVip: newLead.isVip, referenceLink: newLead.referenceLink
       } : l);
+
+      // Cascade update to downstream data
+      if (oldLead) {
+        try {
+          const budgetMatch = finalBudget.match(/\d+(\.\d+)?/g);
+          const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
+          const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
+
+          // Update Orders
+          const savedOrders = localStorage.getItem("revtech_orders");
+          if (savedOrders) {
+            let orderList = JSON.parse(savedOrders);
+            let updated = false;
+            orderList = orderList.map((o: any) => {
+              if (o.phone === oldLead.phone) {
+                updated = true;
+                return { ...o, client: newLead.name, company: newLead.company || "-", phone: finalPhone, service: serviceFull };
+              }
+              return o;
+            });
+            if (updated) localStorage.setItem("revtech_orders", JSON.stringify(orderList));
+          }
+
+          // Update Maintenance Clients
+          const savedClients = localStorage.getItem("revtech_clients");
+          if (savedClients) {
+            let clientList = JSON.parse(savedClients);
+            let updated = false;
+            clientList = clientList.map((c: any) => {
+              if (c.phone === oldLead.phone) {
+                updated = true;
+                return { ...c, name: newLead.company || newLead.name, contact: newLead.name, phone: finalPhone, service: serviceFull };
+              }
+              return c;
+            });
+            if (updated) localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+          }
+
+          // Update Invoices
+          const savedInvoices = localStorage.getItem("revtech_invoices");
+          if (savedInvoices) {
+            let invoiceList = JSON.parse(savedInvoices);
+            let updated = false;
+            invoiceList = invoiceList.map((i: any) => {
+              if (i.phone === oldLead.phone) {
+                updated = true;
+                let updatedInv = { ...i, client: newLead.name, company: newLead.company || "-", phone: finalPhone, service: serviceFull };
+                // Update nominal HANYA untuk DP yang masih pending
+                if (i.type === "dp" && i.status === "pending" && dpAmount > 0) {
+                  updatedInv.amount = dpAmount;
+                }
+                return updatedInv;
+              }
+              return i;
+            });
+            if (updated) localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+          }
+        } catch (err) {
+          console.error("Failed to cascade update", err);
+        }
+      }
     } else {
       updatedLeads.unshift({
         id: "LD-" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"),
@@ -382,6 +541,17 @@ export default function InboxPage() {
     }
 
     saveLeads(updatedLeads);
+    
+    // Auto-generate/remove pending DP based on status
+    const savedLead = updatedLeads.find(l => l.phone === finalPhone && l.name === newLead.name);
+    if (savedLead) {
+      if (newLead.status === "waiting_dp") {
+        autoGeneratePendingDP(savedLead);
+      } else if (["new", "followup", "ghosting"].includes(newLead.status)) {
+        autoRemovePendingDP(savedLead.id);
+      }
+    }
+
     showToast(editingId ? "Perubahan prospek berhasil disimpan." : "Prospek baru berhasil ditambahkan.");
     setView("list");
     setEditingId(null);
@@ -419,20 +589,51 @@ export default function InboxPage() {
       progressLog: [{ date: new Date().toISOString(), note: "Proyek masuk antrean dari Inbox.", by: "Admin" }]
     };
 
-    // 3. Buat Invoice DP otomatis
-    const invoiceDP = {
-      id: `INV-${Date.now().toString().slice(-5)}`,
+    // 3. Update atau Buat Invoice DP (Lunas)
+    const savedInvoices = localStorage.getItem("revtech_invoices");
+    let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
+    
+    let existingDpIndex = invoiceList.findIndex((i: any) => i.id === `INV-DP-${lead.id}`);
+    if (existingDpIndex !== -1) {
+      invoiceList[existingDpIndex].status = "paid";
+      invoiceList[existingDpIndex].paidAt = new Date().toISOString();
+      invoiceList[existingDpIndex].amount = data.dp; // update amount just in case they changed it in modal
+    } else {
+      const invoiceDP = {
+        id: `INV-DP-${lead.id}`,
+        orderId: lead.id,
+        client: lead.name,
+        company: lead.company,
+        service: lead.service,
+        phone: lead.phone,
+        type: "dp",
+        amount: data.dp,
+        status: "paid",
+        issuedAt: new Date().toISOString(),
+        paidAt: new Date().toISOString(), // DP sudah lunas saat deal
+        dueDate: today, 
+        description: `DP 50% — ${lead.service || lead.company || lead.name}`,
+      };
+      invoiceList = [invoiceDP, ...invoiceList];
+    }
+
+    // 4. Buat Invoice Pelunasan otomatis (Pending)
+    const invoicePelunasan = {
+      id: `INV-PL-${orderId}`,
       orderId,
       client: lead.name,
+      company: lead.company,
+      service: lead.service,
       phone: lead.phone,
-      type: "dp",
-      amount: data.dp,
+      type: "pelunasan",
+      amount: data.total - data.dp,
       status: "pending",
-      issuedAt: today,
+      issuedAt: new Date().toISOString(),
       paidAt: null,
-      dueDate: today, // jatuh tempo hari ini (sudah seharusnya DP sudah masuk)
-      description: `DP 50% — ${lead.service}`,
+      dueDate: data.deadline || today, 
+      description: `Pelunasan — ${lead.service || lead.company || lead.name}`,
     };
+    invoiceList = [invoicePelunasan, ...invoiceList];
 
     try {
       // Simpan order
@@ -440,10 +641,8 @@ export default function InboxPage() {
       const ordersList = savedOrders ? JSON.parse(savedOrders) : [];
       localStorage.setItem("revtech_orders", JSON.stringify([orderPayload, ...ordersList]));
 
-      // Simpan invoice DP
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      const invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
-      localStorage.setItem("revtech_invoices", JSON.stringify([invoiceDP, ...invoiceList]));
+      // Simpan invoices
+      localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
     } catch (err) {
       console.error(err);
     }
@@ -566,9 +765,9 @@ export default function InboxPage() {
 
             {/* Empty State */}
             {filtered.length === 0 && (
-              <div className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] py-16 text-center">
-                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] block mb-2">inbox</span>
-                <p className="text-sm text-[var(--adm-text-2)]">Tidak ada prospek ditemukan.</p>
+              <div className="py-24 flex flex-col items-center justify-center text-center px-4">
+                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] mb-4">inbox</span>
+                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada prospek ditemukan.</p>
               </div>
             )}
 
@@ -782,6 +981,7 @@ export default function InboxPage() {
                       <option value="Jasa Website" className="bg-[var(--adm-card)]">Jasa Website</option>
                       <option value="Produk Digital" className="bg-[var(--adm-card)]">Produk Digital</option>
                       <option value="Custom Project" className="bg-[var(--adm-card)]">Custom Project</option>
+                      <option value="Jasa Modifikasi" className="bg-[var(--adm-card)]">Jasa Modifikasi</option>
                     </select>
                   </div>
                   

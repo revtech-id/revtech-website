@@ -105,7 +105,7 @@ export function AdminNotificationPopover() {
                 Notifikasi
               </h3>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-md font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20" style={{ fontSize: '9px' }}>
+                <span className="px-1.5 py-0.5 rounded-md font-bold bg-red-500/10 text-red-500 border border-red-500/20" style={{ fontSize: '9px' }}>
                   {unreadCount} Baru
                 </span>
               )}
@@ -150,12 +150,12 @@ export function AdminNotificationPopover() {
                     );
                   }}
                   className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                    item.unread ? "bg-blue-500/5 hover:bg-blue-500/10" : "opacity-60 hover:opacity-100"
+                    item.unread ? "bg-red-500/5 hover:bg-red-500/10" : "opacity-60 hover:opacity-100"
                   }`}
                   style={{ backgroundColor: !item.unread ? "transparent" : "" }}
                 >
                   {item.unread ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
                   ) : (
                     <div className="w-1.5 h-1.5 shrink-0 mt-1.5" />
                   )}
