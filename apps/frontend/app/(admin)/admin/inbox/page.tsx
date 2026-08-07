@@ -22,7 +22,6 @@ interface Lead {
   handover?: string;
   lastContactedAt?: string;
   followUpNote?: string;
-  isVip?: boolean;
   referenceLink?: string;
   deletedAt?: string;
   deletedBy?: string;
@@ -44,17 +43,11 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
   const [deadline, setDeadline] = useState(() => {
     let days = 14; // Default 14 hari
     const s = lead.service.toLowerCase();
-    const isVip = lead.isVip || false;
 
     if (s.includes("usaha")) days = 5;
     else if (s.includes("profesional")) days = 14;
     else if (s.includes("digital")) days = 1;
     else if (s.includes("custom")) days = 30;
-    
-    // VIP = 2x lebih cepat
-    if (isVip && days > 1) {
-      days = Math.ceil(days / 2);
-    }
 
     const d = new Date();
     d.setDate(d.getDate() + days);
@@ -101,7 +94,10 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nominal DP (Rp) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)]">Nominal DP (Rp) *</label>
+                  <button type="button" onClick={() => setDp(total)} className="text-[10px] font-bold text-[var(--adm-accent)] hover:opacity-80 transition-opacity">Bayar Lunas</button>
+                </div>
                 <input
                   type="text"
                   required
@@ -174,14 +170,15 @@ export default function InboxPage() {
   const [dealLead, setDealLead] = useState<Lead | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteAction, setDeleteAction] = useState<"soft" | "permanent">("soft");
+  const [pendingStatusChange, setPendingStatusChange] = useState<{from: "form" | "list", newStatus?: string, lead?: Lead} | null>(null);
   
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
 
   const [newLead, setNewLead] = useState({
     name: "", phone: "", company: "",
-    service: "Jasa Website", serviceDetail: "",
+    service: "", serviceDetail: "",
     budget: "", message: "", status: "new", handover: "",
-    followUpNote: "", isVip: false, referenceLink: ""
+    followUpNote: "", referenceLink: ""
   });
 
   useEffect(() => {
@@ -190,8 +187,8 @@ export default function InboxPage() {
     if (saved) {
       setLeads(JSON.parse(saved));
     } else {
-      setLeads(inboxData as Lead[]);
-      localStorage.setItem("revtech_inbox", JSON.stringify(inboxData));
+      setLeads([]);
+      localStorage.setItem("revtech_inbox", JSON.stringify([]));
     }
 
     const savedTrash = localStorage.getItem("revtech_inbox_trash");
@@ -227,18 +224,15 @@ export default function InboxPage() {
     setTimeout(() => setToastMessage(null), 3000);
   }
 
-  const calculateBudget = (service: string, detail: string, isVip: boolean) => {
+  const calculateBudget = (service: string, detail: string) => {
     let base = 0;
     if (service === "Jasa Website") {
       if (detail === "Paket Usaha") base = 499000;
       else if (detail === "Paket Profesional") base = 1499000;
       else if (detail === "Paket Eksklusif") base = 5000000;
-    } else if (service === "Produk Digital") {
-      base = 150000;
     }
     
     if (base === 0) return "";
-    if (isVip) base = Math.round(base * 1.3);
     
     return base.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
@@ -266,69 +260,24 @@ export default function InboxPage() {
     return `https://wa.me/${lead.phone}?text=${encodeURIComponent(text)}`;
   }
 
-  function handleQuickStatus(lead: Lead, newStatus: string) {
-    if (newStatus === "deal") return; // Deal hanya via modal
+  function handleQuickStatus(lead: Lead, newStatus: string, skipConfirm = false) {
+    if (newStatus === "deal") {
+      showToast("Klien belum melakukan pembayaran awal! Silakan selesaikan terlebih dahulu.", "error");
+      return;
+    }
+    
+    const restrictedStatuses = ["deal", "ghosting"];
+    if (!skipConfirm && restrictedStatuses.includes(lead.status) && newStatus !== lead.status) {
+       setPendingStatusChange({ from: "list", newStatus, lead });
+       return;
+    }
+
     const updated = leads.map(l => l.id === lead.id
       ? { ...l, status: newStatus, lastContactedAt: new Date().toISOString() }
       : l
     );
     saveLeads(updated);
-
-    if (newStatus === "waiting_dp") {
-      autoGeneratePendingDP(lead);
-    } else if (["new", "followup", "ghosting"].includes(newStatus)) {
-      autoRemovePendingDP(lead.id);
-    }
-  }
-
-  function autoRemovePendingDP(leadId: string) {
-    try {
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      if (savedInvoices) {
-        const invoiceList = JSON.parse(savedInvoices);
-        // Hapus HANYA jika statusnya masih pending
-        const updatedInvoices = invoiceList.filter((i: any) => !(i.id === `INV-DP-${leadId}` && i.status === "pending"));
-        localStorage.setItem("revtech_invoices", JSON.stringify(updatedInvoices));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  function autoGeneratePendingDP(lead: Lead) {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
-      const existingIndex = invoiceList.findIndex((i: any) => i.id === `INV-DP-${lead.id}`);
-      
-      if (existingIndex === -1) {
-        const budgetMatch = lead.budget.match(/\d+(\.\d+)?/g);
-        const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
-        const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
-        
-        if (dpAmount > 0) {
-          const invoiceDP = {
-            id: `INV-DP-${lead.id}`,
-            orderId: lead.id,
-            client: lead.name,
-            company: lead.company,
-            service: lead.service,
-            phone: lead.phone,
-            type: "dp",
-            amount: dpAmount,
-            status: "pending",
-            issuedAt: new Date().toISOString(),
-            paidAt: null,
-            dueDate: today,
-            description: `DP 50% — ${lead.service || lead.company || lead.name}`,
-          };
-          localStorage.setItem("revtech_invoices", JSON.stringify([invoiceDP, ...invoiceList]));
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    showToast("Status berhasil diperbarui");
   }
 
   function handleEdit(lead: Lead) {
@@ -357,7 +306,7 @@ export default function InboxPage() {
       budget: formattedBudget,
       message: lead.message, status: lead.status,
       handover: lead.handover || "", followUpNote: lead.followUpNote || "",
-      isVip: lead.isVip || false, referenceLink: lead.referenceLink || ""
+      referenceLink: lead.referenceLink || ""
     });
     setEditingId(lead.id);
     setView("form");
@@ -439,8 +388,8 @@ export default function InboxPage() {
     }
   }
 
-  function handleAddLead(e: React.FormEvent) {
-    e.preventDefault();
+  function handleAddLead(e?: React.FormEvent, skipConfirm = false) {
+    if (e && e.preventDefault) e.preventDefault();
     const serviceFull = newLead.serviceDetail
       ? `${newLead.service} - ${newLead.serviceDetail}`
       : newLead.service;
@@ -460,12 +409,24 @@ export default function InboxPage() {
     if (editingId) {
       const oldLead = leads.find(l => l.id === editingId);
       
+      // Prevent changing status to deal from the edit form
+      if (oldLead && newLead.status === "deal" && oldLead.status !== "deal") {
+        showToast("Klien belum melakukan pembayaran awal! Silakan selesaikan terlebih dahulu.", "error");
+        return;
+      }
+
+      const restrictedStatuses = ["deal", "ghosting"];
+      if (!skipConfirm && oldLead && restrictedStatuses.includes(oldLead.status) && newLead.status !== oldLead.status) {
+        setPendingStatusChange({ from: "form" });
+        return;
+      }
+      
       updatedLeads = leads.map(l => l.id === editingId ? {
         ...l, name: newLead.name, phone: finalPhone, company: newLead.company,
         service: serviceFull, budget: finalBudget || "-",
         message: newLead.message, status: newLead.status,
         handover: newLead.handover, followUpNote: newLead.followUpNote,
-        isVip: newLead.isVip, referenceLink: newLead.referenceLink
+        referenceLink: newLead.referenceLink
       } : l);
 
       // Cascade update to downstream data
@@ -514,10 +475,6 @@ export default function InboxPage() {
               if (i.phone === oldLead.phone) {
                 updated = true;
                 let updatedInv = { ...i, client: newLead.name, company: newLead.company || "-", phone: finalPhone, service: serviceFull };
-                // Update nominal HANYA untuk DP yang masih pending
-                if (i.type === "dp" && i.status === "pending" && dpAmount > 0) {
-                  updatedInv.amount = dpAmount;
-                }
                 return updatedInv;
               }
               return i;
@@ -536,27 +493,17 @@ export default function InboxPage() {
         message: newLead.message || "-", status: newLead.status,
         createdAt: new Date().toISOString(),
         handover: newLead.handover, followUpNote: newLead.followUpNote,
-        isVip: newLead.isVip, referenceLink: newLead.referenceLink
+        referenceLink: newLead.referenceLink
       });
     }
 
     saveLeads(updatedLeads);
     
-    // Auto-generate/remove pending DP based on status
-    const savedLead = updatedLeads.find(l => l.phone === finalPhone && l.name === newLead.name);
-    if (savedLead) {
-      if (newLead.status === "waiting_dp") {
-        autoGeneratePendingDP(savedLead);
-      } else if (["new", "followup", "ghosting"].includes(newLead.status)) {
-        autoRemovePendingDP(savedLead.id);
-      }
-    }
-
     showToast(editingId ? "Perubahan prospek berhasil disimpan." : "Prospek baru berhasil ditambahkan.");
     setView("list");
     setEditingId(null);
     setSelectedCountry(COUNTRIES[0]);
-    setNewLead({ name: "", phone: "", company: "", service: "Jasa Website", serviceDetail: "", budget: "", message: "", status: "new", handover: "", followUpNote: "", isVip: false, referenceLink: "" });
+    setNewLead({ name: "", phone: "", company: "", service: "", serviceDetail: "", budget: "", message: "", status: "new", handover: "", followUpNote: "", referenceLink: "" });
   }
 
   function handleConfirmDeal(lead: Lead, data: { total: number; dp: number; deadline: string; handover: string }) {
@@ -584,20 +531,26 @@ export default function InboxPage() {
       deadline: data.deadline || null,
       notes: lead.message || "",
       handover: data.handover,
-      isVip: lead.isVip || false,
       assignedDev: "",
       progressLog: [{ date: new Date().toISOString(), note: "Proyek masuk antrean dari Inbox.", by: "Admin" }]
     };
 
-    // 3. Update atau Buat Invoice DP (Lunas)
+    // 3. Update atau Buat Invoice Pertama (DP / Lunas)
     const savedInvoices = localStorage.getItem("revtech_invoices");
     let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
     
+    const isLunas = data.dp >= data.total;
+    const dpPercent = Math.round((data.dp / (data.total || 1)) * 100);
+    const invDesc = isLunas 
+      ? `Pembayaran Penuh — ${lead.service || lead.company || lead.name}` 
+      : `DP ${dpPercent}% — ${lead.service || lead.company || lead.name}`;
+
     let existingDpIndex = invoiceList.findIndex((i: any) => i.id === `INV-DP-${lead.id}`);
     if (existingDpIndex !== -1) {
       invoiceList[existingDpIndex].status = "paid";
       invoiceList[existingDpIndex].paidAt = new Date().toISOString();
       invoiceList[existingDpIndex].amount = data.dp; // update amount just in case they changed it in modal
+      invoiceList[existingDpIndex].description = invDesc;
     } else {
       const invoiceDP = {
         id: `INV-DP-${lead.id}`,
@@ -606,34 +559,38 @@ export default function InboxPage() {
         company: lead.company,
         service: lead.service,
         phone: lead.phone,
-        type: "dp",
+        type: isLunas ? "pelunasan" : "dp", // Use pelunasan type if fully paid upfront to signify full payment, though dp works too. Let's stick to dp type but change desc. Or we can leave type "dp" since it's the initial invoice. Let's use "dp".
         amount: data.dp,
         status: "paid",
         issuedAt: new Date().toISOString(),
-        paidAt: new Date().toISOString(), // DP sudah lunas saat deal
+        paidAt: new Date().toISOString(), // Sudah lunas saat deal
         dueDate: today, 
-        description: `DP 50% — ${lead.service || lead.company || lead.name}`,
+        description: invDesc,
       };
+      // actually let's set type to 'pelunasan' if fully paid, or keep it 'dp'. I'll keep it 'dp' for consistency with ID.
+      invoiceDP.type = "dp"; 
       invoiceList = [invoiceDP, ...invoiceList];
     }
 
-    // 4. Buat Invoice Pelunasan otomatis (Pending)
-    const invoicePelunasan = {
-      id: `INV-PL-${orderId}`,
-      orderId,
-      client: lead.name,
-      company: lead.company,
-      service: lead.service,
-      phone: lead.phone,
-      type: "pelunasan",
-      amount: data.total - data.dp,
-      status: "pending",
-      issuedAt: new Date().toISOString(),
-      paidAt: null,
-      dueDate: data.deadline || today, 
-      description: `Pelunasan — ${lead.service || lead.company || lead.name}`,
-    };
-    invoiceList = [invoicePelunasan, ...invoiceList];
+    // 4. Buat Invoice Pelunasan otomatis (Pending) JIKA BELUM LUNAS
+    if (!isLunas) {
+      const invoicePelunasan = {
+        id: `INV-PL-${orderId}`,
+        orderId,
+        client: lead.name,
+        company: lead.company,
+        service: lead.service,
+        phone: lead.phone,
+        type: "pelunasan",
+        amount: data.total - data.dp,
+        status: "pending",
+        issuedAt: new Date().toISOString(),
+        paidAt: null,
+        dueDate: data.deadline || today, 
+        description: `Pelunasan — ${lead.service || lead.company || lead.name}`,
+      };
+      invoiceList = [invoicePelunasan, ...invoiceList];
+    }
 
     try {
       // Simpan order
@@ -663,10 +620,6 @@ export default function InboxPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     } else if (sortBy === "oldest") {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    } else if (sortBy === "vip") {
-      if (a.isVip && !b.isVip) return -1;
-      if (!a.isVip && b.isVip) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     return 0;
   });
@@ -703,7 +656,7 @@ export default function InboxPage() {
         onAdd={() => {
           setEditingId(null);
           setSelectedCountry(COUNTRIES[0]);
-          setNewLead({ name: "", phone: "", company: "", service: "Jasa Website", serviceDetail: "", handover: "", budget: "", status: "new", message: "", followUpNote: "", isVip: false, referenceLink: "" });
+          setNewLead({ name: "", phone: "", company: "", service: "", serviceDetail: "", handover: "", budget: "", status: "new", message: "", followUpNote: "", referenceLink: "" });
           setView("form");
         }}
         addLabel="Prospek Baru"
@@ -753,7 +706,6 @@ export default function InboxPage() {
                 >
                   <option value="newest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
                   <option value="oldest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
-                  <option value="vip" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">VIP Prioritas</option>
                 </select>
               </div>
             </div>
@@ -825,6 +777,7 @@ export default function InboxPage() {
                                 <option value="new" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Baru Masuk</option>
                                 <option value="followup" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Tindak Lanjut</option>
                                 <option value="waiting_dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Menunggu DP</option>
+                                <option value="deal" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Selesai</option>
                                 <option value="ghosting" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Batal</option>
                               </select>
                             )}
@@ -875,11 +828,6 @@ export default function InboxPage() {
                             {lead.handover && (
                               <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold">
                                 {lead.handover}
-                              </span>
-                            )}
-                            {lead.isVip && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border" style={{ color: "var(--adm-warning)", backgroundColor: "rgba(245,158,11,0.1)", borderColor: "rgba(245,158,11,0.2)" }}>
-                                VIP
                               </span>
                             )}
                             {lead.status === "deal" && (
@@ -947,11 +895,11 @@ export default function InboxPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Nama Lengkap *</label>
-                    <input required type="text" value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" placeholder="Masukkan nama lengkap" />
+                    <input required type="text" value={newLead.name} onChange={e => setNewLead({...newLead, name: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan nama lengkap" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Nomor WhatsApp *</label>
-                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
+                    <div className="flex rounded-xl bg-transparent border border-[var(--adm-border)] focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-colors">
                       <CountrySelector 
                         selected={selectedCountry} 
                         onSelect={setSelectedCountry} 
@@ -964,20 +912,16 @@ export default function InboxPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Bisnis / Instansi</label>
-                  <input type="text" value={newLead.company} onChange={e => setNewLead({...newLead, company: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" placeholder="Masukkan nama bisnis atau instansi" />
-                </div>
-
-                <div className={`grid grid-cols-1 ${newLead.service === "Custom Project" ? "" : "md:grid-cols-2"} gap-5`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Kategori Layanan</label>
                     <select value={newLead.service} onChange={e => {
                         const val = e.target.value;
-                        const newDetail = val === "Jasa Website" ? "Paket Usaha" : "";
-                        const newBudget = calculateBudget(val, newDetail, newLead.isVip);
+                        const newDetail = "";
+                        const newBudget = calculateBudget(val, newDetail);
                         setNewLead({...newLead, service: val, serviceDetail: newDetail, budget: newBudget});
-                      }} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]">
+                      }} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors">
+                      <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Layanan -</option>
                       <option value="Jasa Website" className="bg-[var(--adm-card)]">Jasa Website</option>
                       <option value="Produk Digital" className="bg-[var(--adm-card)]">Produk Digital</option>
                       <option value="Custom Project" className="bg-[var(--adm-card)]">Custom Project</option>
@@ -990,10 +934,10 @@ export default function InboxPage() {
                       <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Paket Website</label>
                       <select value={newLead.serviceDetail} onChange={e => {
                           const val = e.target.value;
-                          const newBudget = calculateBudget(newLead.service, val, newLead.isVip);
+                          const newBudget = calculateBudget(newLead.service, val);
                           setNewLead({...newLead, serviceDetail: val, budget: newBudget});
-                        }} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]">
-                        <option value="" className="bg-[var(--adm-card)]">- Pilih Paket -</option>
+                        }} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors">
+                        <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Paket -</option>
                         <option value="Paket Usaha" className="bg-[var(--adm-card)]">Paket Usaha</option>
                         <option value="Paket Profesional" className="bg-[var(--adm-card)]">Paket Profesional</option>
                         <option value="Paket Eksklusif" className="bg-[var(--adm-card)]">Paket Eksklusif</option>
@@ -1002,65 +946,40 @@ export default function InboxPage() {
                   ) : newLead.service === "Produk Digital" ? (
                     <div>
                       <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Nama Produk</label>
-                      <input type="text" value={newLead.serviceDetail} onChange={e => setNewLead({...newLead, serviceDetail: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" placeholder="Masukkan nama produk" />
+                      <input type="text" value={newLead.serviceDetail} onChange={e => setNewLead({...newLead, serviceDetail: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan nama produk" />
                     </div>
                   ) : null}
                 </div>
 
-                {newLead.service === "Jasa Website" && (
-                  <div className="flex items-center gap-3 mt-2">
-                    <input 
-                      type="checkbox" 
-                      id="vip-check" 
-                      checked={newLead.isVip} 
-                      onChange={e => {
-                        const vip = e.target.checked;
-                        const calculated = calculateBudget(newLead.service, newLead.serviceDetail, vip);
-                        if (calculated) {
-                          setNewLead({...newLead, isVip: vip, budget: calculated});
-                        } else {
-                          const raw = parseInt(newLead.budget.replace(/[^0-9]/g, "")) || 0;
-                          if (raw > 0) {
-                            const adjusted = vip ? Math.round(raw * 1.3) : Math.round(raw / 1.3);
-                            setNewLead({...newLead, isVip: vip, budget: adjusted.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")});
-                          } else {
-                            setNewLead({...newLead, isVip: vip});
-                          }
-                        }
-                      }}
-                      className="w-[18px] h-[18px] rounded bg-[var(--adm-bg)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)] cursor-pointer shrink-0 border-[var(--adm-border)]"
-                    />
-                    <label htmlFor="vip-check" className="text-sm font-bold text-[var(--adm-warning)] cursor-pointer leading-snug">
-                      Jalur VIP (+30% Biaya)
-                    </label>
-                  </div>
-                )}
+                <div>
+                  <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Bisnis / Instansi <span className="text-[10px] text-[var(--adm-text-3)] normal-case font-normal">(Opsional)</span></label>
+                  <input type="text" value={newLead.company} onChange={e => setNewLead({...newLead, company: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan nama bisnis atau instansi (jika ada)" />
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">
                       {newLead.service === "Produk Digital" ? "Harga Produk" : "Estimasi Budget"}
                     </label>
-                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-all">
-                      <div className="bg-transparent rounded-l-lg border-r border-[var(--adm-border)] text-[var(--adm-text)] font-bold text-[13px] px-4 flex items-center justify-center pointer-events-none">
-                        Rp
-                      </div>
-                      <input 
-                        type="text" 
-                        value={newLead.budget} 
-                        onChange={e => {
-                          const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                          const formatted = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                          setNewLead({...newLead, budget: formatted});
-                        }} 
-                        className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder-[var(--adm-text-3)]" 
-                        placeholder={newLead.service === "Produk Digital" ? "Masukkan harga" : "Masukkan nominal budget"} 
-                      />
-                    </div>
+                    <input 
+                      type="text" 
+                      value={newLead.budget ? (newLead.budget.startsWith("Rp ") ? newLead.budget : `Rp ${newLead.budget.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`) : ""} 
+                      onChange={e => {
+                        const rawValue = e.target.value.replace(/\D/g, '');
+                        if (!rawValue) {
+                          setNewLead({...newLead, budget: ""});
+                          return;
+                        }
+                        const formatted = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                        setNewLead({...newLead, budget: `Rp ${formatted}`});
+                      }} 
+                      className="w-full px-3 py-2.5 rounded-lg text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" 
+                      placeholder="Rp 0" 
+                    />
                   </div>
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Status Saat Ini</label>
-                    <select value={newLead.status} onChange={e => setNewLead({...newLead, status: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]">
+                    <select value={newLead.status} onChange={e => setNewLead({...newLead, status: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]">
                       <option value="new" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Baru Masuk</option>
                       <option value="followup" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Tindak Lanjut</option>
                       <option value="waiting_dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Menunggu DP</option>
@@ -1073,25 +992,25 @@ export default function InboxPage() {
                 {newLead.service === "Custom Project" && (
                   <div>
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Link Referensi / Contoh Produk (Opsional)</label>
-                    <input type="text" value={newLead.referenceLink} onChange={e => setNewLead({...newLead, referenceLink: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)]" placeholder="cth: www.contoh.com" />
+                    <input type="text" value={newLead.referenceLink} onChange={e => setNewLead({...newLead, referenceLink: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan link referensi..." />
                   </div>
                 )}
 
                 <div>
                   <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Pesan / Kebutuhan Klien</label>
-                  <textarea rows={3} value={newLead.message} onChange={e => setNewLead({...newLead, message: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] resize-none" placeholder={newLead.service === "Custom Project" ? "Ceritakan ide sistem, web app, atau solusi custom yang Anda butuhkan secara singkat..." : "Tuliskan kebutuhan spesifik dari klien..."} />
+                  <textarea rows={3} value={newLead.message} onChange={e => setNewLead({...newLead, message: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors resize-none" placeholder={newLead.service === "Custom Project" ? "Ceritakan ide sistem, web app, atau solusi custom yang Anda butuhkan secara singkat..." : "Tuliskan kebutuhan spesifik dari klien..."} />
                 </div>
 
                 {/* Progressive Disclosure: Hanya tampilkan Catatan Follow-up jika status bukan Baru Masuk */}
                 {newLead.status !== "new" && (
                   <div className="p-4 bg-[var(--adm-warning)]/5 rounded-xl border border-[var(--adm-warning)]/20 mt-4">
                     <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-warning)] uppercase tracking-wide">Catatan Follow-up Internal</label>
-                    <input type="text" value={newLead.followUpNote} onChange={e => setNewLead({...newLead, followUpNote: e.target.value})} className="w-full px-3 py-2.5 rounded-lg text-sm bg-[var(--adm-card)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-warning)] border border-[var(--adm-border)]" placeholder="Cth: Klien mau diingatkan lagi Senin depan" />
+                    <input type="text" value={newLead.followUpNote} onChange={e => setNewLead({...newLead, followUpNote: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-warning)] transition-colors" placeholder="Cth: Klien mau diingatkan lagi Senin depan" />
                   </div>
                 )}
 
                 <div className="pt-2 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => setView("list")} className="px-5 py-2 rounded-lg font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] hover:text-[var(--adm-text)] transition-colors text-sm">Batal</button>
+                  <button type="button" onClick={() => setView("list")} className="px-5 py-2 rounded-lg font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm">Batal</button>
                   <button type="submit" className="px-5 py-2 rounded-lg bg-[var(--adm-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
                     {editingId ? "Simpan Perubahan" : "Simpan ke Inbox"}
                   </button>
@@ -1157,7 +1076,7 @@ export default function InboxPage() {
               <div className="flex gap-2 mt-6">
                 <button
                   onClick={() => setDeletingId(null)}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
@@ -1170,6 +1089,41 @@ export default function InboxPage() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingStatusChange && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[var(--adm-bg)] w-full max-w-sm rounded-2xl shadow-xl overflow-hidden border border-[var(--adm-border)] flex flex-col">
+              <div className="p-5">
+                <div className="w-12 h-12 rounded-full bg-[var(--adm-warning)]/20 flex items-center justify-center mb-4 text-[var(--adm-warning)]">
+                  <AlertTriangle size={24} strokeWidth={2.5} />
+                </div>
+                <h2 className="text-lg font-bold text-[var(--adm-text)] mb-2">Yakin Mengubah Status?</h2>
+                <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">
+                  Prospek ini sebelumnya berstatus <strong>
+                    {pendingStatusChange.from === "list" 
+                      ? (pendingStatusChange.lead?.status === "deal" ? "Selesai" : "Batal") 
+                      : (leads.find(l => l.id === editingId)?.status === "deal" ? "Selesai" : "Batal")}
+                  </strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
+                </p>
+              </div>
+              <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3">
+                <button onClick={() => setPendingStatusChange(null)} className="flex-1 px-4 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent border border-[var(--adm-border)] rounded-xl hover:text-[var(--adm-text)] transition-colors">Batal</button>
+                <button onClick={() => {
+                  if (pendingStatusChange.from === "form") {
+                    handleAddLead(undefined, true);
+                  } else if (pendingStatusChange.from === "list" && pendingStatusChange.lead && pendingStatusChange.newStatus) {
+                    handleQuickStatus(pendingStatusChange.lead, pendingStatusChange.newStatus, true);
+                  }
+                  setPendingStatusChange(null);
+                }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
+                  Ya, Ubah Status
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader, StatusBadge, AdminTable, AdminToolbar } from "@/components/admin/ui";
 import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Globe, Calendar, MessageSquare, Pencil, Trash2, RefreshCw, AlertCircle, Server, Wand2, MoreHorizontal, X } from "lucide-react";
 import rawClients from "@/data/admin/clients.json";
+import { CountrySelector } from "@/components/ui/CountrySelector";
+import { countries as COUNTRIES } from "@/lib/countries";
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
 
@@ -98,7 +100,7 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick, 
             </h3>
           </div>
           {client.website || client.domain ? (
-            <a href={client.website || `https://${client.domain}`} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate max-w-xs" onClick={e => e.stopPropagation()}>
+            <a href={(client.website || client.domain)?.startsWith('http') ? (client.website || client.domain) : `https://${client.website || client.domain}`} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate max-w-xs" onClick={e => e.stopPropagation()}>
               {client.website || client.domain}
             </a>
           ) : <span className="text-[13px] italic text-[var(--adm-text-3)]">Tidak ada link</span>}
@@ -238,6 +240,8 @@ export default function MaintenancePage() {
   const [usingModId, setUsingModId] = useState<string | null>(null);
   const [modNotes, setModNotes] = useState("");
   const [modDeadline, setModDeadline] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedMsgCountry, setSelectedMsgCountry] = useState(COUNTRIES[0]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -247,7 +251,7 @@ export default function MaintenancePage() {
   useEffect(() => {
     setIsClient(true);
     const savedClients = localStorage.getItem("revtech_clients");
-    let currentClients: Client[] = savedClients ? JSON.parse(savedClients) : (rawClients as Client[]);
+    let currentClients: Client[] = savedClients ? JSON.parse(savedClients) : [];
     
     // Auto-sync from finished orders
     const savedOrders = localStorage.getItem("revtech_orders");
@@ -280,8 +284,8 @@ export default function MaintenancePage() {
           joinDate: (o.createdAt || "").split("T")[0],
           totalSpend: o.total || 0,
           activeProjects: 0,
-          domain: isTerimaBeres ? (derivedDomain || "Dikelola RevTech") : derivedDomain,
-          domainExpiry: isTerimaBeres ? (o.nextBillingDate || null) : null,
+          domain: derivedDomain,
+          domainExpiry: o.nextBillingDate || null,
           hosting: isTerimaBeres ? "RevTech Managed" : null,
           hostingExpiry: isTerimaBeres ? (o.nextBillingDate || null) : null,
           service: o.service,
@@ -291,33 +295,21 @@ export default function MaintenancePage() {
 
         const existing = currentClients.find(c => c.id === o.id);
         if (!existing) {
-          changed = true;
-          currentClients.unshift(builtClient);
-        } else {
-          // Fix previous bug where name and contact were swapped
-          if (existing.name === o.client && existing.contact === (o.company || o.client) && o.company) {
+          if (isTerimaBeres) {
             changed = true;
-            existing.name = o.company;
-            existing.contact = o.client;
+            currentClients.unshift(builtClient);
           }
-
-          // Update fields that may have changed after handover re-submit
-          const needsUpdate =
-            existing.handover !== builtClient.handover ||
-            existing.domainExpiry !== builtClient.domainExpiry ||
-            existing.website !== builtClient.website;
-          if (needsUpdate) {
+        } else {
+          if (!isTerimaBeres) {
             changed = true;
-            Object.assign(existing, {
-              website: builtClient.website,
-              domain: builtClient.domain,
-              domainExpiry: builtClient.domainExpiry,
-              hosting: builtClient.hosting,
-              hostingExpiry: builtClient.hostingExpiry,
-              handover: builtClient.handover,
-              service: builtClient.service,
-              recurringFee: builtClient.recurringFee,
-            });
+            currentClients = currentClients.filter(c => c.id !== o.id);
+          } else {
+            // Fix previous bug where name and contact were swapped
+            if (existing.name === o.client && existing.contact === (o.company || o.client) && o.company) {
+              changed = true;
+              existing.name = o.company;
+              existing.contact = o.client;
+            }
           }
         }
       });
@@ -513,6 +505,37 @@ export default function MaintenancePage() {
         handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
         modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : undefined
       } : c);
+
+      // Sinkronisasi perubahan ke invoice yang berstatus pending (jika ada)
+      try {
+        const savedInvoices = localStorage.getItem("revtech_invoices");
+        if (savedInvoices) {
+          let invoiceList = JSON.parse(savedInvoices);
+          let invoiceChanged = false;
+          invoiceList = invoiceList.map((inv: any) => {
+            // Update invoice jika orderId cocok, type "maintenance", dan status belum dibayar
+            if (inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending") {
+              invoiceChanged = true;
+              return {
+                ...inv,
+                client: form.contact || form.name,
+                company: form.name,
+                service: form.service || inv.service,
+                phone: form.phone || inv.phone,
+                amount: typeof form.recurringFee === "number" ? form.recurringFee : inv.amount
+              };
+            }
+            return inv;
+          });
+          if (invoiceChanged) {
+            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+            // Trigger event for other tabs to catch up (optional)
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync invoice updates from maintenance edit", err);
+      }
     } else {
       updated = [{
         id: `CLN-${Date.now().toString().slice(-5)}`,
@@ -533,7 +556,7 @@ export default function MaintenancePage() {
   }
 
   const filtered = clients.filter(c => {
-    const isMaintenance = Boolean(c.domainExpiry) || Boolean(c.recurringFee && c.recurringFee > 0);
+    const isMaintenance = Boolean(c.domainExpiry) || Boolean(c.recurringFee && c.recurringFee > 0) || Boolean(c.handover?.includes("Terima Beres"));
     const days = daysUntil(c.domainExpiry);
     const matchTab = tabFilter === "all" || 
       (tabFilter === "kritis" ? (days !== null && days <= 14) : 
@@ -690,7 +713,7 @@ export default function MaintenancePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Bisnis / Instansi *</label>
-                  <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="CV Maju Jaya" />
+                  <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Masukkan nama bisnis / instansi" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Status Website</label>
@@ -704,32 +727,37 @@ export default function MaintenancePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Alamat Website</label>
-                  <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="https://klien.com" />
+                  <input type="text" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Masukkan alamat website" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nomor WhatsApp</label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">+62</span>
+                  <div className="flex rounded-xl bg-transparent focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all border border-[var(--adm-border)]">
+                    <CountrySelector selected={selectedCountry} onSelect={setSelectedCountry} theme="admin" />
                     <input 
                       type="text" 
-                      value={form.phone ? form.phone.replace(/^62/, '') : ''} 
+                      value={form.phone ? form.phone.replace(new RegExp(`^${selectedCountry.dial_code.replace('+', '')}`), '') : ''} 
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '');
                         const cleanVal = val.startsWith('0') ? val.substring(1) : val;
-                        setForm({ ...form, phone: cleanVal ? `62${cleanVal}` : '' });
+                        const code = selectedCountry.dial_code.replace('+', '');
+                        setForm({ ...form, phone: cleanVal ? `${code}${cleanVal}` : '' });
                       }} 
-                      className="w-full pl-11 pr-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" 
-                      placeholder="81234567890" 
+                      className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder-[var(--adm-text-3)]" 
+                      placeholder={selectedCountry.code === 'ID' ? "8123456..." : "123456789..."} 
                     />
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Serah Terima</label>
-                    <input type="text" value={form.handover || ""} onChange={e => setForm({ ...form, handover: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Paket Plus" />
+                    <select value={form.handover || ""} onChange={e => setForm({ ...form, handover: e.target.value })} className="w-full pl-3 pr-8 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm truncate focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                      <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Opsi -</option>
+                      <option value="Terima Beres (Basic)" className="bg-[var(--adm-card)]">Terima Beres (Basic)</option>
+                      <option value="Terima Beres (Plus)" className="bg-[var(--adm-card)]">Terima Beres (Plus)</option>
+                    </select>
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jatah Revisi</label>
@@ -743,25 +771,22 @@ export default function MaintenancePage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nominal Tagihan</label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">Rp</span>
-                      <input 
-                        type="text" 
-                        value={form.recurringFee ? form.recurringFee.toLocaleString('id-ID') : ""} 
-                        onChange={e => {
-                          const val = parseInt(e.target.value.replace(/\D/g, ''));
-                          setForm({ ...form, recurringFee: isNaN(val) ? 0 : val });
-                        }} 
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" 
-                        placeholder="900.000" 
-                      />
-                    </div>
+                    <input 
+                      type="text" 
+                      value={form.recurringFee ? `Rp ${form.recurringFee.toLocaleString('id-ID')}` : ""} 
+                      onChange={e => {
+                        const val = parseInt(e.target.value.replace(/\D/g, ''));
+                        setForm({ ...form, recurringFee: isNaN(val) ? 0 : val });
+                      }} 
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" 
+                      placeholder="Rp 0" 
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--adm-border)]">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm">Batal</button>
+                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm">Batal</button>
                 <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-colors shadow-sm text-sm">{editingId ? "Simpan Perubahan" : "Tambah Klien"}</button>
               </div>
             </form>
@@ -829,18 +854,19 @@ export default function MaintenancePage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nomor WhatsApp Tujuan</label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">+62</span>
+                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition-all border border-[var(--adm-border)]">
+                      <CountrySelector selected={selectedMsgCountry} onSelect={setSelectedMsgCountry} theme="admin" />
                       <input 
                         type="text" 
-                        value={selectedClient.phone ? selectedClient.phone.replace(/^62/, '') : ''} 
+                        value={selectedClient.phone ? selectedClient.phone.replace(new RegExp(`^${selectedMsgCountry.dial_code.replace('+', '')}`), '') : ''} 
                         onChange={e => {
                           const val = e.target.value.replace(/\D/g, '');
                           const cleanVal = val.startsWith('0') ? val.substring(1) : val;
-                          updateSelectedClient('phone', cleanVal ? `62${cleanVal}` : '');
+                          const code = selectedMsgCountry.dial_code.replace('+', '');
+                          updateSelectedClient('phone', cleanVal ? `${code}${cleanVal}` : '');
                         }} 
-                        className="w-full pl-11 pr-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" 
-                        placeholder="81234567890" 
+                        className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder-[var(--adm-text-3)]" 
+                        placeholder={selectedMsgCountry.code === 'ID' ? "8123456..." : "123456789..."} 
                       />
                     </div>
                   </div>
@@ -932,7 +958,7 @@ export default function MaintenancePage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setRenewingClient(null)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
                   >
                     Batal
                   </button>
@@ -978,7 +1004,7 @@ export default function MaintenancePage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setDeletingId(null)}
-                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm"
+                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm"
                   >
                     Batal
                   </button>
@@ -1067,7 +1093,7 @@ export default function MaintenancePage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setUsingModId(null); setModNotes(""); setModDeadline(""); }}
-                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm border border-[var(--adm-border)]"
+                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm border border-[var(--adm-border)]"
                   >
                     Batal
                   </button>

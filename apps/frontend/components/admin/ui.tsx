@@ -514,8 +514,8 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
 // ── AdminToolbar ─────────────────────────────────────────────────────────────
 
 interface AdminToolbarProps {
-  view: "list" | "form";
-  onBack: () => void;
+  view?: "list" | "form";
+  onBack?: () => void;
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
@@ -526,7 +526,7 @@ interface AdminToolbarProps {
 }
 
 export function AdminToolbar({
-  view,
+  view = "list",
   onBack,
   search,
   onSearchChange,

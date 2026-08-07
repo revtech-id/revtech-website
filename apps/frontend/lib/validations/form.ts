@@ -5,7 +5,6 @@ export const jasaWebFormSchema = z.object({
   whatsapp: z.string().min(9, "Nomor WhatsApp tidak valid (minimal 9 angka)"),
   business: z.string().optional(),
   message: z.string().min(10, "Pesan minimal harus 10 karakter"),
-  vipLane: z.boolean().optional(),
   handoverOption: z.string().optional(),
   reference: z.string().optional(),
 });

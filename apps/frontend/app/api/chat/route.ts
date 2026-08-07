@@ -21,7 +21,7 @@ INFO PENTING TENTANG REVTECH:
 3. Opsi Handover (Serah Terima):
    Ada 3 opsi setelah lunas:
    - Terima Beres (Basic): Gratis domain & server tahun pertama. Tahun berikutnya perpanjangan mulai Rp 50.000/tahun.
-   - Terima Beres (Plus): Rekomendasi. VIP mulai Rp 300.000/tahun. Tim RevTech yang merawat & amankan sistem. Termasuk 1x revisi minor gratis tiap bulan.
+   - Terima Beres (Plus): Rekomendasi. Mulai Rp 300.000/tahun. Tim RevTech yang merawat & amankan sistem. Termasuk 1x revisi minor gratis tiap bulan.
    - Sistem Mandiri (Source Code): Klien dapat source code mentah. Klien urus server/domain sendiri. Gratis (sudah include di paket awal).
 
 4. Kebijakan Garansi & Revisi:

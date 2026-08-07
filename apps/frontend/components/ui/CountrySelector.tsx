@@ -42,7 +42,7 @@ export function CountrySelector({ selected, onSelect, theme = "public" }: Countr
         className={`bg-transparent border-r h-full flex items-center justify-center gap-2 outline-none transition-colors ${
           isPublic 
             ? "border-gray-200 rounded-l-xl text-gray-900 font-bold pl-4 pr-9 group-hover:bg-gray-100" 
-            : "border-[var(--adm-border)] rounded-l-lg text-[var(--adm-text)] font-semibold pl-3 pr-7 hover:bg-[var(--adm-bg)]"
+            : "border-[var(--adm-border)] rounded-l-lg text-[var(--adm-text)] font-semibold pl-3 pr-7"
         }`}
       >
         <img src={`https://flagcdn.com/w20/${selected.code.toLowerCase()}.png`} alt={selected.code} className={`h-auto object-contain rounded-sm shadow-sm ${isPublic ? "w-5" : "w-4"}`} />
@@ -79,7 +79,7 @@ export function CountrySelector({ selected, onSelect, theme = "public" }: Countr
                 className={`flex items-center gap-3 px-3 rounded-md text-left transition-colors ${
                   isPublic
                     ? `py-2.5 text-sm ${selected.code === country.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium'}`
-                    : `py-2 text-sm ${selected.code === country.code ? 'bg-[var(--adm-accent)]/10 text-[var(--adm-accent)] font-bold' : 'text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] hover:text-[var(--adm-text)] font-medium'}`
+                    : `py-2 text-sm ${selected.code === country.code ? 'bg-[var(--adm-accent)]/10 text-[var(--adm-accent)] font-bold' : 'text-[var(--adm-text-2)] hover:text-[var(--adm-text)] font-medium'}`
                 }`}
               >
                 <img src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`} alt={country.code} loading="lazy" className={`h-auto object-contain rounded-sm shadow-sm ${isPublic ? "w-5" : "w-4"}`} />

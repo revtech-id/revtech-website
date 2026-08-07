@@ -21,7 +21,6 @@ export default function KontakForm() {
     
     const [service, setService] = useState<ServiceCategory>('jasa_web');
     const [jasaWebPackage, setJasaWebPackage] = useState<JasaWebPackage>('Usaha');
-    const [vipLane, setVipLane] = useState<boolean>(false);
 
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
     const [waLink, setWaLink] = useState<string>('');
@@ -37,7 +36,6 @@ export default function KontakForm() {
         reset();
         setService('jasa_web');
         setJasaWebPackage('Usaha');
-        setVipLane(false);
         setSelectedCountry(countries[0]);
     };
 
@@ -75,7 +73,7 @@ export default function KontakForm() {
         
         if (service === 'jasa_web') {
             messageText += `Paket: ${jasaWebPackage}\n`;
-            if (vipLane) messageText += `Jalur VIP: Ya\n`;
+
         }
         if (service === 'custom' && data.reference) {
             messageText += `Referensi: ${data.reference}\n`;
@@ -97,7 +95,7 @@ export default function KontakForm() {
             } else if (service === 'produk_digital') {
                 basePrice = 150000;
             }
-            if (vipLane && basePrice > 0) basePrice = Math.round(basePrice * 1.3);
+
             
             const newLead = {
                 id: `LD-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -111,7 +109,6 @@ export default function KontakForm() {
                 status: "new",
                 createdAt: new Date().toISOString(),
                 handover: "",
-                isVip: vipLane,
                 referenceLink: service === 'custom' ? (data.reference || "") : ""
             };
 
@@ -292,19 +289,6 @@ export default function KontakForm() {
                                         </select>
                                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 pt-0 sm:pt-7 w-full sm:w-auto">
-                                    <input 
-                                        type="checkbox" 
-                                        id="vipLane" 
-                                        checked={vipLane}
-                                        onChange={(e) => setVipLane(e.target.checked)}
-                                        className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                                    />
-                                    <label htmlFor="vipLane" className="text-sm font-bold text-gray-700 cursor-pointer whitespace-nowrap">
-                                        Gunakan Jalur VIP
-                                    </label>
                                 </div>
                             </div>
                         </motion.div>

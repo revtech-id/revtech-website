@@ -5,9 +5,6 @@ import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { StatCard, ProgressRingCard, AdminCard, DonutChart } from "@/components/admin/ui";
-import ordersRaw from "@/data/admin/orders.json";
-import invoicesRaw from "@/data/admin/invoices.json";
-import clientsRaw from "@/data/admin/clients.json";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,9 +42,14 @@ interface Client {
   hostingExpiry: string | null;
 }
 
-const orders = ordersRaw as Order[];
-const invoices = invoicesRaw as Invoice[];
-const clients = clientsRaw as Client[];
+interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  company: string;
+  service: string;
+  status: string;
+}
 
 // ── Recharts (dynamic — SSR safe) ─────────────────────────────────────────────
 
@@ -85,17 +87,26 @@ const STAGES = [
   { key: "selesai",    label: "Selesai",    color: "#10B981" },
 ];
 
-function getPipelineData() {
-  return STAGES.map((s) => ({
-    ...s,
-    count: orders.filter((o) => o.status === s.key).length,
-  }));
+function getPipelineData(orders: Order[], leads: Lead[]) {
+  return STAGES.map((s) => {
+    let count = 0;
+    if (s.key === "inbox") {
+      count = leads.filter((l) => l.status === "new").length;
+    } else if (s.key === "chat") {
+      count = leads.filter((l) => l.status === "followup" || l.status === "waiting_dp").length;
+    } else if (s.key === "dp") {
+      count = orders.filter((o) => o.status === "antrean").length;
+    } else {
+      count = orders.filter((o) => o.status === s.key).length;
+    }
+    return { ...s, count };
+  });
 }
 
 const STATUS_LABEL: Record<string, string> = {
   selesai: "Selesai", pengerjaan: "Dikerjakan", revisi: "Revisi",
   dp: "DP Masuk", pelunasan: "Tunggu Lunas", handover: "Handover",
-  inbox: "Inbox", chat: "Negosiasi",
+  inbox: "Inbox", chat: "Negosiasi", antrean: "Antrean", batal: "Batal"
 };
 
 const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
@@ -107,6 +118,8 @@ const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
   handover:   { bg: "rgba(20,184,166,0.12)",  text: "#0D9488" },
   inbox:      { bg: "rgba(100,116,139,0.1)",  text: "#64748B" },
   chat:       { bg: "rgba(139,92,246,0.12)",  text: "#7C3AED" },
+  antrean:    { bg: "rgba(100,116,139,0.1)",  text: "#64748B" },
+  batal:      { bg: "rgba(244,63,94,0.12)",   text: "#E11D48" },
 };
 
 // ── Custom Tooltip ────────────────────────────────────────────────────────────
@@ -133,7 +146,7 @@ const CustomBarShape = (props: any) => {
 
 // ── AI Insight Widget ─────────────────────────────────────────────────────────
 
-function AIInsightWidget() {
+function AIInsightWidget({ invoices, clients, orders }: { invoices: Invoice[], clients: Client[], orders: Order[] }) {
   const [insight, setInsight] = useState<React.ReactNode>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -247,7 +260,7 @@ function AIInsightWidget() {
 
   useEffect(() => {
     fetchInsight();
-  }, []);
+  }, [invoices, clients, orders]);
 
   return (
     <div className="w-full">
@@ -283,6 +296,43 @@ const CustomTick = ({ x, y, payload }: any) => (
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"proyek" | "server">("proyek");
+  const [isClient, setIsClient] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+
+  useEffect(() => {
+    setIsClient(true);
+    
+    function loadData() {
+      const savedOrders = localStorage.getItem("revtech_orders");
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+
+      const savedInvoices = localStorage.getItem("revtech_invoices");
+      if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
+
+      const savedClients = localStorage.getItem("revtech_clients");
+      if (savedClients) setClients(JSON.parse(savedClients));
+
+      const savedLeads = localStorage.getItem("revtech_inbox");
+      if (savedLeads) setLeads(JSON.parse(savedLeads));
+    }
+
+    loadData();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "revtech_orders" || e.key === "revtech_invoices" || e.key === "revtech_clients" || e.key === "revtech_inbox") {
+        loadData();
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  if (!isClient) return null;
+
   // ── Computed from real data ──
   const activeOrders = orders.filter((o) => o.status !== "selesai");
   const completedOrders = orders.filter((o) => o.status === "selesai");
@@ -301,20 +351,22 @@ export default function DashboardPage() {
   });
 
   // Pipeline funnel data
-  const pipelineData = getPipelineData();
+  const pipelineData = getPipelineData(orders, leads);
 
   // Server & Maintenance data
-  const activeClients = clients.filter((c) => {
+  const maintenanceClients = clients.filter(c => c.handover && (c.handover.includes("Basic") || c.handover.includes("Plus")));
+  
+  const activeClients = maintenanceClients.filter((c) => {
     const d = daysUntil(c.domainExpiry);
-    return d === null || d > 60;
+    return d === null || isNaN(d) || d > 60;
   });
-  const expiringClients = clients.filter((c) => {
+  const expiringClients = maintenanceClients.filter((c) => {
     const d = daysUntil(c.domainExpiry);
-    return d !== null && d >= 0 && d <= 60;
+    return d !== null && !isNaN(d) && d >= 0 && d <= 60;
   });
-  const expiredClients = clients.filter((c) => {
+  const expiredClients = maintenanceClients.filter((c) => {
     const d = daysUntil(c.domainExpiry);
-    return d !== null && d < 0;
+    return d !== null && !isNaN(d) && d < 0;
   });
 
   const serverSegments = [
@@ -330,7 +382,7 @@ export default function DashboardPage() {
       {/* ── Baris 1: Sistem Insight (Full Width) ────────────────────── */}
       <div className="mb-5">
         <motion.div {...fadeUp(1)}>
-          <AIInsightWidget />
+          <AIInsightWidget invoices={invoices} clients={clients} orders={orders} />
         </motion.div>
       </div>
 
@@ -500,8 +552,10 @@ export default function DashboardPage() {
                         <span className="truncate max-w-[150px] block" style={{ color: "var(--adm-text)" }}>{o.client}</span>
                       </td>
                       <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>{o.service}</td>
-                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>
-                        {STATUS_LABEL[o.status]}
+                      <td className="px-2 py-2.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--adm-text)" }}>
+                          {STATUS_LABEL[o.status] || o.status}
+                        </span>
                       </td>
                       <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>
                         {formatRp(o.total)}
@@ -608,7 +662,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {clients.slice(0, 5).map((c) => {
+                    {maintenanceClients.slice(0, 5).map((c) => {
                       const d = daysUntil(c.domainExpiry);
                       const isCritical = d !== null && d <= 14;
                       const isWarning = d !== null && d <= 60 && d > 14;

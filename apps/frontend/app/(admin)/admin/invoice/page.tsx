@@ -47,11 +47,6 @@ const fadeUp = (i: number) => ({
   animate: { opacity: 1, y: 0, transition: { delay: i * 0.07, type: "spring" as const, stiffness: 300, damping: 24 } },
 });
 
-const EMPTY_FORM = {
-  client: "", company: "", service: "", phone: "", orderId: "", type: "dp" as "dp" | "pelunasan" | "maintenance",
-  amount: 0, dueDate: "", description: ""
-};
-
 function InvoiceCard({ 
   inv, 
   onMarkPaid, 
@@ -128,13 +123,14 @@ function InvoiceCard({
         {/* Bottom Row: Description + Actions + Deadline */}
         <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
           <div className="flex items-baseline gap-2 pr-2 sm:pr-4 overflow-hidden min-w-0 flex-1">
-            <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">
-              {inv.type === "dp" ? "DP" : inv.type === "pelunasan" ? "Pelunasan" : "Maintenance"}
+            <h3 className="text-[13px] font-medium text-[var(--adm-text-2)] whitespace-nowrap">
+              {(() => {
+                if (inv.description.startsWith("Pembayaran Penuh")) return "Pembayaran Penuh";
+                if (inv.type === "dp") return inv.description.includes("DP") ? `Pembayaran ${inv.description.split(" — ")[0]}` : "Pembayaran DP";
+                if (inv.type === "pelunasan") return "Pembayaran Pelunasan";
+                return "Pembayaran Maintenance";
+              })()}
             </h3>
-            <span className="text-[var(--adm-text-3)] hidden sm:inline">—</span>
-            <p className="text-[13px] text-[var(--adm-text-2)] truncate cursor-default flex-1 min-w-0">
-              "{inv.description}"
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0 ml-auto mt-2 sm:mt-0">
@@ -158,7 +154,7 @@ function InvoiceCard({
                 </span>
               ) : inv.type === "maintenance" ? (
                 <span className={isOverdue(inv.dueDate, inv.status) ? "text-[var(--adm-danger)]" : "text-[var(--adm-text-3)]"}>
-                  Tempo: {new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
+                  Tempo: {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase() : "BELUM DIATUR"}
                 </span>
               ) : null}
             </div>
@@ -177,38 +173,13 @@ export default function InvoicePage() {
   const [typeFilter, setTypeFilter] = useState<"all" | "dp" | "pelunasan" | "maintenance">("all");
   const [layananFilter, setLayananFilter] = useState("Semua Layanan");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<"list" | "form">("list");
-  const [form, setForm] = useState(EMPTY_FORM);
   const [lunasInvoice, setLunasInvoice] = useState<Invoice | null>(null);
   const [lunasDate, setLunasDate] = useState("");
-  const [orders, setOrders] = useState<{ id: string; client: string; company: string; phone: string; dp: number; total: number; service: string }[]>([]);
-  const [leads, setLeads] = useState<any[]>([]);
 
   useEffect(() => {
     setIsClient(true);
     const saved = localStorage.getItem("revtech_invoices");
-    let currentInvoices: Invoice[] = saved ? JSON.parse(saved) : (rawInvoices as Invoice[]);
-
-    // Auto-sync pesanan untuk invoice dan dropdown
-    const savedOrders = localStorage.getItem("revtech_orders");
-    if (savedOrders) {
-      const parsedOrders = JSON.parse(savedOrders);
-      setOrders(parsedOrders.map((o: any) => ({
-        id: o.id, client: o.client, company: o.company || "", phone: o.phone || "",
-        dp: o.dp || 0, total: o.total || 0, service: o.service || ""
-      })));
-      
-      const savedInbox = localStorage.getItem("revtech_inbox");
-      const parsedInbox = savedInbox ? JSON.parse(savedInbox) : rawInbox;
-      setLeads(parsedInbox);
-      
-      let changed = false;
-      
-      if (changed) {
-        currentInvoices.sort((a,b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime());
-        localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
-      }
-    }
+    let currentInvoices: Invoice[] = saved ? JSON.parse(saved) : [];
     
     setInvoiceList(currentInvoices);
     if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
@@ -242,55 +213,6 @@ export default function InvoicePage() {
   function handleDelete(id: string) {
     if (window.confirm("Apakah Anda yakin ingin menghapus tagihan ini?")) {
       save(invoiceList.filter(inv => inv.id !== id));
-    }
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const newInv: Invoice = {
-      id: `INV-${Date.now().toString().slice(-5)}`,
-      orderId: form.orderId,
-      client: form.client,
-      company: form.company,
-      service: form.service,
-      phone: form.phone,
-      type: form.type,
-      amount: Number(form.amount),
-      status: "pending",
-      issuedAt: new Date().toISOString(),
-      paidAt: null,
-      dueDate: form.dueDate,
-      description: form.description || `${form.type === "dp" ? "DP 50%" : "Pelunasan"} — ${form.client}`,
-    };
-    save([newInv, ...invoiceList]);
-    setForm(EMPTY_FORM);
-    setView("list");
-  }
-
-  function handleLinkSelect(id: string) {
-    if (form.type === "dp") {
-      const lead = leads.find(l => l.id === id);
-      if (lead) {
-        // Budget might be a string like "Rp 5.000.000", parse it if possible, else 0
-        const budgetMatch = lead.budget.match(/\d+(\.\d+)?/g);
-        const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
-        const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
-        
-        setForm(f => ({
-          ...f, orderId: id, client: lead.name, company: lead.company, service: lead.service, phone: lead.phone,
-          amount: dpAmount,
-          description: `DP 50% — ${lead.service || lead.company || lead.name}`
-        }));
-      }
-    } else {
-      const order = orders.find(o => o.id === id);
-      if (order) {
-        setForm(f => ({
-          ...f, orderId: id, client: order.client, company: order.company, service: order.service, phone: order.phone,
-          amount: order.total - order.dp,
-          description: `Pelunasan — ${order.service || order.client}`
-        }));
-      }
     }
   }
 
@@ -351,8 +273,6 @@ export default function InvoicePage() {
     <div>
       {/* Toolbar */}
       <AdminToolbar
-        view={view}
-        onBack={() => setView("list")}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Cari invoice, klien..."
@@ -374,13 +294,9 @@ export default function InvoicePage() {
             </div>
           </div>
         }
-        onAdd={() => { setForm(EMPTY_FORM); setView("form"); }}
-        addLabel="Buat Invoice"
-        addIcon="add"
       />
 
-      {view === "list" && (
-        <>
+      <>
           {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
             {[
@@ -490,105 +406,9 @@ export default function InvoicePage() {
                   <p className="text-lg font-medium text-[var(--adm-text-2)]">Tidak ada invoice ditemukan</p>
                 </div>
               )}
-            </AnimatePresence>
+              </AnimatePresence>
           </motion.div>
         </>
-      )}
-
-      {view === "form" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
-          <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] p-6 sm:p-8 shadow-[var(--adm-shadow)]">
-            <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">Buat Invoice Baru</h2>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Link ke Data Sumber */}
-              {form.type === "dp" ? (
-                leads.length > 0 && (
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Inbox (Leads) - Opsional</label>
-                    <select
-                      value={form.orderId}
-                      onChange={(e) => handleLinkSelect(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    >
-                      <option value="" className="bg-[var(--adm-card)]">— Pilih Lead —</option>
-                      {leads.map(l => (
-                        <option key={l.id} value={l.id} className="bg-[var(--adm-card)]">{l.id} · {l.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              ) : (
-                orders.length > 0 && (
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tautkan ke Pesanan (Opsional)</label>
-                    <select
-                      value={form.orderId}
-                      onChange={(e) => handleLinkSelect(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    >
-                      <option value="" className="bg-[var(--adm-card)]">— Pilih Pesanan —</option>
-                      {orders.map(o => (
-                        <option key={o.id} value={o.id} className="bg-[var(--adm-card)]">{o.id} · {o.client}</option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Klien *</label>
-                  <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Nama klien" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nama Bisnis</label>
-                  <input type="text" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Opsional (Cth: RevTech)" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Nomor WhatsApp</label>
-                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="628xxxxxxxxxx" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Layanan</label>
-                  <input type="text" value={form.service} onChange={e => setForm({ ...form, service: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Opsional (Cth: Jasa Website)" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tipe Invoice *</label>
-                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as "dp" | "pelunasan" })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    <option value="dp" className="bg-[var(--adm-card)]">DP (Down Payment)</option>
-                    <option value="pelunasan" className="bg-[var(--adm-card)]">Pelunasan</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jumlah (Rp) *</label>
-                  <input required type="number" value={form.amount} onChange={e => setForm({ ...form, amount: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jatuh Tempo *</label>
-                <input required type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Deskripsi</label>
-                <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Cth: DP 50% Website Company Profile" />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--adm-border)]">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] transition-colors text-sm">Batal</button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-colors shadow-sm text-sm">Simpan Invoice</button>
-              </div>
-            </form>
-          </div>
-        </motion.div>
-      )}
 
       {/* Modal Konfirmasi Lunas */}
       <AnimatePresence>
@@ -633,7 +453,7 @@ export default function InvoicePage() {
                     type="date"
                     value={lunasDate}
                     onChange={(e) => setLunasDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
+                    className="w-full px-4 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -641,7 +461,7 @@ export default function InvoicePage() {
               <div className="p-5 border-t border-[var(--adm-border)] flex gap-3 bg-[var(--adm-bg)]">
                 <button 
                   onClick={() => setLunasInvoice(null)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-card)] transition-colors border border-transparent hover:border-[var(--adm-border)]"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
                 >
                   Batal
                 </button>

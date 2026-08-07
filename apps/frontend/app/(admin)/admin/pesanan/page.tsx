@@ -24,14 +24,13 @@ interface Order {
   handover?: string;       // Link hasil pekerjaan
   recurringFee?: number;   // Tagihan bulanan/tahunan
   nextBillingDate?: string;// Tanggal tagihan berikutnya
-  isVip?: boolean;                // VIP flag
   assignedDev?: string;           // siapa developer yang mengerjakan
   progressLog?: { date: string; note: string; by: string }[]; // log progress bertanggal
 }
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"];
 
-const defaultOrders: Order[] = rawOrders as Order[];
+const defaultOrders: Order[] = [];
 
 const PIPELINE: { status: OrderStatus; label: string; badgeVariant: "slate" | "purple" | "amber" | "blue" | "indigo" | "rose" | "emerald" }[] = [
   { status: "antrean", label: "Antrean", badgeVariant: "slate" },
@@ -278,11 +277,13 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
                 onChange={e => onStatusChange(e.target.value as OrderStatus)}
                 className="text-[11px] text-[var(--adm-text-3)] font-bold py-1.5 border-0 bg-transparent cursor-pointer focus:outline-none text-right shrink-0 ml-1"
               >
-                {PIPELINE.map(p => (
-                  <option key={p.status} value={p.status} className="bg-[var(--adm-card)] text-[var(--adm-text)]">
-                    {p.label}
-                  </option>
-                ))}
+                {PIPELINE.map(p => {
+                  return (
+                    <option key={p.status} value={p.status} className="bg-[var(--adm-card)] text-[var(--adm-text)]">
+                      {p.label}
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>
@@ -341,20 +342,22 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
               </span>
             )}
             {order.handover && (
-              <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold flex items-center gap-1" title="Link/Aset Pekerjaan">
+              <a 
+                href={order.handover.startsWith('http') ? order.handover : `https://${order.handover}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="px-2 py-0.5 rounded bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] text-[var(--adm-text-2)] hover:text-[var(--adm-accent)] transition-colors text-[10px] font-semibold flex items-center gap-1 cursor-pointer" 
+                title="Link/Aset Pekerjaan"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Globe size={10} />
                 <span className="truncate max-w-[150px]">{order.handover}</span>
-              </span>
+              </a>
             )}
             {order.recurringFee !== undefined && order.recurringFee > 0 && order.nextBillingDate && (
               <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border flex items-center gap-1" style={{ color: "var(--adm-accent)", backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)" }} title="Jadwal Tagihan Selanjutnya">
                 <Calendar size={10} />
                 {new Date(order.nextBillingDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} : {formatRp(order.recurringFee)}
-              </span>
-            )}
-            {order.isVip && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border" style={{ color: "var(--adm-warning)", backgroundColor: "rgba(245,158,11,0.1)", borderColor: "rgba(245,158,11,0.2)" }}>
-                VIP
               </span>
             )}
           </div>
@@ -416,6 +419,7 @@ export default function PesananPage() {
   const [handoverOrder, setHandoverOrder] = useState<Order | null>(null);
   const [lunasOrder, setLunasOrder] = useState<Order | null>(null);
   const [lunasPayment, setLunasPayment] = useState<number>(0);
+  const [lunasExtraFee, setLunasExtraFee] = useState<number>(0);
   const [lunasNote, setLunasNote] = useState<string>("");
   const [handoverLink, setHandoverLink] = useState("");
   const [handoverNote, setHandoverNote] = useState("");
@@ -425,11 +429,11 @@ export default function PesananPage() {
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmStatusChangeData, setConfirmStatusChangeData] = useState<Partial<Order> | null>(null);
   
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
     client: "", phone: "", service: "Jasa Website", status: "antrean", dp: 0, total: 0, deadline: "", notes: "", handoverOption: "", handover: ""
   });
-  const [isVip, setIsVip] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -471,7 +475,7 @@ export default function PesananPage() {
     localStorage.setItem("revtech_orders_trash", JSON.stringify(newDeleted));
   };
 
-  // Auto-calculate deadline when service or VIP changes
+  // Auto-calculate deadline when service changes
   useEffect(() => {
     if (view === "form") {
       const today = new Date();
@@ -481,18 +485,17 @@ export default function PesananPage() {
       if (s.includes("logo") || s.includes("desain")) days = 3;
       else if (s.includes("website") || s.includes("sistem")) days = 14;
 
-      if (isVip) days = Math.max(1, Math.floor(days / 2)); // VIP is twice as fast
-
       const deadlineDate = new Date(today);
       deadlineDate.setDate(deadlineDate.getDate() + days);
       setNewOrder(prev => ({ ...prev, deadline: deadlineDate.toISOString().split("T")[0] }));
     }
-  }, [newOrder.service, isVip, view]);
+  }, [newOrder.service, view]);
 
   const confirmLunas = () => {
     if (!lunasOrder) return;
+    const newTotal = lunasOrder.total + (lunasExtraFee || 0);
     const newDp = lunasOrder.dp + (lunasPayment || 0);
-    const isPaid = newDp >= lunasOrder.total;
+    const isPaid = newDp >= newTotal;
     
     const newOrders = orders.map(o => {
       if (o.id !== lunasOrder.id) return o;
@@ -509,6 +512,7 @@ export default function PesananPage() {
 
       return {
         ...o,
+        total: newTotal,
         dp: newDp,
         notes: updatedNotes,
         ...(isPaid && { status: "handover" as OrderStatus })
@@ -540,7 +544,7 @@ export default function PesananPage() {
             service: lunasOrder.service,
             phone: lunasOrder.phone,
             type: "pelunasan",
-            amount: lunasOrder.total - lunasOrder.dp,
+            amount: newTotal - lunasOrder.dp,
             status: "paid",
             issuedAt: today,
             paidAt: today,
@@ -557,6 +561,7 @@ export default function PesananPage() {
     setLunasOrder(null);
     setLunasNote("");
     setLunasPayment(0);
+    setLunasExtraFee(0);
     showToast(isPaid ? "Lunas! Status otomatis berubah ke Handover." : "Pembayaran berhasil ditambahkan!");
   };
 
@@ -628,6 +633,22 @@ export default function PesananPage() {
   };
 
   const changeOrderStatus = (id: string, newStatus: OrderStatus) => {
+    const originalOrder = orders.find(o => o.id === id);
+    
+    // Prevent changing to selesai/handover if not fully paid
+    if (originalOrder && (newStatus === "selesai" || newStatus === "handover") && originalOrder.dp < originalOrder.total) {
+      showToast("Klien belum lunas! Silakan lunasi pembayaran terlebih dahulu.", "error");
+      return;
+    }
+    
+    const restrictedStatuses = ["selesai", "batal", "handover"];
+    
+    if (originalOrder && restrictedStatuses.includes(originalOrder.status) && newStatus !== originalOrder.status) {
+      setEditingId(id);
+      setConfirmStatusChangeData({ ...originalOrder, status: newStatus } as Order);
+      return;
+    }
+
     const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
     saveOrders(updated);
     showToast("Status berhasil diperbarui");
@@ -691,8 +712,149 @@ export default function PesananPage() {
     if (!newOrder.client || !newOrder.phone || !newOrder.service) return;
 
     if (editingId) {
-      const updated = orders.map(o => o.id === editingId ? { ...o, ...newOrder } as Order : o);
+      const originalOrder = orders.find(o => o.id === editingId);
+      
+      // Prevent changing to selesai/handover if not fully paid
+      if (originalOrder && (newOrder.status === "selesai" || newOrder.status === "handover") && originalOrder.dp < originalOrder.total) {
+        showToast("Klien belum lunas! Silakan lunasi pembayaran terlebih dahulu.", "error");
+        return;
+      }
+
+      const restrictedStatuses = ["selesai", "batal", "handover"];
+      if (originalOrder && restrictedStatuses.includes(originalOrder.status) && newOrder.status !== originalOrder.status) {
+        setConfirmStatusChangeData(newOrder);
+        return;
+      }
+      
+      const isTerimaBeres = newOrder.handoverOption?.includes("Terima Beres");
+      const orderToSave = {
+        ...newOrder,
+        recurringFee: isTerimaBeres ? newOrder.recurringFee : 0,
+        nextBillingDate: isTerimaBeres ? newOrder.nextBillingDate : "",
+      };
+      
+      const updated = orders.map(o => o.id === editingId ? { ...o, ...orderToSave } as Order : o);
       saveOrders(updated);
+      
+      // SYNC to Maintenance (Clients)
+      try {
+        const savedClients = localStorage.getItem("revtech_clients");
+        if (savedClients) {
+          let clientList = JSON.parse(savedClients);
+          let clientChanged = false;
+          
+          if (!isTerimaBeres) {
+            const prevLength = clientList.length;
+            clientList = clientList.filter((c: any) => c.id !== editingId);
+            if (clientList.length !== prevLength) clientChanged = true;
+          } else {
+            let foundClient = false;
+            clientList = clientList.map((c: any) => {
+              if (c.id === editingId) {
+                clientChanged = true;
+                foundClient = true;
+                return {
+                  ...c,
+                  handover: orderToSave.handoverOption !== undefined ? orderToSave.handoverOption : c.handover,
+                  recurringFee: orderToSave.recurringFee !== undefined ? orderToSave.recurringFee : c.recurringFee,
+                  domainExpiry: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : c.domainExpiry,
+                  hostingExpiry: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : c.hostingExpiry,
+                  website: orderToSave.handover !== undefined ? orderToSave.handover : c.website,
+                };
+              }
+              return c;
+            });
+            
+            // Re-create client if it was previously removed
+            if (!foundClient && orderToSave.status === "selesai") {
+              let derivedDomain = null;
+              if (orderToSave.handover) {
+                try { derivedDomain = new URL(orderToSave.handover.startsWith("http") ? orderToSave.handover : `https://${orderToSave.handover}`).hostname; }
+                catch { derivedDomain = orderToSave.handover; }
+              }
+              clientList.unshift({
+                id: editingId,
+                name: orderToSave.company || orderToSave.client,
+                contact: orderToSave.client,
+                phone: orderToSave.phone,
+                email: "",
+                website: orderToSave.handover?.startsWith("http") ? orderToSave.handover : (derivedDomain ? `https://${derivedDomain}` : null),
+                websiteStatus: "active",
+                joinDate: (orderToSave.createdAt || "").split("T")[0],
+                totalSpend: orderToSave.total || 0,
+                activeProjects: 0,
+                domain: derivedDomain,
+                domainExpiry: orderToSave.nextBillingDate || null,
+                hosting: "RevTech Managed",
+                hostingExpiry: orderToSave.nextBillingDate || null,
+                service: orderToSave.service,
+                handover: orderToSave.handoverOption,
+                recurringFee: orderToSave.recurringFee,
+              });
+              clientChanged = true;
+            }
+          }
+          
+          if (clientChanged) {
+            localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+          }
+        }
+      } catch (err) {}
+
+      // SYNC to Invoices
+      try {
+        const savedInvoices = localStorage.getItem("revtech_invoices");
+        if (savedInvoices) {
+          let invoiceList = JSON.parse(savedInvoices);
+          let invoiceChanged = false;
+          
+          if (!isTerimaBeres) {
+            const prevLength = invoiceList.length;
+            invoiceList = invoiceList.filter((inv: any) => !(inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending"));
+            if (invoiceList.length !== prevLength) invoiceChanged = true;
+          } else {
+            let foundInvoice = false;
+            invoiceList = invoiceList.map((inv: any) => {
+              if (inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending") {
+                invoiceChanged = true;
+                foundInvoice = true;
+                return {
+                  ...inv,
+                  amount: orderToSave.recurringFee !== undefined ? orderToSave.recurringFee : inv.amount,
+                  dueDate: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : inv.dueDate,
+                };
+              }
+              return inv;
+            });
+            
+            // Re-create invoice if it was previously removed
+            if (!foundInvoice && orderToSave.status === "selesai") {
+              invoiceList.unshift({
+                id: `INV-${Date.now().toString().slice(-5)}`,
+                orderId: editingId,
+                client: orderToSave.client,
+                company: orderToSave.company || "",
+                service: orderToSave.service,
+                phone: orderToSave.phone,
+                type: "maintenance",
+                amount: orderToSave.recurringFee || 0,
+                status: "pending",
+                issuedAt: new Date().toISOString(),
+                paidAt: null,
+                dueDate: orderToSave.nextBillingDate || "",
+                description: `Pembayaran Maintenance — ${orderToSave.company || orderToSave.client}`
+              });
+              invoiceChanged = true;
+            }
+          }
+          
+          if (invoiceChanged) {
+            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
+      } catch (err) {}
+
       showToast("Pesanan berhasil diperbarui");
     } else {
       const order: Order = {
@@ -709,7 +871,6 @@ export default function PesananPage() {
         handover: newOrder.handover || "",
         recurringFee: newOrder.recurringFee || 0,
         nextBillingDate: newOrder.nextBillingDate || "",
-        isVip: isVip,
         createdAt: new Date().toISOString().split("T")[0]
       };
       saveOrders([order, ...orders]);
@@ -722,7 +883,6 @@ export default function PesananPage() {
   const handleEdit = (order: Order) => {
     setEditingId(order.id);
     setNewOrder(order);
-    setIsVip(order.isVip || false);
     setView("form");
   };
 
@@ -739,10 +899,6 @@ export default function PesananPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     } else if (sortBy === "oldest") {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    } else if (sortBy === "vip") {
-      if (a.isVip && !b.isVip) return -1;
-      if (!a.isVip && b.isVip) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     } else if (sortBy === "deadline") {
       if (!a.deadline) return 1;
       if (!b.deadline) return -1;
@@ -840,7 +996,6 @@ export default function PesananPage() {
                   <option value="newest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
                   <option value="oldest" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
                   <option value="deadline" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Deadline</option>
-                  <option value="vip" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">VIP Prioritas</option>
                 </select>
               </div>
             </div>
@@ -893,99 +1048,29 @@ export default function PesananPage() {
             <form onSubmit={handleAddOrder} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Nama Klien / Instansi</label>
-                  <input required type="text" value={newOrder.client} onChange={(e) => setNewOrder({ ...newOrder, client: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: PT. Maju Jaya" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Nomor WhatsApp</label>
-                  <input required type="text" value={newOrder.phone} onChange={(e) => setNewOrder({ ...newOrder, phone: e.target.value.replace(/\D/g, '') })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: 62812..." />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Layanan</label>
-                  <select required value={newOrder.service} onChange={(e) => {
-                    const val = e.target.value;
-                    const s = val.toLowerCase();
-                    let days = 0;
-                    if (s.includes("website") || s.includes("usaha")) days = 5;
-                    else if (s.includes("custom") || s.includes("profesional")) days = 14;
-                    
-                    let deadlineStr = newOrder.deadline;
-                    if (days > 0) {
-                       if (isVip) days = Math.max(1, Math.ceil(days / 2));
-                       const d = new Date();
-                       d.setDate(d.getDate() + days);
-                       deadlineStr = d.toISOString().split("T")[0];
-                    }
-                    setNewOrder({ ...newOrder, service: val, ...(days > 0 ? {deadline: deadlineStr} : {}) });
-                  }} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer">
-                    <option value="" disabled className="bg-[var(--adm-card)]">Pilih Layanan</option>
-                    {SERVICE_TABS.filter(s => s !== "Semua").map(s => (
-                      <option key={s} value={s} className="bg-[var(--adm-card)]">{s}</option>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Status Pesanan</label>
+                  <select
+                    value={newOrder.status}
+                    onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value as OrderStatus })}
+                    className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer"
+                  >
+                    {PIPELINE.map(p => (
+                      <option key={p.status} value={p.status} className="bg-[var(--adm-card)]">
+                        {p.label}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Status</label>
-                  <select value={newOrder.status} onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value as OrderStatus })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer">
-                    {PIPELINE.map(p => <option key={p.status} value={p.status} className="bg-[var(--adm-card)]">{p.label}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">DP (Rp)</label>
-                  <input type="text" value={newOrder.dp ? `Rp ${newOrder.dp.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setNewOrder({ ...newOrder, dp: v ? parseInt(v) : 0 }) }} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Rp 0" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Total Harga (Rp)</label>
-                  <input type="text" required value={newOrder.total ? `Rp ${newOrder.total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : ""} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setNewOrder({ ...newOrder, total: v ? parseInt(v) : 0 }) }} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Rp 0" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Deadline Otomatis / Manual</label>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Edit Deadline</label>
                   <div className="flex items-center gap-3">
-                    <input type="date" value={newOrder.deadline || ""} onChange={(e) => setNewOrder({ ...newOrder, deadline: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all [color-scheme:dark]" />
-                    <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[var(--adm-warning)]/10 cursor-pointer shrink-0">
-                      <input 
-                        type="checkbox" 
-                        checked={isVip} 
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setIsVip(checked);
-                          
-                          // Jika ada deadline yang sudah diatur, sesuaikan durasinya
-                          if (newOrder.deadline) {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const currentDeadline = new Date(newOrder.deadline);
-                            
-                            const diffTime = currentDeadline.getTime() - today.getTime();
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays > 0) {
-                              // VIP = 2x lebih cepat (setengah waktu). Non-VIP = 2x lebih lama
-                              const newDays = checked ? Math.max(1, Math.ceil(diffDays / 2)) : diffDays * 2;
-                              const newDate = new Date(today);
-                              newDate.setDate(today.getDate() + newDays);
-                              setNewOrder({ ...newOrder, deadline: newDate.toISOString().split("T")[0] });
-                            }
-                          }
-                        }} 
-                        className="w-4 h-4 rounded text-[var(--adm-warning)] border-none focus:ring-0 bg-[var(--adm-bg)]" 
-                      />
-                      <span className="text-sm font-bold text-[var(--adm-warning)]">VIP</span>
-                    </label>
+                    <input type="date" value={newOrder.deadline || ""} onChange={(e) => setNewOrder({ ...newOrder, deadline: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all [color-scheme:dark]" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Catatan Proyek</label>
-                  <textarea rows={3} value={newOrder.notes} onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all resize-none" placeholder="Fitur khusus, catatan tim, dll." />
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Catatan Follow-up Internal</label>
+                  <textarea rows={3} value={newOrder.notes} onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all resize-none" placeholder="Masukkan catatan progress, riwayat follow-up, keluhan klien..." />
+                  <p className="text-[10px] text-[var(--adm-text-3)] mt-1 ml-1 leading-tight">Nama klien, layanan, dan harga hanya bisa diedit dari Inbox.</p>
                 </div>
               </div>
 
@@ -1000,8 +1085,8 @@ export default function PesananPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Opsi Serah Terima</label>
-                      <select value={newOrder.handoverOption || ""} onChange={(e) => setNewOrder({ ...newOrder, handoverOption: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer">
-                        <option value="" className="bg-[var(--adm-card)]">- Pilih Opsi -</option>
+                      <select value={newOrder.handoverOption || ""} onChange={(e) => setNewOrder({ ...newOrder, handoverOption: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all cursor-pointer">
+                        <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Opsi -</option>
                         <option value="Terima Beres (Basic)" className="bg-[var(--adm-card)]">Terima Beres (Basic)</option>
                         <option value="Terima Beres (Plus)" className="bg-[var(--adm-card)]">Terima Beres (Plus)</option>
                         <option value="Sistem Mandiri" className="bg-[var(--adm-card)]">Sistem Mandiri</option>
@@ -1010,7 +1095,7 @@ export default function PesananPage() {
 
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Link / Aset Pekerjaan</label>
-                      <input type="text" value={newOrder.handover || ""} onChange={(e) => setNewOrder({ ...newOrder, handover: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: Link GDrive / URL Website..." />
+                      <input type="text" value={newOrder.handover || ""} onChange={(e) => setNewOrder({ ...newOrder, handover: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: Link GDrive / URL Website..." />
                     </div>
                   </div>
 
@@ -1027,7 +1112,7 @@ export default function PesananPage() {
                             const v = e.target.value.replace(/\D/g, "");
                             setNewOrder({ ...newOrder, recurringFee: v ? parseInt(v) : 0 });
                           }}
-                          className="w-full px-4 py-3 rounded-xl bg-[var(--adm-card)] text-[var(--adm-text)] font-bold placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)]"
+                          className="w-full px-4 py-3 rounded-xl bg-transparent text-[var(--adm-text)] font-bold placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)]"
                           placeholder="Rp 0"
                         />
                       </div>
@@ -1037,7 +1122,7 @@ export default function PesananPage() {
                           type="date"
                           value={newOrder.nextBillingDate || ""}
                           onChange={(e) => setNewOrder({ ...newOrder, nextBillingDate: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-[var(--adm-card)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)] [color-scheme:dark]"
+                          className="w-full px-4 py-3 rounded-xl bg-transparent text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)] [color-scheme:dark]"
                         />
                       </div>
                     </div>
@@ -1046,7 +1131,7 @@ export default function PesananPage() {
               )}
 
               <div className="flex items-center justify-end gap-3 pt-6 mt-8">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] hover:text-[var(--adm-text)] transition-colors">Batal</button>
+                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors">Batal</button>
                 <button type="submit" className="px-5 py-2.5 rounded-xl text-sm font-bold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-opacity shadow-[var(--adm-shadow)]">{editingId ? "Simpan Perubahan" : "Simpan Pesanan"}</button>
               </div>
             </form>
@@ -1104,9 +1189,9 @@ export default function PesananPage() {
                   <select
                     value={handoverOptionState}
                     onChange={(e) => setHandoverOptionState(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
                   >
-                    <option value="">- Pilih Opsi -</option>
+                    <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Opsi -</option>
                     <option value="Terima Beres (Basic)">Terima Beres (Basic)</option>
                     <option value="Terima Beres (Plus)">Terima Beres (Plus)</option>
                     <option value="Sistem Mandiri">Sistem Mandiri</option>
@@ -1127,7 +1212,7 @@ export default function PesananPage() {
                           setRecurringFeeState(v ? parseInt(v) : 0);
                         }}
                         placeholder="Rp 0"
-                        className="w-full px-3 py-2 rounded-lg bg-[var(--adm-card)] text-sm font-bold text-[var(--adm-text)] focus:outline-none border border-[var(--adm-border)]"
+                        className="w-full px-3 py-2 rounded-lg bg-transparent text-sm font-bold text-[var(--adm-text)] focus:outline-none border border-[var(--adm-border)]"
                       />
                     </div>
                     
@@ -1137,7 +1222,7 @@ export default function PesananPage() {
                         type="date"
                         value={nextBillingDateState}
                         onChange={(e) => setNextBillingDateState(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-[var(--adm-card)] text-sm text-[var(--adm-text)] focus:outline-none border border-[var(--adm-border)] [color-scheme:dark]"
+                        className="w-full px-3 py-2 rounded-lg bg-transparent text-sm text-[var(--adm-text)] focus:outline-none border border-[var(--adm-border)] [color-scheme:dark]"
                       />
                     </div>
                   </div>
@@ -1150,7 +1235,7 @@ export default function PesananPage() {
                     value={handoverLink}
                     onChange={(e) => setHandoverLink(e.target.value)}
                     placeholder="Contoh: Link GDrive / URL Website..."
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
                   />
                 </div>
 
@@ -1160,7 +1245,7 @@ export default function PesananPage() {
                     type="text"
                     value={handoverNote}
                     onChange={(e) => setHandoverNote(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
                     placeholder="Contoh: Expired domain tgl 20..."
                   />
                 </div>
@@ -1169,7 +1254,7 @@ export default function PesananPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setHandoverOrder(null)}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
@@ -1212,7 +1297,7 @@ export default function PesananPage() {
               <div className="flex gap-2 mt-6">
                 <button
                   onClick={() => setDeletingId(null)}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
@@ -1255,17 +1340,37 @@ export default function PesananPage() {
               <div className="space-y-4 mb-6">
                 <div className="bg-[var(--adm-bg)] rounded-xl p-3 border border-[var(--adm-border)]">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Total Harga</span>
+                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Total Harga Awal</span>
                     <span className="text-sm font-semibold text-[var(--adm-text)]">{formatRp(lunasOrder.total)}</span>
                   </div>
+                  <div className="flex justify-between items-center mb-1 pb-1">
+                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Biaya Tambahan</span>
+                    <span className="text-sm font-semibold text-[var(--adm-warning)]">
+                      {lunasExtraFee > 0 ? `+ ${formatRp(lunasExtraFee)}` : "-"}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center mb-2 pb-2 border-b border-[var(--adm-border)]">
-                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Sudah Dibayar</span>
+                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Sudah Dibayar (DP)</span>
                     <span className="text-sm font-semibold text-[var(--adm-success)]">{formatRp(lunasOrder.dp)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-[var(--adm-text-2)] uppercase tracking-wide">Sisa Tagihan</span>
-                    <span className="text-sm font-bold text-[var(--adm-danger)]">{formatRp(lunasOrder.total - lunasOrder.dp)}</span>
+                    <span className="text-sm font-bold text-[var(--adm-danger)]">{formatRp(lunasOrder.total + (lunasExtraFee || 0) - lunasOrder.dp)}</span>
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Biaya Tambahan <span className="text-[10px] text-[var(--adm-text-3)] normal-case font-normal">(jika ada)</span></label>
+                  <input
+                    type="text"
+                    value={lunasExtraFee ? `Rp ${lunasExtraFee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : ""}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "");
+                      setLunasExtraFee(v ? parseInt(v) : 0);
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm font-bold text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-warning)]/40 transition-all border border-[var(--adm-border)]"
+                    placeholder="Rp 0"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -1277,7 +1382,7 @@ export default function PesananPage() {
                       const v = e.target.value.replace(/\D/g, "");
                       setLunasPayment(v ? parseInt(v) : 0);
                     }}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm font-bold text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all border border-[var(--adm-border)]"
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm font-bold text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all border border-[var(--adm-border)]"
                     placeholder="Rp 0"
                   />
                 </div>
@@ -1288,7 +1393,7 @@ export default function PesananPage() {
                     type="text"
                     value={lunasNote}
                     onChange={(e) => setLunasNote(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--adm-bg)] text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all border border-[var(--adm-border)]"
+                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all border border-[var(--adm-border)]"
                     placeholder="Contoh: Baru bayar 1jt sisa tgl 20..."
                   />
                 </div>
@@ -1297,7 +1402,7 @@ export default function PesananPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setLunasOrder(null)}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
@@ -1310,6 +1415,36 @@ export default function PesananPage() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmStatusChangeData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[var(--adm-bg)] w-full max-w-sm rounded-2xl shadow-xl overflow-hidden border border-[var(--adm-border)] flex flex-col">
+              <div className="p-5">
+                <div className="w-12 h-12 rounded-full bg-[var(--adm-warning)]/20 flex items-center justify-center mb-4 text-[var(--adm-warning)]">
+                  <AlertTriangle size={24} strokeWidth={2.5} />
+                </div>
+                <h2 className="text-lg font-bold text-[var(--adm-text)] mb-2">Yakin Mengubah Status?</h2>
+                <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">
+                  Pesanan ini sebelumnya berstatus <strong>{orders.find(o => o.id === editingId)?.status}</strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
+                </p>
+              </div>
+              <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3">
+                <button onClick={() => setConfirmStatusChangeData(null)} className="flex-1 px-4 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent border border-[var(--adm-border)] rounded-xl hover:text-[var(--adm-text)] transition-colors">Batal</button>
+                <button onClick={() => {
+                  const updated = orders.map(o => o.id === editingId ? { ...o, ...confirmStatusChangeData } as Order : o);
+                  saveOrders(updated);
+                  showToast("Status pesanan berhasil diubah", "success");
+                  setView("list");
+                  setConfirmStatusChangeData(null);
+                }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
+                  Ya, Ubah Status
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

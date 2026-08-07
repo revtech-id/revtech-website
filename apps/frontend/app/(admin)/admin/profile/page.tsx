@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { PageHeader, AdminCard, StatusBadge } from "@/components/admin/ui";
+import { CountrySelector } from "@/components/ui/CountrySelector";
+import { countries as COUNTRIES } from "@/lib/countries";
 
 const inputCls =
   "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors";
@@ -31,6 +33,8 @@ export default function ProfilePage() {
     location: "Indonesia",
     website: "https://hi-revtech.my.id",
   });
+
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
 
   const [passwords, setPasswords] = useState({
     current: "",
@@ -99,7 +103,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-600">
                   <span className="material-symbols-outlined text-[18px] text-slate-400">language</span>
-                  <a href={profile.website} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">
+                  <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">
                     {profile.website}
                   </a>
                 </div>
@@ -160,13 +164,22 @@ export default function ProfilePage() {
                     />
                   </Field>
                   <Field label="Nomor WhatsApp *">
-                    <input
-                      id="profile-phone"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                      className={inputCls}
-                      required
-                    />
+                    <div className="flex rounded-xl bg-transparent focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-colors border border-slate-200 overflow-hidden">
+                      <CountrySelector selected={selectedCountry} onSelect={setSelectedCountry} theme="admin" />
+                      <input
+                        id="profile-phone"
+                        value={profile.phone ? profile.phone.replace(new RegExp(`^${selectedCountry.dial_code.replace('+', '')}`), '') : ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          const cleanVal = val.startsWith('0') ? val.substring(1) : val;
+                          const code = selectedCountry.dial_code.replace('+', '');
+                          setProfile({ ...profile, phone: cleanVal ? `${code}${cleanVal}` : '' });
+                        }}
+                        className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-slate-700 focus:outline-none focus:ring-0 placeholder:text-slate-400"
+                        placeholder={selectedCountry.code === 'ID' ? "8123456..." : "123456789..."}
+                        required
+                      />
+                    </div>
                   </Field>
                 </div>
 

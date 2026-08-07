@@ -18,7 +18,6 @@ interface Lead {
   handover?: string;
   lastContactedAt?: string;
   followUpNote?: string;
-  isVip?: boolean;
   referenceLink?: string;
   deletedAt?: string;
   deletedBy?: string;
@@ -574,7 +573,7 @@ export default function TrashPage() {
                     setDeletingId(null);
                     setDeletingBulk(false);
                   }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] border border-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
@@ -620,7 +619,7 @@ export default function TrashPage() {
                     setRestoringAction(null);
                     setRestoringId(null);
                   }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-[var(--adm-bg)] hover:bg-[var(--adm-border)] border border-[var(--adm-border)] rounded-xl transition-colors"
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
                 >
                   Batal
                 </button>
