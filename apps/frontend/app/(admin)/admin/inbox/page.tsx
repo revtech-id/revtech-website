@@ -334,7 +334,7 @@ export default function InboxPage() {
         // Cascade delete: hapus pesanan dan invoice terkait
         try {
           const savedOrders = localStorage.getItem("revtech_orders");
-          let relatedOrderId = null;
+          let relatedOrderId: string | null = null;
           if (savedOrders) {
             let orderList = JSON.parse(savedOrders);
             const relatedOrder = orderList.find((o: any) => o.phone === leadToMove.phone);
