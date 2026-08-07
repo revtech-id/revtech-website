@@ -100,7 +100,7 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick, 
             </h3>
           </div>
           {client.website || client.domain ? (
-            <a href={(client.website || client.domain)?.startsWith('http') ? (client.website || client.domain) : `https://${client.website || client.domain}`} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate max-w-xs" onClick={e => e.stopPropagation()}>
+            <a href={((client.website || client.domain) ?? undefined)?.startsWith('http') ? (client.website || client.domain) ?? undefined : `https://${client.website || client.domain}`} target="_blank" rel="noopener noreferrer" className="text-[13px] text-blue-500 hover:underline truncate max-w-xs" onClick={e => e.stopPropagation()}>
               {client.website || client.domain}
             </a>
           ) : <span className="text-[13px] italic text-[var(--adm-text-3)]">Tidak ada link</span>}
