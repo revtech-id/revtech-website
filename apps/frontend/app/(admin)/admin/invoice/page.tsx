@@ -175,6 +175,7 @@ export default function InvoicePage() {
   const [search, setSearch] = useState("");
   const [lunasInvoice, setLunasInvoice] = useState<Invoice | null>(null);
   const [lunasDate, setLunasDate] = useState("");
+  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -183,6 +184,11 @@ export default function InvoicePage() {
     
     setInvoiceList(currentInvoices);
     if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
+
+    const savedOrders = localStorage.getItem("revtech_orders");
+    if (savedOrders) {
+      setOrders(JSON.parse(savedOrders));
+    }
   }, []);
 
   const confirmLunas = () => {
@@ -235,7 +241,7 @@ export default function InvoicePage() {
 
     let matchLayanan = true;
     if (layananFilter !== "Semua Layanan") {
-      const order = orders.find(o => o.id === i.orderId);
+      const order = orders.find((o: any) => o.id === i.orderId);
       const invService = order?.service || "";
       if (layananFilter === "Jasa Modifikasi" && i.type === "maintenance") {
         matchLayanan = true;
