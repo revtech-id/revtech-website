@@ -193,8 +193,8 @@ export default function InvoicePage() {
     const timeString = now.toISOString().substring(11); // ambil bagian T00:00:00.000Z
     const fullIsoDate = `${lunasDate}T${timeString}`;
 
-    const updated = invoiceList.map((inv) =>
-      inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: fullIsoDate } : inv
+    const updated: Invoice[] = invoiceList.map((inv) =>
+      inv.id === lunasInvoice.id ? { ...inv, status: "paid" as const, paidAt: fullIsoDate } : inv
     );
     setInvoiceList(updated);
     localStorage.setItem("revtech_invoices", JSON.stringify(updated));
