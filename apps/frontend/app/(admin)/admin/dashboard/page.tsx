@@ -37,9 +37,22 @@ interface Invoice {
 interface Client {
   id: string;
   name: string;
+  contact: string;
+  phone: string;
+  email: string;
+  website: string | null;
+  websiteStatus: "active" | "down";
+  joinDate: string;
+  totalSpend: number;
+  activeProjects: number;
   domain: string | null;
   domainExpiry: string | null;
+  hosting: string | null;
   hostingExpiry: string | null;
+  service?: string;
+  handover?: string;
+  recurringFee?: number;
+  modificationsQuota?: number;
 }
 
 interface Lead {
