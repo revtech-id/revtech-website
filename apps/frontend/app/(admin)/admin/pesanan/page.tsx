@@ -475,21 +475,7 @@ export default function PesananPage() {
     localStorage.setItem("revtech_orders_trash", JSON.stringify(newDeleted));
   };
 
-  // Auto-calculate deadline when service changes
-  useEffect(() => {
-    if (view === "form") {
-      const today = new Date();
-      let days = 7; // default regular
-      
-      const s = newOrder.service?.toLowerCase() || "";
-      if (s.includes("logo") || s.includes("desain")) days = 3;
-      else if (s.includes("website") || s.includes("sistem")) days = 14;
-
-      const deadlineDate = new Date(today);
-      deadlineDate.setDate(deadlineDate.getDate() + days);
-      setNewOrder(prev => ({ ...prev, deadline: deadlineDate.toISOString().split("T")[0] }));
-    }
-  }, [newOrder.service, view]);
+  // Deadline is now completely manual, no auto-calculation based on service.
 
   const confirmLunas = () => {
     if (!lunasOrder) return;
