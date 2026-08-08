@@ -40,19 +40,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
   const [total, setTotal] = useState<number | string>(defaultTotal);
   const [dp, setDp] = useState<number | string>(Math.round(defaultTotal / 2));
   
-  const [deadline, setDeadline] = useState(() => {
-    let days = 14; // Default 14 hari
-    const s = lead.service.toLowerCase();
-
-    if (s.includes("usaha")) days = 5;
-    else if (s.includes("profesional")) days = 14;
-    else if (s.includes("digital")) days = 1;
-    else if (s.includes("custom")) days = 30;
-
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split("T")[0];
-  });
+  const [deadline, setDeadline] = useState("");
 
   return (
     <AnimatePresence>
