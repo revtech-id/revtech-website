@@ -36,7 +36,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/team": "Struktur Tim",
   "/admin/team/activity": "Activity Log",
   "/admin/profile": "Profil Saya",
-  "/admin/system": "System",
+  "/admin/system": "Pengaturan",
   "/admin/system/integrasi": "Integrasi",
   "/admin/system/pengaturan": "Pengaturan",
   "/admin/trash": "Tempat Sampah",
@@ -55,7 +55,7 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/team": "Org chart Solo Founder & AI Co-Pilot",
   "/admin/team/activity": "Jejak rekam pergerakan sistem & login",
   "/admin/profile": "Kelola informasi data diri, kontak, dan akses keamanan akun Anda.",
-  "/admin/system": "Konfigurasi engine, integrasi API, dan pengaturan bisnis",
+  "/admin/system": "Konfigurasi informasi profil bisnis, kontak, dan pengaturan utama",
   "/admin/trash": "Penampungan terpusat untuk memulihkan atau menghapus permanen data yang dihapus dari berbagai modul.",
 };
 

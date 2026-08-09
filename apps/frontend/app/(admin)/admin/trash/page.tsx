@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal, X, CheckSquare, SlidersHorizontal, Search, ArrowDownUp, Filter } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
+import { logActivity } from "@/lib/activityLog";
 
 // Tipe data berdasarkan model Inbox (sementara hanya inbox yang didukung)
 interface Lead {
@@ -26,6 +28,7 @@ interface Lead {
 }
 
 export default function TrashPage() {
+  const { user } = useUser();
   const [deletedLeads, setDeletedLeads] = useState<Lead[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
@@ -152,6 +155,14 @@ export default function TrashPage() {
     if (deletingBulk) {
       const itemsToDelete = deletedLeads.filter((l) => selectedIds.includes(l.id));
       processPermanentDelete(itemsToDelete);
+      
+      logActivity({
+        type: "system",
+        title: "Data Dihapus Permanen",
+        description: `${selectedIds.length} data telah dihapus secara permanen dari Tempat Sampah`,
+        user: user.name
+      });
+
       setDeletingBulk(false);
       setSelectedIds([]);
       showToast(`${selectedIds.length} item berhasil dihapus permanen`);
@@ -161,7 +172,15 @@ export default function TrashPage() {
     if (!deletingId) return;
     
     const itemToDelete = deletedLeads.find((l) => l.id === deletingId);
-    if (itemToDelete) processPermanentDelete([itemToDelete]);
+    if (itemToDelete) {
+      processPermanentDelete([itemToDelete]);
+      logActivity({
+        type: "system",
+        title: "Data Dihapus Permanen",
+        description: `Data "${itemToDelete.name}" telah dihapus secara permanen`,
+        user: user.name
+      });
+    }
     setDeletingId(null);
     showToast("Item berhasil dihapus permanen");
   };
@@ -181,17 +200,36 @@ export default function TrashPage() {
       const leadToRestore = deletedLeads.find((l) => l.id === restoringId);
       if (leadToRestore) {
         processRestore([leadToRestore]);
+        logActivity({
+          type: "system",
+          title: "Data Dipulihkan",
+          description: `Data "${leadToRestore.name}" telah dipulihkan ke ${leadToRestore._module || "Sistem"}`,
+          user: user.name
+        });
         showToast(`Item berhasil dipulihkan ke ${leadToRestore._module === "Pesanan" ? "Project" : "Leads Utama"}`);
       }
     } else if (restoringAction === "bulk") {
       const leadsToRestore = deletedLeads.filter((l) => selectedIds.includes(l.id));
       processRestore(leadsToRestore);
+      logActivity({
+        type: "system",
+        title: "Data Dipulihkan",
+        description: `${leadsToRestore.length} data telah dipulihkan ke modul asalnya`,
+        user: user.name
+      });
     } else if (restoringAction === "all") {
       const leadsToRestore = filteredLeads;
       processRestore(leadsToRestore);
+      logActivity({
+        type: "system",
+        title: "Semua Data Dipulihkan",
+        description: `${leadsToRestore.length} data telah dipulihkan ke modul asalnya`,
+        user: user.name
+      });
     }
     setRestoringAction(null);
     setRestoringId(null);
+    setSelectedIds([]); // clear selection if any
   };
 
   const toggleSelectAll = () => {
