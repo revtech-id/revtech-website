@@ -9,6 +9,7 @@ import { Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AdminDateRangePicker } from "@/components/admin/AdminDateRangePicker";
 import { AdminNotificationPopover } from "@/components/admin/AdminNotificationPopover";
+import { UserProvider, useUser } from "@/contexts/UserContext";
 
 // ── Theme Context ─────────────────────────────────────────────────────────────
 
@@ -24,8 +25,8 @@ export const useAdminTheme = () => useContext(ThemeContext);
 
 const PAGE_TITLES: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
-  "/admin/inbox": "Inbox",
-  "/admin/pesanan": "Pesanan",
+  "/admin/inbox": "Leads",
+  "/admin/pesanan": "Projects",
   "/admin/klien": "Klien & Website",
   "/admin/invoice": "Invoice",
   "/admin/maintenance": "Maintenance",
@@ -34,7 +35,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/portofolio": "Portofolio",
   "/admin/team": "Struktur Tim",
   "/admin/team/activity": "Activity Log",
-  "/admin/profile": "Profil Superadmin",
+  "/admin/profile": "Profil Saya",
   "/admin/system": "System",
   "/admin/system/integrasi": "Integrasi",
   "/admin/system/pengaturan": "Pengaturan",
@@ -53,7 +54,7 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/portofolio": "Showcase studi kasus & proyek terbaik RevTech",
   "/admin/team": "Org chart Solo Founder & AI Co-Pilot",
   "/admin/team/activity": "Jejak rekam pergerakan sistem & login",
-  "/admin/profile": "Kelola informasi akun, peran founder, dan keamanan",
+  "/admin/profile": "Kelola informasi data diri, kontak, dan akses keamanan akun Anda.",
   "/admin/system": "Konfigurasi engine, integrasi API, dan pengaturan bisnis",
   "/admin/trash": "Penampungan terpusat untuk memulihkan atau menghapus permanen data yang dihapus dari berbagai modul.",
 };
@@ -88,7 +89,15 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 // ── Layout ────────────────────────────────────────────────────────────────────
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <UserProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </UserProvider>
+  );
+}
 
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
+  const { user } = useUser();
   const [dark, setDark] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
@@ -172,9 +181,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <h1 
                 className={pageTitle === "Dashboard" ? "text-2xl lg:text-3xl font-bold tracking-tight" : "text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"}
                 style={pageTitle === "Dashboard" ? { color: "var(--adm-text)", fontFamily: "var(--font-heading)" } : { color: "var(--adm-text)" }}
-                title={pageTitle === "Dashboard" ? "Selamat Datang, Superadmin!" : undefined}
+                title={pageTitle === "Dashboard" ? `Selamat Datang, ${user.name}` : undefined}
               >
-                {pageTitle === "Dashboard" ? "Selamat Datang, Superadmin!" : pageTitle}
+                {pageTitle === "Dashboard" ? `Selamat Datang, ${user.name}` : pageTitle}
               </h1>
               {PAGE_DESCRIPTIONS[pathname] && (
                 <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--adm-text-3)" }}>

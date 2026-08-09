@@ -1,65 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { PageHeader, AdminCard } from "@/components/admin/ui";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AdminCard, SaveButton } from "@/components/admin/ui";
+import { CheckCircle2 } from "lucide-react";
+import ImageCropper from "@/components/ui/ImageCropper";
+import { useUser } from "@/contexts/UserContext";
+import { logActivity } from "@/lib/activityLog";
 
-const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-colors";
+const inputCls = "w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] text-sm text-[var(--adm-text)] bg-transparent placeholder:text-[var(--adm-text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors";
 
 const SECTIONS = [
   {
-    id: "engine",
-    label: "Engine & Domain",
-    icon: "settings",
+    id: "system_settings",
+    label: "Pengaturan Sistem Utama",
+    icon: "tune",
     fields: [
       { key: "businessName", label: "Nama Bisnis", placeholder: "RevTech", type: "text" },
       { key: "founderName", label: "Nama Founder", placeholder: "Superadmin", type: "text" },
-      { key: "businessEmail", label: "Email Bisnis", placeholder: "hi@revtech.id", type: "email" },
       { key: "primaryDomain", label: "Domain Utama", placeholder: "hi-revtech.my.id", type: "text" },
-      { key: "currency", label: "Mata Uang", placeholder: "IDR", type: "text" },
+      
+      { key: "marketingEmail", label: "Email Bisnis & Jualan", placeholder: "revtech.id.contact@gmail.com", type: "email" },
+      { key: "marketingPass", label: "Password (Email Bisnis)", placeholder: "********", type: "password" },
+      
+      { key: "coreEmail", label: "Email Sistem (Vibe Coding)", placeholder: "revtech.id.core@gmail.com", type: "email" },
+      { key: "corePass", label: "Password (Email Sistem)", placeholder: "********", type: "password" },
+      
+      { key: "waBisnis", label: "WhatsApp Bisnis (Form Pesanan)", placeholder: "62812...", type: "tel" },
+      { key: "waPribadi", label: "WhatsApp Pribadi (Konsultasi)", placeholder: "62812...", type: "tel" },
     ],
-  },
-  {
-    id: "whatsapp",
-    label: "WhatsApp Rotator",
-    icon: "chat",
-    fields: [
-      { key: "wa1", label: "WhatsApp No. 1", placeholder: "6281234567890", type: "tel" },
-      { key: "wa2", label: "WhatsApp No. 2 (Opsional)", placeholder: "6282345678901", type: "tel" },
-      { key: "wa3", label: "WhatsApp No. 3 (Opsional)", placeholder: "6283456789012", type: "tel" },
-    ],
-  },
-  {
-    id: "api",
-    label: "API Keys",
-    icon: "key",
-    fields: [
-      { key: "geminiKey", label: "Gemini API Key", placeholder: "AIzaSy...", type: "password" },
-      { key: "openaiKey", label: "OpenAI API Key (Opsional)", placeholder: "sk-...", type: "password" },
-    ],
-  },
-  {
-    id: "payment",
-    label: "Payment Gateway",
-    icon: "payments",
-    fields: [
-      { key: "midtransKey", label: "Midtrans Server Key", placeholder: "SB-Mid-server-...", type: "password" },
-      { key: "midtransEnv", label: "Environment", placeholder: "sandbox", type: "text" },
-    ],
-  },
+  }
 ];
 
 type FormState = Record<string, string>;
 
 const DEFAULTS: FormState = {
   businessName: "RevTech",
-  founderName: "Superadmin",
-  businessEmail: "",
   primaryDomain: "hi-revtech.my.id",
-  currency: "IDR",
-  wa1: "", wa2: "", wa3: "",
-  geminiKey: "", openaiKey: "",
-  midtransKey: "", midtransEnv: "sandbox",
+  waBisnis: "6281290018819", waPribadi: "6281290018819",
+  marketingEmail: "revtech.id.contact@gmail.com", marketingPass: "",
+  coreEmail: "revtech.id.core@gmail.com", corePass: "",
 };
 
 const fadeUp = (i: number) => ({
@@ -68,102 +48,161 @@ const fadeUp = (i: number) => ({
 });
 
 export default function SystemPage() {
-  const [form, setForm] = useState<FormState>(DEFAULTS);
+  const { user, setUser } = useUser();
+  const [form, setForm] = useState<FormState>({
+    ...DEFAULTS,
+    founderName: user.name,
+  });
+  
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempImageSrc(reader.result as string);
+        setIsCropOpen(true);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    setLogoPreview(croppedImage);
+  };
 
   function update(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
-    setSaved(false);
   }
 
   function save() {
-    // TODO: persist to localStorage or API
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setIsSaving(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Sync founderName to UserContext
+      if (form.founderName !== user.name) {
+        setUser({ ...user, name: form.founderName });
+      }
+      
+      logActivity({
+        type: "system",
+        title: "Pengaturan Sistem",
+        description: `Pengaturan sistem & integrasi diperbarui oleh ${form.founderName}`,
+        user: form.founderName,
+      });
+
+      setIsSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }, 800);
   }
 
   return (
     <div>
-      <div className="flex justify-end mb-4 mt-2">
-          <button
-            id="save-system-settings"
-            onClick={save}
-            className={`inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${saved ? "bg-emerald-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-sm"}`}
-          >
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {saved ? "check_circle" : "save"}
-            </span>
-            {saved ? "Tersimpan!" : "Simpan Pengaturan"}
-          </button>
-      </div>
-
       <div className="space-y-5">
-        {SECTIONS.map((section, si) => (
-          <motion.div key={section.id} {...fadeUp(si)}>
-            <AdminCard>
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-blue-600 text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>{section.icon}</span>
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-800">{section.label}</h3>
-                </div>
-
-                {section.id === "api" && (
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/60 flex items-start gap-2 mb-3">
-                    <span className="material-symbols-outlined text-amber-500 text-[16px] shrink-0 mt-0.5">lock</span>
-                    <p className="text-xs text-amber-700">API key disimpan secara lokal di browser dan tidak dikirim ke server pihak ketiga. Untuk keamanan maksimal, gunakan environment variable di production.</p>
-                  </div>
-                )}
-
-                <div className={`grid gap-4 ${section.fields.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-                  {section.fields.map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">{field.label}</label>
-                      <input
-                        id={`field-${field.key}`}
-                        type={field.type}
-                        value={form[field.key] ?? ""}
-                        onChange={(e) => update(field.key, e.target.value)}
-                        placeholder={field.placeholder}
-                        className={inputCls}
-                        autoComplete={field.type === "password" ? "off" : undefined}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </AdminCard>
-          </motion.div>
-        ))}
-
-        {/* About RevTech Engine */}
-        <motion.div {...fadeUp(SECTIONS.length)}>
+        <motion.div {...fadeUp(1)}>
           <AdminCard>
-            <div className="p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+            {/* Logo Bisnis Section */}
+            <div className="p-6 sm:p-8 border-b border-[var(--adm-border)] flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6">
+                <input type="file" ref={fileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
+                <div 
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex shrink-0 items-center justify-center text-5xl font-bold text-white relative z-10 overflow-hidden shadow-sm"
+                  style={{ background: logoPreview ? undefined : "var(--adm-accent)" }}
+                >
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    form.businessName?.charAt(0).toUpperCase() || "R"
+                  )}
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">RevTech Engine</h3>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "Versi OS", value: "1.0.0" },
-                  { label: "Framework", value: "Next.js 16" },
-                  { label: "AI Engine", value: "Gemini 2.0" },
-                  { label: "Status", value: "Aktif" },
-                ].map((info) => (
-                  <div key={info.label} className="bg-slate-50 rounded-xl px-3 py-2.5">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wide">{info.label}</p>
-                    <p className="text-sm font-semibold text-slate-800 mt-0.5">{info.value}</p>
+                
+                <div className="flex-1 text-center sm:text-left mt-2 sm:mt-0">
+                   <h3 className="text-lg font-bold text-[var(--adm-text)]">Logo Bisnis</h3>
+                   <p className="text-xs text-[var(--adm-text-2)] mt-1 mb-4 leading-relaxed max-w-xl">
+                      Unggah logo bisnis Anda di sini. Disarankan menggunakan gambar dengan rasio 1:1, beresolusi minimal 500x500 px, dan ukuran maksimal 2MB (format JPG, PNG, atau WebP).
+                   </p>
+                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-5">
+                      <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[var(--adm-text)] text-xs font-semibold flex items-center gap-1.5 outline-none focus:outline-none hover:opacity-70 transition-opacity">
+                         <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                         Ubah Logo
+                      </button>
+                      <button type="button" onClick={() => setLogoPreview(null)} className="text-red-500 text-xs font-semibold flex items-center gap-1.5 outline-none focus:outline-none hover:opacity-70 transition-opacity">
+                         <span className="material-symbols-outlined text-[16px]">delete</span>
+                         Hapus
+                      </button>
+                   </div>
+                </div>
+            </div>
+
+            {SECTIONS.map((section, si) => (
+              <div key={section.id}>
+                <div className={`px-6 py-5 ${si !== 0 ? "border-t" : ""} border-b border-[var(--adm-border)] flex items-center gap-3`}>
+                  <div className="w-10 h-10 rounded-xl bg-[var(--adm-accent)]/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[var(--adm-accent)] text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>{section.icon}</span>
                   </div>
-                ))}
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--adm-text)]">{section.label}</h3>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className={`grid gap-5 ${section.fields.length >= 3 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+                    {section.fields.map((field) => (
+                      <div key={field.key}>
+                        <label className="block text-xs font-semibold text-[var(--adm-text-2)] mb-1.5">{field.label}</label>
+                        <input
+                          id={`field-${field.key}`}
+                          type={field.type}
+                          value={form[field.key] ?? ""}
+                          onChange={(e) => update(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className={inputCls}
+                          autoComplete={field.type === "password" ? "off" : undefined}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
+            ))}
+            <div className="px-6 py-5 border-t border-[var(--adm-border)] bg-[var(--adm-bg)]/30 flex justify-end">
+              <SaveButton id="save-system-settings" onClick={save} isSaving={isSaving} />
             </div>
           </AdminCard>
         </motion.div>
       </div>
+
+      {tempImageSrc && (
+        <ImageCropper
+          imageSrc={tempImageSrc}
+          isOpen={isCropOpen}
+          onClose={() => setIsCropOpen(false)}
+          onCropCompleteAction={handleCropComplete}
+        />
+      )}
+
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-[var(--adm-shadow-lg)] text-sm font-semibold z-[999] flex items-center gap-2 bg-[var(--adm-card)] text-[var(--adm-text)]"
+          >
+            <CheckCircle2 size={18} className="text-[var(--adm-success)]" />
+            Pengaturan sistem berhasil disimpan.
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

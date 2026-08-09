@@ -84,7 +84,7 @@ function ClientCard({ client, index, onEdit, onDelete, onRenew, onMessageClick, 
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0, transition: { delay: index * 0.04, type: "spring", stiffness: 300, damping: 28 } }}
-      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] p-5 flex flex-col gap-4 border border-[var(--adm-border)] hover:border-blue-500/30 transition-colors group"
+      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] p-5 flex flex-col gap-4 border border-[var(--adm-border)] transition-colors group"
     >
       {/* Top Row: Info */}
       <div className="flex justify-between items-start gap-4">

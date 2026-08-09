@@ -13,23 +13,23 @@ import {
   Sparkles,
   FileText,
   FolderKanban,
-  User,
-  GitFork,
-  History,
-  Settings,
-  LogOut,
   ChevronsUpDown,
+  LogOut,
+  Settings,
+  User,
+  History,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 export const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
-  { label: "Inbox", icon: Inbox, href: "/admin/inbox" },
-  { label: "Pesanan", icon: ShoppingBag, href: "/admin/pesanan" },
+  { label: "Leads", icon: Inbox, href: "/admin/inbox" },
+  { label: "Projects", icon: ShoppingBag, href: "/admin/pesanan" },
   { label: "Maintenance", icon: Server, href: "/admin/maintenance" },
   { label: "Invoice", icon: Receipt, href: "/admin/invoice" },
   { label: "RevTech Studio", icon: Sparkles, href: "/admin/studio" },
@@ -39,6 +39,8 @@ export const NAV_ITEMS = [
 
 export function SidebarProfileSection() {
   const [profileOpen, setProfileOpen] = useState(false);
+  const { user } = useUser();
+  const pathname = usePathname();
 
   return (
     <div className="p-3.5 shrink-0 relative">
@@ -62,14 +64,18 @@ export function SidebarProfileSection() {
           {/* User Info Header */}
           <div className="flex items-center gap-2.5 pb-1 px-1">
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm"
-              style={{ background: "linear-gradient(135deg, var(--adm-accent), var(--adm-purple))" }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm overflow-hidden"
+              style={{ background: "var(--adm-accent)" }}
             >
-              R
+              {user.avatar ? (
+                <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                user.name.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold truncate" style={{ color: "var(--adm-text)" }}>Superadmin</p>
-              <p className="text-[10px] truncate" style={{ color: "var(--adm-text-3)" }}>hi@revtech.id</p>
+              <p className="text-xs font-bold truncate" style={{ color: "var(--adm-text)" }}>{user.name}</p>
+              <p className="text-[10px] truncate" style={{ color: "var(--adm-text-3)" }}>{user.email}</p>
             </div>
           </div>
 
@@ -77,60 +83,74 @@ export function SidebarProfileSection() {
           <div className="space-y-0.5">
             {[
               { label: "Profil", icon: User, href: "/admin/profile" },
-              { label: "Tim", icon: GitFork, href: "/admin/team" },
               { label: "Activity Log", icon: History, href: "/admin/team/activity" },
               { label: "Pengaturan", icon: Settings, href: "/admin/system" },
               { label: "Tempat Sampah", icon: Trash2, href: "/admin/trash" },
             ].map((opt) => {
+              const isActive = pathname === opt.href;
               const Icon = opt.icon;
               return (
-                <Link
+                <Button
                   key={opt.href}
-                  href={opt.href}
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-[var(--adm-card-hover)]"
+                  style={{ 
+                    color: "var(--adm-text)",
+                    background: isActive ? "rgba(37,99,235,0.08)" : "transparent"
+                  }}
                   onClick={() => setProfileOpen(false)}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-[var(--adm-card-hover)]"
-                  style={{ color: "var(--adm-text)" }}
                 >
-                  <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--adm-text)" }} />
-                  <span>{opt.label}</span>
-                </Link>
+                  <Link href={opt.href}>
+                    <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--adm-text)" }} />
+                    <span>{opt.label}</span>
+                  </Link>
+                </Button>
               );
             })}
 
-            <Link
-              href="/"
+            <Button
+              asChild
+              variant="ghost"
+              className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-bold transition-colors hover:bg-transparent text-rose-600 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-400"
               onClick={() => setProfileOpen(false)}
-              className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-rose-500/10 text-rose-600 dark:text-rose-400"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span>Keluar</span>
-            </Link>
+              <Link href="/">
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Keluar</span>
+              </Link>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Profile Trigger Button */}
-      <button
+      <Button
         id="sidebar-profile-button"
+        variant="ghost"
         onClick={() => setProfileOpen((o) => !o)}
-        className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--adm-card-hover)] transition-all text-left group"
+        className="w-full justify-start gap-2.5 p-2 h-auto rounded-xl transition-all text-left group hover:bg-transparent"
       >
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm"
-          style={{ background: "linear-gradient(135deg, var(--adm-accent), var(--adm-purple))" }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm overflow-hidden"
+          style={{ background: "var(--adm-accent)" }}
         >
-          R
+          {user.avatar ? (
+            <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            user.name.charAt(0).toUpperCase()
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold truncate leading-tight" style={{ color: "var(--adm-text)" }}>
-            Superadmin
+            {user.name}
           </p>
           <p className="text-[10px] font-medium truncate" style={{ color: "var(--adm-text-3)" }}>
-            Founder & CEO
+            {user.role}
           </p>
         </div>
         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" style={{ color: "var(--adm-text)" }} />
-      </button>
+      </Button>
     </div>
   );
 }

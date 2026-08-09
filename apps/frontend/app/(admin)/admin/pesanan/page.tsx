@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge, AdminToolbar } from "@/components/admin/ui";
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle, CircleDollarSign, CheckSquare, Calendar } from "lucide-react";
 import rawOrders from "@/data/admin/orders.json";
+import { logActivity } from "@/lib/activityLog";
 
 type OrderStatus = "antrean" | "pengerjaan" | "revisi" | "pelunasan" | "handover" | "selesai" | "batal";
 
@@ -26,6 +27,8 @@ interface Order {
   nextBillingDate?: string;// Tanggal tagihan berikutnya
   assignedDev?: string;           // siapa developer yang mengerjakan
   progressLog?: { date: string; note: string; by: string }[]; // log progress bertanggal
+  maxRevisions?: number;          // berapa kali bisa revisi
+  usedRevisions?: number;         // jumlah revisi yang sudah terpakai
 }
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"];
@@ -201,7 +204,7 @@ function WAModal({ order, onClose }: WAModalProps) {
 
 // ── Order Card ────────────────────────────────────────────────────────────────
 
-function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; }) {
+function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover, onIncrementRevision, onCardClick }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; onIncrementRevision: () => void; onCardClick: () => void; }) {
   const pipelineIndex = PIPELINE.findIndex((p) => p.status === order.status);
   const badge = PIPELINE[pipelineIndex] || PIPELINE[0];
 
@@ -236,7 +239,8 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0, transition: { delay: index * 0.04, type: "spring", stiffness: 300, damping: 28 } }}
-      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] overflow-hidden hover:shadow-[var(--adm-shadow-md)] transition-shadow"
+      className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] overflow-hidden hover:shadow-[var(--adm-shadow-md)] transition-shadow cursor-pointer border border-transparent"
+      onClick={onCardClick}
     >
       <div className="p-4 flex flex-col gap-2">
         {/* Top Row: Identity & Status */}
@@ -256,16 +260,15 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
 
           <div className="flex items-center justify-end gap-1.5 shrink-0">
             {order.status === "pelunasan" && order.dp < order.total && (
-              <button onClick={onQuickLunas} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-success)] hover:opacity-70 transition-all active:scale-95 focus:outline-none" title="Tandai Lunas">
+              <button onClick={(e) => { e.stopPropagation(); onQuickLunas(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-success)] hover:opacity-70 transition-all active:scale-95 focus:outline-none" title="Tandai Lunas">
                 <CircleDollarSign size={18} strokeWidth={2.5} />
               </button>
             )}
             {order.status === "handover" && (
-              <button onClick={onQuickHandover} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-accent)] hover:opacity-70 transition-all active:scale-95 focus:outline-none" title="Handover & Selesai">
+              <button onClick={(e) => { e.stopPropagation(); onQuickHandover(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-accent)] hover:opacity-70 transition-all active:scale-95 focus:outline-none" title="Handover & Selesai">
                 <CheckSquare size={18} strokeWidth={2.5} />
               </button>
             )}
-            
             {order.status === "selesai" ? (
               <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0 ml-1" style={getStyle(badge.badgeVariant)}>
                 <span className="truncate">{badge.label}</span>
@@ -274,7 +277,8 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
             ) : (
               <select
                 value={order.status}
-                onChange={e => onStatusChange(e.target.value as OrderStatus)}
+                onClick={(e) => e.stopPropagation()}
+                onChange={e => { e.stopPropagation(); onStatusChange(e.target.value as OrderStatus); }}
                 className="text-[11px] text-[var(--adm-text-3)] font-bold py-1.5 border-0 bg-transparent cursor-pointer focus:outline-none text-right shrink-0 ml-1"
               >
                 {PIPELINE.map(p => {
@@ -292,8 +296,16 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
         {/* Middle Row: Service detail — Dev/Notes */}
         <div className="flex items-baseline gap-2 mt-1.5 mb-2 pr-4 sm:pr-8 overflow-hidden">
           {(() => {
-            const [, ...rest] = order.service.split(" - ");
-            const detail = rest.length > 0 ? rest.join(" - ") : order.service;
+            const [cat, ...rest] = order.service.split(" - ");
+            let detail = rest.length > 0 ? rest.join(" - ") : order.service;
+            
+            // Fallback for older data where package wasn't saved properly
+            if (cat === "Jasa Website" && rest.length === 0) {
+              detail = "Paket (Tidak Diketahui)";
+            } else if (cat === "Produk Digital" && rest.length === 0) {
+              detail = "Produk (Tidak Diketahui)";
+            }
+            
             return <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">{detail}</h3>;
           })()}
           <span className="text-[var(--adm-text-3)] hidden sm:inline">—</span>
@@ -327,7 +339,7 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
               const isPaid = order.dp >= order.total;
               const hasDP = order.dp > 0;
               return (
-                <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isPaid ? 'bg-[var(--adm-success)]/10 text-[var(--adm-success)]' : 'bg-[var(--adm-bg)] text-[var(--adm-text-2)]'}`}>
                   {isPaid
                     ? "✓ Lunas"
                     : hasDP
@@ -355,22 +367,37 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
               </a>
             )}
             {order.recurringFee !== undefined && order.recurringFee > 0 && order.nextBillingDate && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border flex items-center gap-1" style={{ color: "var(--adm-accent)", backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)" }} title="Jadwal Tagihan Selanjutnya">
+              <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold flex items-center gap-1" title="Jadwal Tagihan Selanjutnya">
                 <Calendar size={10} />
                 {new Date(order.nextBillingDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} : {formatRp(order.recurringFee)}
+              </span>
+            )}
+            {order.status === "revisi" && order.maxRevisions !== undefined && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border flex items-center gap-1" style={{ color: "var(--adm-warning)", backgroundColor: "rgba(245, 158, 11, 0.1)", borderColor: "rgba(245, 158, 11, 0.2)" }} title="Batas Revisi">
+                <Undo2 size={10} />
+                Revisi: {order.usedRevisions || 0}/{order.maxRevisions}
+                {(order.usedRevisions || 0) < order.maxRevisions && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onIncrementRevision(); }}
+                    className="ml-1 hover:text-[var(--adm-text)] transition-colors opacity-70 hover:opacity-100 text-[12px]"
+                    title="Gunakan 1 Revisi"
+                  >
+                    +
+                  </button>
+                )}
               </span>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0 ml-auto mt-2 sm:mt-0">
             <div className="flex items-center gap-1.5">
-              <button onClick={onWA} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Follow-up WhatsApp">
+              <button onClick={(e) => { e.stopPropagation(); onWA(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Follow-up WhatsApp">
                 <MessageSquare size={13} strokeWidth={2} />
               </button>
-              <button onClick={onEdit} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
                 <Pencil size={13} strokeWidth={2} />
               </button>
-              <button onClick={onDelete} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
+              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
                 <Trash2 size={13} strokeWidth={2} />
               </button>
             </div>
@@ -419,13 +446,17 @@ export default function PesananPage() {
   const [handoverOrder, setHandoverOrder] = useState<Order | null>(null);
   const [lunasOrder, setLunasOrder] = useState<Order | null>(null);
   const [lunasPayment, setLunasPayment] = useState<number>(0);
-  const [lunasExtraFee, setLunasExtraFee] = useState<number>(0);
   const [lunasNote, setLunasNote] = useState<string>("");
   const [handoverLink, setHandoverLink] = useState("");
   const [handoverNote, setHandoverNote] = useState("");
   const [handoverOptionState, setHandoverOptionState] = useState("");
   const [recurringFeeState, setRecurringFeeState] = useState<number>(0);
   const [nextBillingDateState, setNextBillingDateState] = useState("");
+  const [revisionOrder, setRevisionOrder] = useState<Order | null>(null);
+  const [revisionNote, setRevisionNote] = useState("");
+  
+  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [detailTab, setDetailTab] = useState<"info" | "pembayaran" | "riwayat">("info");
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -475,11 +506,41 @@ export default function PesananPage() {
     localStorage.setItem("revtech_orders_trash", JSON.stringify(newDeleted));
   };
 
+  const triggerRevision = (id: string) => {
+    const order = orders.find(o => o.id === id);
+    if (order) {
+      setRevisionOrder(order);
+      setRevisionNote("");
+    }
+  };
+
+  const confirmRevision = () => {
+    if (!revisionOrder) return;
+    const updated = orders.map(o => {
+      if (o.id === revisionOrder.id && (o.usedRevisions || 0) < (o.maxRevisions || 0)) {
+        const newUsed = (o.usedRevisions || 0) + 1;
+        const noteText = revisionNote ? `Menggunakan revisi (${newUsed}/${o.maxRevisions}): ${revisionNote}` : `Menggunakan revisi (${newUsed}/${o.maxRevisions})`;
+        const newLog = {
+          date: new Date().toISOString(),
+          note: noteText,
+          by: "Admin"
+        };
+        const currentLogs = o.progressLog || [];
+        return { ...o, usedRevisions: newUsed, progressLog: [...currentLogs, newLog] } as Order;
+      }
+      return o;
+    });
+    setOrders(updated);
+    saveOrders(updated);
+    setRevisionOrder(null);
+    showToast("Revisi berhasil dicatat", "success");
+  };
+
   // Deadline is now completely manual, no auto-calculation based on service.
 
   const confirmLunas = () => {
     if (!lunasOrder) return;
-    const newTotal = lunasOrder.total + (lunasExtraFee || 0);
+    const newTotal = lunasOrder.total;
     const newDp = lunasOrder.dp + (lunasPayment || 0);
     const isPaid = newDp >= newTotal;
     
@@ -547,7 +608,24 @@ export default function PesananPage() {
     setLunasOrder(null);
     setLunasNote("");
     setLunasPayment(0);
-    setLunasExtraFee(0);
+    
+    // Log activity
+    if (isPaid) {
+      logActivity({
+        type: "order_lunas",
+        title: "Pembayaran Lunas",
+        description: `Project ${lunasOrder.client} (${lunasOrder.service}) telah lunas sepenuhnya.`,
+        user: "Admin",
+      });
+    } else {
+      logActivity({
+        type: "invoice_paid",
+        title: "Pembayaran Diterima",
+        description: `Pembayaran Rp ${(lunasPayment || 0).toLocaleString('id-ID')} diterima untuk project ${lunasOrder.client}.`,
+        user: "Admin",
+      });
+    }
+    
     showToast(isPaid ? "Lunas! Status otomatis berubah ke Handover." : "Pembayaran berhasil ditambahkan!");
   };
 
@@ -615,7 +693,16 @@ export default function PesananPage() {
     setHandoverOptionState("");
     setRecurringFeeState(0);
     setNextBillingDateState("");
-    showToast("Pesanan selesai & Handover tersimpan!");
+    
+    // Log activity
+    logActivity({
+      type: "order_handover",
+      title: "Project Selesai & Diserahterimakan",
+      description: `Project ${handoverOrder.client} (${handoverOrder.service}) telah selesai dan diserahterimakan.`,
+      user: "Admin",
+    });
+    
+    showToast("Project selesai & Handover tersimpan!");
   };
 
   const changeOrderStatus = (id: string, newStatus: OrderStatus) => {
@@ -634,8 +721,19 @@ export default function PesananPage() {
       setConfirmStatusChangeData({ ...originalOrder, status: newStatus } as Order);
       return;
     }
-
-    const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
+    const updated = orders.map(o => {
+      if (o.id === id) {
+        const newLog = {
+          date: new Date().toISOString(),
+          note: `Status diubah dari ${o.status.toUpperCase()} menjadi ${newStatus.toUpperCase()}`,
+          by: "Admin"
+        };
+        const currentLogs = o.progressLog || [];
+        return { ...o, status: newStatus, progressLog: [...currentLogs, newLog] };
+      }
+      return o;
+    });
+    setOrders(updated);
     saveOrders(updated);
     showToast("Status berhasil diperbarui");
 
@@ -690,7 +788,7 @@ export default function PesananPage() {
     }
 
     setDeletingId(null);
-    showToast("Pesanan beserta tagihan terkait dipindah ke Tempat Sampah", "error");
+    showToast("Project beserta tagihan terkait dipindah ke Tempat Sampah", "error");
   };
 
   const handleAddOrder = (e: React.FormEvent) => {
@@ -841,7 +939,7 @@ export default function PesananPage() {
         }
       } catch (err) {}
 
-      showToast("Pesanan berhasil diperbarui");
+      showToast("Project berhasil diperbarui");
     } else {
       const order: Order = {
         id: `ord-${Date.now()}`,
@@ -860,7 +958,7 @@ export default function PesananPage() {
         createdAt: new Date().toISOString().split("T")[0]
       };
       saveOrders([order, ...orders]);
-      showToast("Pesanan baru berhasil ditambahkan");
+      showToast("Project baru berhasil ditambahkan");
     }
     
     setView("list");
@@ -990,7 +1088,7 @@ export default function PesananPage() {
             {filtered.length === 0 && (
               <div className="py-24 flex flex-col items-center justify-center text-center px-4">
                 <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] mb-4">inbox</span>
-                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada pesanan ditemukan.</p>
+                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada project ditemukan.</p>
               </div>
             )}
 
@@ -1003,6 +1101,11 @@ export default function PesananPage() {
                   onStatusChange={(status) => changeOrderStatus(order.id, status)}
                   onEdit={() => handleEdit(order)}
                   onDelete={() => setDeletingId(order.id)}
+                  onIncrementRevision={() => triggerRevision(order.id)}
+                  onCardClick={() => {
+                    setDetailOrder(order);
+                    setDetailTab("info");
+                  }}
                   onQuickLunas={() => {
                     setLunasOrder(order);
                     setLunasPayment(order.total - order.dp);
@@ -1029,12 +1132,12 @@ export default function PesananPage() {
       {view === "form" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mt-4 mx-auto pb-8">
           <div className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">{editingId ? "Edit Pesanan" : "Tambah Pesanan Baru"}</h2>
+            <h2 className="text-xl font-bold text-[var(--adm-text)] mb-6">{editingId ? "Edit Project" : "Tambah Project Baru"}</h2>
             
             <form onSubmit={handleAddOrder} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Status Pesanan</label>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Status Project</label>
                   <select
                     value={newOrder.status}
                     onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value as OrderStatus })}
@@ -1053,10 +1156,16 @@ export default function PesananPage() {
                     <input type="date" value={newOrder.deadline || ""} onChange={(e) => setNewOrder({ ...newOrder, deadline: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all [color-scheme:dark]" />
                   </div>
                 </div>
+                {newOrder.status === "revisi" && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Batas Revisi</label>
+                    <input type="number" value={newOrder.maxRevisions ?? ""} onChange={(e) => setNewOrder({ ...newOrder, maxRevisions: e.target.value ? parseInt(e.target.value) : undefined })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all" placeholder="Contoh: 3" />
+                  </div>
+                )}
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Catatan Follow-up Internal</label>
                   <textarea rows={3} value={newOrder.notes} onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all resize-none" placeholder="Masukkan catatan progress, riwayat follow-up, keluhan klien..." />
-                  <p className="text-[10px] text-[var(--adm-text-3)] mt-1 ml-1 leading-tight">Nama klien, layanan, dan harga hanya bisa diedit dari Inbox.</p>
+                  <p className="text-[10px] text-[var(--adm-text-3)] mt-1 ml-1 leading-tight">Nama klien, layanan, dan harga hanya bisa diedit dari Leads.</p>
                 </div>
               </div>
 
@@ -1118,7 +1227,7 @@ export default function PesananPage() {
 
               <div className="flex items-center justify-end gap-3 pt-6 mt-8">
                 <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors">Batal</button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl text-sm font-bold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-opacity shadow-[var(--adm-shadow)]">{editingId ? "Simpan Perubahan" : "Simpan Pesanan"}</button>
+                <button type="submit" className="px-5 py-2.5 rounded-xl text-sm font-bold bg-[var(--adm-accent)] text-white hover:opacity-90 transition-opacity shadow-[var(--adm-shadow)]">{editingId ? "Simpan Perubahan" : "Simpan Project"}</button>
               </div>
             </form>
           </div>
@@ -1178,9 +1287,9 @@ export default function PesananPage() {
                     className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)]"
                   >
                     <option value="" disabled className="bg-[var(--adm-card)] text-[var(--adm-text-3)]">- Pilih Opsi -</option>
-                    <option value="Terima Beres (Basic)">Terima Beres (Basic)</option>
-                    <option value="Terima Beres (Plus)">Terima Beres (Plus)</option>
-                    <option value="Sistem Mandiri">Sistem Mandiri</option>
+                    <option value="Terima Beres (Basic)" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terima Beres (Basic)</option>
+                    <option value="Terima Beres (Plus)" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Terima Beres (Plus)</option>
+                    <option value="Sistem Mandiri" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Sistem Mandiri</option>
                   </select>
                 </div>
 
@@ -1248,7 +1357,7 @@ export default function PesananPage() {
                   onClick={submitHandover}
                   className="flex-1 py-2 text-sm font-bold text-white rounded-xl transition-colors bg-[var(--adm-accent)] hover:opacity-90"
                 >
-                  Selesaikan Pesanan
+                  Selesaikan Project
                 </button>
               </div>
             </motion.div>
@@ -1276,7 +1385,7 @@ export default function PesananPage() {
                 <div>
                   <h3 className="font-bold text-[var(--adm-text)]">Pindahkan ke Sampah?</h3>
                   <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
-                    Pesanan akan dipindahkan ke Tempat Sampah dan bisa dipulihkan nanti.
+                    Project akan dipindahkan ke Tempat Sampah dan bisa dipulihkan nanti.
                   </p>
                 </div>
               </div>
@@ -1298,6 +1407,208 @@ export default function PesananPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Order Detail Modal */}
+      <AnimatePresence>
+        {detailOrder && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setDetailOrder(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[var(--adm-card)] rounded-2xl w-full max-w-2xl shadow-[var(--adm-shadow-lg)] overflow-hidden my-8 flex flex-col"
+              style={{ maxHeight: '90vh' }}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-[var(--adm-border)]">
+                <div>
+                  <h3 className="font-bold text-lg text-[var(--adm-text)]">{detailOrder.client}</h3>
+                  <p className="text-[13px] text-[var(--adm-text-2)]">{detailOrder.service}</p>
+                </div>
+                <button onClick={() => setDetailOrder(null)} className="p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors rounded-full hover:bg-[var(--adm-bg)]">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {/* Tabs */}
+              <div className="flex px-6 pt-4 gap-6 border-b border-[var(--adm-border)]">
+                <button onClick={() => setDetailTab("info")} className={`pb-3 text-sm font-bold transition-colors border-b-2 ${detailTab === "info" ? "border-[var(--adm-accent)] text-[var(--adm-accent)]" : "border-transparent text-[var(--adm-text-3)] hover:text-[var(--adm-text-2)]"}`}>Info Utama</button>
+                <button onClick={() => setDetailTab("pembayaran")} className={`pb-3 text-sm font-bold transition-colors border-b-2 ${detailTab === "pembayaran" ? "border-[var(--adm-accent)] text-[var(--adm-accent)]" : "border-transparent text-[var(--adm-text-3)] hover:text-[var(--adm-text-2)]"}`}>Pembayaran</button>
+                <button onClick={() => setDetailTab("riwayat")} className={`pb-3 text-sm font-bold transition-colors border-b-2 ${detailTab === "riwayat" ? "border-[var(--adm-accent)] text-[var(--adm-accent)]" : "border-transparent text-[var(--adm-text-3)] hover:text-[var(--adm-text-2)]"}`}>Riwayat Aktivitas</button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto flex-1">
+                {detailTab === "info" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Status Saat Ini</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)] uppercase">{detailOrder.status}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Deadline</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)]">{detailOrder.deadline ? new Date(detailOrder.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">No. WhatsApp</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)]">{detailOrder.phone || "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Batas Revisi</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)]">{detailOrder.maxRevisions !== undefined ? `${detailOrder.usedRevisions || 0} / ${detailOrder.maxRevisions} terpakai` : "Tidak ada batas"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Tgl Pemesanan</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)]">{new Date(detailOrder.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Catatan Internal / Follow up</p>
+                      <div className="p-3 border border-[var(--adm-border)] rounded-xl text-sm font-semibold text-[var(--adm-text)] whitespace-pre-wrap leading-relaxed">{detailOrder.notes || "Tidak ada catatan."}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {detailTab === "pembayaran" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Total Tagihan</p>
+                        <p className="text-lg font-bold text-[var(--adm-text)]">{formatRp(detailOrder.total)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Sudah Dibayar (DP)</p>
+                        <p className="text-lg font-bold text-[var(--adm-success)]">{formatRp(detailOrder.dp)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Sisa Pembayaran</p>
+                        <p className="text-lg font-bold text-[var(--adm-danger)]">{formatRp(Math.max(0, detailOrder.total - detailOrder.dp))}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-1">Status Lunas</p>
+                        <p className="text-sm font-semibold text-[var(--adm-text)]">{detailOrder.dp >= detailOrder.total && detailOrder.total > 0 ? "✅ Lunas" : "⏳ Belum Lunas"}</p>
+                      </div>
+                    </div>
+                    
+                    <hr className="border-[var(--adm-border)]" />
+                    
+                    <div>
+                      <p className="text-[11px] font-bold text-[var(--adm-text-3)] uppercase tracking-widest mb-3">Detail Handover & Maintenance</p>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[var(--adm-text-2)] font-medium">Opsi Handover:</span>
+                          <span className="font-bold text-[var(--adm-text)]">{detailOrder.handoverOption || "-"}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[var(--adm-text-2)] font-medium">Aset / Link:</span>
+                          {detailOrder.handover ? (
+                            <a href={detailOrder.handover.startsWith('http') ? detailOrder.handover : `https://${detailOrder.handover}`} target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--adm-accent)] hover:underline truncate max-w-[200px]">{detailOrder.handover}</a>
+                          ) : <span className="font-bold text-[var(--adm-text)]">-</span>}
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[var(--adm-text-2)] font-medium">Tagihan Maintenance (Bulanan/Tahunan):</span>
+                          <span className="font-bold text-[var(--adm-text)]">{detailOrder.recurringFee ? formatRp(detailOrder.recurringFee) : "-"}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-[var(--adm-text-2)] font-medium">Jatuh Tempo Selanjutnya:</span>
+                          <span className="font-bold text-[var(--adm-text)]">{detailOrder.nextBillingDate ? new Date(detailOrder.nextBillingDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {detailTab === "riwayat" && (
+                  <div className="space-y-4">
+                    {detailOrder.progressLog && detailOrder.progressLog.length > 0 ? (
+                      <div className="relative border-l border-[var(--adm-border)] ml-3 space-y-6 pb-2">
+                        {[...detailOrder.progressLog].reverse().map((log, i) => (
+                          <div key={i} className="relative pl-6">
+                            <div className="absolute w-3 h-3 bg-[var(--adm-accent)] rounded-full -left-[6.5px] top-1.5 ring-4 ring-[var(--adm-card)]"></div>
+                            <p className="text-[10px] font-bold text-[var(--adm-text-3)] mb-0.5 uppercase tracking-wider">{new Date(log.date).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                            <div className="border border-[var(--adm-border)] p-3 rounded-xl rounded-tl-sm text-sm text-[var(--adm-text)] shadow-sm">
+                              <p className="font-medium">{log.note}</p>
+                              <p className="text-[10px] text-[var(--adm-text-3)] mt-2">Oleh: {log.by}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10">
+                        <div className="w-12 h-12 rounded-full bg-[var(--adm-bg)] mx-auto flex items-center justify-center text-[var(--adm-text-3)] mb-3">
+                          <SlidersHorizontal size={20} />
+                        </div>
+                        <p className="text-[13px] text-[var(--adm-text-2)]">Belum ada riwayat aktivitas yang dicatat.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Revision Confirmation Modal */}
+      <AnimatePresence>
+        {revisionOrder && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-[var(--adm-card)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)]"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--adm-warning)]/10 text-[var(--adm-warning)]">
+                  <Undo2 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--adm-text)]">Gunakan Revisi?</h3>
+                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+                    Akan mencatat penggunaan 1 kuota revisi untuk <span className="font-semibold text-[var(--adm-text)]">{revisionOrder.client}</span>.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-1.5 mb-6">
+                <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Catatan Revisi <span className="text-[10px] text-[var(--adm-text-3)] normal-case font-normal">(opsional)</span></label>
+                <textarea
+                  rows={3}
+                  value={revisionNote}
+                  onChange={(e) => setRevisionNote(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/40 transition-all border border-[var(--adm-border)] resize-none"
+                  placeholder="Contoh: Perbaikan warna tombol..."
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRevisionOrder(null)}
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmRevision}
+                  className="flex-1 py-2 text-sm font-bold text-white rounded-xl transition-colors bg-[var(--adm-warning)] hover:bg-[var(--adm-warning)]/90"
+                >
+                  Simpan Revisi
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Lunas Confirmation Modal */}
       <AnimatePresence>
         {lunasOrder && (
@@ -1329,34 +1640,14 @@ export default function PesananPage() {
                     <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Total Harga Awal</span>
                     <span className="text-sm font-semibold text-[var(--adm-text)]">{formatRp(lunasOrder.total)}</span>
                   </div>
-                  <div className="flex justify-between items-center mb-1 pb-1">
-                    <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Biaya Tambahan</span>
-                    <span className="text-sm font-semibold text-[var(--adm-warning)]">
-                      {lunasExtraFee > 0 ? `+ ${formatRp(lunasExtraFee)}` : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-[var(--adm-border)]">
+                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-[var(--adm-border)] mt-1 pt-1 border-t">
                     <span className="text-[11px] font-semibold text-[var(--adm-text-3)] uppercase tracking-wide">Sudah Dibayar (DP)</span>
                     <span className="text-sm font-semibold text-[var(--adm-success)]">{formatRp(lunasOrder.dp)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[11px] font-bold text-[var(--adm-text-2)] uppercase tracking-wide">Sisa Tagihan</span>
-                    <span className="text-sm font-bold text-[var(--adm-danger)]">{formatRp(lunasOrder.total + (lunasExtraFee || 0) - lunasOrder.dp)}</span>
+                    <span className="text-sm font-bold text-[var(--adm-danger)]">{formatRp(lunasOrder.total - lunasOrder.dp)}</span>
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Biaya Tambahan <span className="text-[10px] text-[var(--adm-text-3)] normal-case font-normal">(jika ada)</span></label>
-                  <input
-                    type="text"
-                    value={lunasExtraFee ? `Rp ${lunasExtraFee.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : ""}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "");
-                      setLunasExtraFee(v ? parseInt(v) : 0);
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl bg-transparent text-sm font-bold text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-warning)]/40 transition-all border border-[var(--adm-border)]"
-                    placeholder="Rp 0"
-                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -1414,7 +1705,7 @@ export default function PesananPage() {
                 </div>
                 <h2 className="text-lg font-bold text-[var(--adm-text)] mb-2">Yakin Mengubah Status?</h2>
                 <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">
-                  Pesanan ini sebelumnya berstatus <strong>{orders.find(o => o.id === editingId)?.status}</strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
+                  Project ini sebelumnya berstatus <strong>{orders.find(o => o.id === editingId)?.status}</strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
                 </p>
               </div>
               <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3">
@@ -1422,7 +1713,7 @@ export default function PesananPage() {
                 <button onClick={() => {
                   const updated = orders.map(o => o.id === editingId ? { ...o, ...confirmStatusChangeData } as Order : o);
                   saveOrders(updated);
-                  showToast("Status pesanan berhasil diubah", "success");
+                  showToast("Status project berhasil diubah", "success");
                   setView("list");
                   setConfirmStatusChangeData(null);
                 }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">

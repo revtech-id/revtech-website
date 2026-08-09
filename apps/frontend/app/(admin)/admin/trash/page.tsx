@@ -181,7 +181,7 @@ export default function TrashPage() {
       const leadToRestore = deletedLeads.find((l) => l.id === restoringId);
       if (leadToRestore) {
         processRestore([leadToRestore]);
-        showToast(`Item berhasil dipulihkan ke ${leadToRestore._module === "Pesanan" ? "Pesanan" : "Inbox Utama"}`);
+        showToast(`Item berhasil dipulihkan ke ${leadToRestore._module === "Pesanan" ? "Project" : "Leads Utama"}`);
       }
     } else if (restoringAction === "bulk") {
       const leadsToRestore = deletedLeads.filter((l) => selectedIds.includes(l.id));
@@ -283,9 +283,9 @@ export default function TrashPage() {
               title="Filter Kategori"
             >
               <option value="Semua" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Semua Kategori</option>
-              <option value="Inbox" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Inbox</option>
+              <option value="Inbox" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Leads</option>
               <option value="Klien" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Klien</option>
-              <option value="Pesanan" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Pesanan</option>
+              <option value="Pesanan" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Project</option>
               <option value="Invoice" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Invoice</option>
             </select>
           </div>
@@ -442,8 +442,8 @@ export default function TrashPage() {
                 <div 
                   className={`p-4 rounded-2xl bg-[var(--adm-card)] shadow-sm transition-colors cursor-pointer border ${
                     selectedIds.includes(lead.id) 
-                      ? 'border-[var(--adm-accent)] ring-1 ring-[var(--adm-accent)]/50' 
-                      : 'border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50'
+                      ? 'border-[var(--adm-text-2)] bg-[var(--adm-bg)]' 
+                      : 'border-transparent hover:border-[var(--adm-border)]'
                   }`}
                   onClick={() => {
                     if (isSelectionMode) {
@@ -469,7 +469,7 @@ export default function TrashPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-[var(--adm-text)]">{lead.name}</h3>
                         <span className="text-[11px] px-1.5 py-0.5 bg-[var(--adm-bg)] rounded text-[var(--adm-text-2)] font-semibold">
-                          {lead._module || "Sistem"}
+                          {lead._module === "Pesanan" ? "Project" : lead._module === "Inbox" ? "Leads" : (lead._module || "Sistem")}
                         </span>
                         </div>
                         <p className="text-xs text-[var(--adm-text-3)] line-clamp-1">{lead.company} — {lead.service}</p>

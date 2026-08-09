@@ -119,6 +119,16 @@ export default function KontakForm() {
             }
             inboxData.unshift(newLead);
             localStorage.setItem("revtech_inbox", JSON.stringify(inboxData));
+            
+            // Log activity for notification popover
+            import("@/lib/activityLog").then(({ logActivity }) => {
+              logActivity({
+                type: "lead_created",
+                title: "Pesanan Baru dari Website!",
+                description: `${data.name}${data.business ? ` (${data.business})` : ""} mengisi formulir untuk layanan ${service === 'jasa_web' ? `Jasa Website - Paket ${jasaWebPackage}` : service === 'produk_digital' ? 'Produk Digital' : 'Ide Custom'}.`,
+                user: "System",
+              });
+            });
         } catch (e) {
             console.error("Failed to save to inbox:", e);
         }

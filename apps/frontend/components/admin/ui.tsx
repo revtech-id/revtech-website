@@ -581,3 +581,29 @@ export function AdminToolbar({
     </div>
   );
 }
+
+// ── SaveButton ──────────────────────────────────────────────────────────────────
+
+interface SaveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  isSaving: boolean;
+  label?: string;
+}
+
+export function SaveButton({ isSaving, label = "Simpan Perubahan", className, ...props }: SaveButtonProps) {
+  return (
+    <button
+      type="button"
+      disabled={isSaving}
+      className={cn(
+        "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-semibold transition-all bg-[var(--adm-accent)] hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed",
+        className
+      )}
+      {...props}
+    >
+      <span className={cn("material-symbols-outlined text-[18px]", isSaving && "animate-spin")}>
+        {isSaving ? "progress_activity" : "save"}
+      </span>
+      {label}
+    </button>
+  );
+}

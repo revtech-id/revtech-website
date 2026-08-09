@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
+
+import activityLog from "@/data/admin/activity-log.json";
 
 interface NotificationItem {
   id: string;
@@ -13,40 +15,95 @@ interface NotificationItem {
   type: "order" | "payment" | "system";
 }
 
-const INITIAL_NOTIFS: NotificationItem[] = [
-  {
-    id: "1",
-    title: "Pesanan Baru Masuk!",
-    desc: "Paket Website Profesional dari PT Synergy Global",
-    time: "5 menit lalu",
-    unread: true,
-    type: "order",
-  },
-  {
-    id: "2",
-    title: "Pembayaran Dikonfirmasi",
-    desc: "Invoice #INV-2026-089 lunas sebesar Rp 14.500.000",
-    time: "1 jam lalu",
-    unread: true,
-    type: "payment",
-  },
-  {
-    id: "3",
-    title: "RevTech AI Assistant v2.4",
-    desc: "Fitur auto-SEO generator baru di Studio aktif",
-    time: "3 jam lalu",
-    unread: false,
-    type: "system",
-  },
-];
+function getTimeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  // if future date or just now
+  if (diffInSeconds < 60) return "Baru saja";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} menit lalu`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} jam lalu`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays} hari lalu`;
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export function AdminNotificationPopover() {
   const [open, setOpen] = useState(false);
-  const [notifs, setNotifs] = useState(INITIAL_NOTIFS);
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    const loadNotifs = () => {
+      // Read from the unified activity log (all sources)
+      const localLog: any[] = JSON.parse(localStorage.getItem("revtech_activity_log") || "[]");
+      
+      // Track which IDs have been marked as read (persisted)
+      const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
+
+      const dynamicNotifs: NotificationItem[] = localLog.slice(0, 15).map((entry) => ({
+        id: entry.id,
+        title: entry.type === "lead_created" ? "Prospek Baru Masuk!"
+          : entry.type === "lead_added" ? "Prospek Ditambahkan"
+          : entry.type === "lead_deal" ? "Deal Baru!"
+          : entry.type === "order_status_changed" ? "Status Project Berubah"
+          : entry.type === "order_handover" ? "Project Selesai"
+          : entry.type === "invoice_paid" || entry.type === "order_lunas" || entry.type === "lead_paid_full" ? "Pembayaran Diterima"
+          : entry.type === "login" ? "Aktivitas Login"
+          : "Notifikasi Sistem",
+        desc: entry.description,
+        time: getTimeAgo(entry.timestamp),
+        unread: !readIds.includes(entry.id),
+        type: (
+          entry.type === "lead_created" || entry.type === "lead_added" || entry.type === "lead_deal" || entry.type === "order_status_changed" || entry.type === "order_handover"
+            ? "order"
+            : entry.type === "invoice_paid" || entry.type === "order_lunas" || entry.type === "lead_paid_full"
+              ? "payment"
+              : "system"
+        ) as "order" | "payment" | "system",
+      }));
+
+      // Append static activity-log.json entries as fallback if no dynamic data yet
+      if (dynamicNotifs.length === 0) {
+        const staticNotifs: NotificationItem[] = activityLog.slice(0, 5).map((log, i) => ({
+          id: log.id,
+          title: log.type === "order_created" ? "Project Baru Masuk!"
+            : log.type === "invoice_paid" ? "Pembayaran Dikonfirmasi"
+            : "Aktivitas Sistem",
+          desc: log.description,
+          time: getTimeAgo(log.timestamp),
+          unread: i < 2,
+          type: (log.type === "order_created" ? "order" : log.type === "invoice_paid" ? "payment" : "system") as "order" | "payment" | "system",
+        }));
+        setNotifs(staticNotifs);
+        return;
+      }
+
+      setNotifs(dynamicNotifs);
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "revtech_activity_log" || e.key === "revtech_inbox") {
+        loadNotifs();
+      }
+    };
+
+    loadNotifs();
+    window.addEventListener("activityLogUpdated", loadNotifs);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("activityLogUpdated", loadNotifs);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const unreadCount = notifs.filter((n) => n.unread).length;
 
   const markAllRead = () => {
+    const readIds = notifs.map((n) => n.id);
+    localStorage.setItem("revtech_notif_read", JSON.stringify(readIds));
     setNotifs((list) => list.map((item) => ({ ...item, unread: false })));
   };
 
@@ -99,16 +156,12 @@ export function AdminNotificationPopover() {
           className="absolute right-0 top-full mt-3 w-80 sm:w-96 z-50 rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5" style={{ background: "var(--adm-bg)" }}>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--adm-border)]">
             <div className="flex items-center gap-2.5">
               <h3 className="text-[13px] font-bold" style={{ color: "var(--adm-text)" }}>
                 Notifikasi
               </h3>
-              {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-md font-bold bg-red-500/10 text-red-500 border border-red-500/20" style={{ fontSize: '9px' }}>
-                  {unreadCount} Baru
-                </span>
-              )}
+              {/* Badge removed */}
             </div>
 
             {unreadCount > 0 ? (
@@ -149,16 +202,10 @@ export function AdminNotificationPopover() {
                       list.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
                     );
                   }}
-                  className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                    item.unread ? "bg-red-500/5 hover:bg-red-500/10" : "opacity-60 hover:opacity-100"
+                  className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer hover:bg-[var(--adm-bg)] ${
+                    item.unread ? "" : "opacity-60"
                   }`}
-                  style={{ backgroundColor: !item.unread ? "transparent" : "" }}
                 >
-                  {item.unread ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                  ) : (
-                    <div className="w-1.5 h-1.5 shrink-0 mt-1.5" />
-                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className={`text-[12px] truncate transition-colors ${item.unread ? "font-bold" : "font-medium"}`} style={{ color: "var(--adm-text)" }}>
@@ -178,7 +225,7 @@ export function AdminNotificationPopover() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-2.5" style={{ background: "var(--adm-bg)" }}>
+          <div className="px-5 py-2.5 border-t border-[var(--adm-border)]">
             <Link
               href="/admin/team/activity"
               onClick={() => setOpen(false)}

@@ -90,7 +90,7 @@ function daysUntil(dateStr: string | null): number | null {
 // ── Data computations from real mock data ─────────────────────────────────────
 
 const STAGES = [
-  { key: "inbox",      label: "Inbox",      color: "#94A3B8" },
+  { key: "inbox",      label: "Leads",      color: "#94A3B8" },
   { key: "chat",       label: "Negosiasi",  color: "#8B5CF6" },
   { key: "dp",         label: "DP Masuk",   color: "#F59E0B" },
   { key: "pengerjaan", label: "Pengerjaan", color: "#3B82F6" },
@@ -119,7 +119,7 @@ function getPipelineData(orders: Order[], leads: Lead[]) {
 const STATUS_LABEL: Record<string, string> = {
   selesai: "Selesai", pengerjaan: "Dikerjakan", revisi: "Revisi",
   dp: "DP Masuk", pelunasan: "Tunggu Lunas", handover: "Handover",
-  inbox: "Inbox", chat: "Negosiasi", antrean: "Antrean", batal: "Batal"
+  inbox: "Leads", chat: "Negosiasi", antrean: "Antrean", batal: "Batal"
 };
 
 const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
@@ -144,7 +144,7 @@ function PipelineTooltip({ active, payload }: { active?: boolean; payload?: Arra
       className="px-3 py-2 rounded-xl text-xs font-semibold shadow-lg"
       style={{ background: "var(--adm-card)", border: "1px solid var(--adm-border)", color: "var(--adm-text)" }}
     >
-      {payload[0].payload.label}: <strong>{payload[0].value} pesanan</strong>
+      {payload[0].payload.label}: <strong>{payload[0].value} project</strong>
     </div>
   );
 }
@@ -190,7 +190,7 @@ function AIInsightWidget({ invoices, clients, orders }: { invoices: Invoice[], c
       if (issuesCount > 0) {
         const issueTexts = [];
         if (overdueInvoices.length > 0) issueTexts.push(`${overdueInvoices.length} tagihan tertunggak`);
-        if (urgentDeadlines.length > 0) issueTexts.push(`${urgentDeadlines.length} proyek kritis`);
+        if (urgentDeadlines.length > 0) issueTexts.push(`${urgentDeadlines.length} project kritis`);
         if (expiringDomains.length > 0) issueTexts.push(`${expiringDomains.length} domain expired`);
         
         let alertSentence = "";
@@ -430,19 +430,19 @@ export default function DashboardPage() {
             </motion.div>
             <motion.div {...fadeUp(3)}>
               <StatCard
-                label="Pesanan Aktif"
+                label="Project Aktif"
                 value={activeOrders.length}
-                sub={`${completedOrders.length} proyek selesai`}
+                sub={`${completedOrders.length} project selesai`}
                 icon="work"
                 iconColor="#2563EB"
                 trend="up"
-                trendLabel="5 pesanan baru mgg ini"
+                trendLabel="5 project baru mgg ini"
                 href="/admin/pesanan"
               />
             </motion.div>
             <motion.div {...fadeUp(4)}>
               <StatCard
-                label="Proyek Selesai"
+                label="Project Selesai"
                 value={completedOrders.length}
                 sub="Total sepanjang waktu"
                 icon="task_alt"
@@ -489,7 +489,7 @@ export default function DashboardPage() {
           <AdminCard className="h-full flex flex-col relative">
             <div className="px-5 pt-5 pb-2 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Pesanan</h3>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pipeline Project</h3>
               </div>
               <button
                 onClick={() => setActiveTab("server")}
@@ -531,7 +531,7 @@ export default function DashboardPage() {
           <AdminCard className="h-full flex flex-col">
             <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Pesanan Aktif</h3>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Project Aktif</h3>
               </div>
               <a
                 href="/admin/pesanan"
@@ -602,7 +602,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setActiveTab("proyek")}
                 className="absolute top-5 right-5 opacity-40 hover:opacity-100 transition-opacity flex items-center justify-center z-10"
-                title="Beralih ke Arus Proyek"
+                title="Beralih ke Arus Project"
               >
                 <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--adm-text)" }}>swap_horiz</span>
               </button>

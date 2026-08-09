@@ -7,6 +7,7 @@ import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, Monito
 import inboxData from "@/data/admin/inbox.json";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { CountrySelector } from "@/components/ui/CountrySelector";
+import { logActivity } from "@/lib/activityLog";
 
 interface Lead {
   id: string;
@@ -78,7 +79,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                     setTotal(raw === "" ? "" : raw);
                     if (raw !== "") setDp(Math.round(parseInt(raw, 10) / 2).toString());
                   }}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] text-sm font-bold focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all"
                 />
               </div>
               <div>
@@ -94,7 +95,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                     const raw = e.target.value.replace(/\D/g, "");
                     setDp(raw === "" ? "" : raw);
                   }}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] text-sm font-bold focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all"
                 />
               </div>
             </div>
@@ -105,7 +106,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 [color-scheme:dark]"
+                className="w-full px-3 py-2.5 rounded-xl bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--adm-success)]/40 transition-all [color-scheme:dark]"
               />
             </div>
           </div>
@@ -113,7 +114,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
           <div className="flex gap-2 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 py-2 rounded-lg font-semibold text-[var(--adm-text-2)] hover:bg-[var(--adm-bg)] hover:text-[var(--adm-text)] transition-colors text-sm"
+              className="flex-1 py-2 rounded-xl bg-transparent font-semibold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors text-sm"
             >
               Batal
             </button>
@@ -127,7 +128,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
               disabled={!total || !dp}
               className="flex-1 py-2 rounded-lg font-bold bg-[var(--adm-success)] text-white hover:opacity-90 transition-opacity text-sm shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Pindahkan ke Pesanan
+              Pindahkan ke Project
             </button>
           </div>
         </motion.div>
@@ -487,6 +488,16 @@ export default function InboxPage() {
 
     saveLeads(updatedLeads);
     
+    // Log activity
+    if (!editingId) {
+      logActivity({
+        type: "lead_added",
+        title: "Prospek Baru Ditambahkan",
+        description: `Prospek baru dari ${newLead.name}${newLead.company ? ` (${newLead.company})` : ""} untuk ${newLead.service} ditambahkan oleh admin.`,
+        user: "Admin",
+      });
+    }
+    
     showToast(editingId ? "Perubahan prospek berhasil disimpan." : "Prospek baru berhasil ditambahkan.");
     setView("list");
     setEditingId(null);
@@ -510,7 +521,7 @@ export default function InboxPage() {
       id: orderId,
       client: lead.name,
       company: lead.company || "",
-      service: lead.service,
+      service: lead.serviceDetail ? `${lead.service} - ${lead.serviceDetail}` : lead.service,
       status: "antrean",
       dp: data.dp,
       total: data.total,
@@ -520,7 +531,7 @@ export default function InboxPage() {
       notes: lead.message || "",
       handover: data.handover,
       assignedDev: "",
-      progressLog: [{ date: new Date().toISOString(), note: "Proyek masuk antrean dari Inbox.", by: "Admin" }]
+      progressLog: [{ date: new Date().toISOString(), note: "Project masuk antrean dari Leads.", by: "Admin" }]
     };
 
     // 3. Update atau Buat Invoice Pertama (DP / Lunas)
@@ -593,6 +604,17 @@ export default function InboxPage() {
     }
 
     setDealLead(null);
+    
+    // Log activity
+    const isLunasUpfront = data.dp >= data.total;
+    logActivity({
+      type: "lead_deal",
+      title: isLunasUpfront ? "Deal — Pembayaran Penuh" : "Deal — DP Diterima",
+      description: isLunasUpfront
+        ? `Project ${lead.name} (${lead.service}) deal & bayar penuh Rp ${data.total.toLocaleString('id-ID')}.`
+        : `Project ${lead.name} (${lead.service}) deal dengan DP Rp ${data.dp.toLocaleString('id-ID')} dari total Rp ${data.total.toLocaleString('id-ID')}.`,
+      user: "Admin",
+    });
   }
 
   const filtered = leads.filter(l => {
@@ -802,9 +824,8 @@ export default function InboxPage() {
                               </span>
                             )}
                             {lead.referenceLink && (
-                              <a href={lead.referenceLink.startsWith('http') ? lead.referenceLink : `https://${lead.referenceLink}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-[var(--adm-text-2)] hover:text-[var(--adm-text)] font-semibold inline-flex items-center gap-1 transition-colors">
-                                <span className="material-symbols-outlined text-[10px]">open_in_new</span>
-                                <span>Referensi</span>
+                              <a href={lead.referenceLink.startsWith('http') ? lead.referenceLink : `https://${lead.referenceLink}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-500 hover:underline font-semibold inline-flex items-center transition-colors max-w-[150px] truncate" onClick={e => e.stopPropagation()} title={lead.referenceLink}>
+                                <span className="truncate">{lead.referenceLink.replace(/^https?:\/\//, '')}</span>
                               </a>
                             )}
                             {lead.followUpNote && (
@@ -819,8 +840,8 @@ export default function InboxPage() {
                               </span>
                             )}
                             {lead.status === "deal" && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border" style={{ color: "var(--adm-success)", backgroundColor: "rgba(16,185,129,0.1)", borderColor: "rgba(16,185,129,0.2)" }}>
-                                DP LUNAS
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold" style={{ color: "var(--adm-success)", backgroundColor: "rgba(16,185,129,0.1)" }}>
+                                DP Lunas
                               </span>
                             )}
                           </div>
@@ -934,7 +955,12 @@ export default function InboxPage() {
                   ) : newLead.service === "Produk Digital" ? (
                     <div>
                       <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Nama Produk</label>
-                      <input type="text" value={newLead.serviceDetail} onChange={e => setNewLead({...newLead, serviceDetail: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan nama produk" />
+                      <input type="text" value={newLead.serviceDetail || ""} onChange={e => setNewLead({...newLead, serviceDetail: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Masukkan nama produk" />
+                    </div>
+                  ) : newLead.service === "Jasa Modifikasi" ? (
+                    <div>
+                      <label className="text-xs font-semibold mb-1.5 block text-[var(--adm-text-2)]">Link Website / Referensi</label>
+                      <input type="text" value={newLead.referenceLink || ""} onChange={e => setNewLead({...newLead, referenceLink: e.target.value})} className="w-full px-3 py-2.5 rounded-xl text-sm bg-transparent border border-[var(--adm-border)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors" placeholder="Misal: revtech.id" />
                     </div>
                   ) : null}
                 </div>
@@ -1000,7 +1026,7 @@ export default function InboxPage() {
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button type="button" onClick={() => setView("list")} className="px-5 py-2 rounded-lg font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm">Batal</button>
                   <button type="submit" className="px-5 py-2 rounded-lg bg-[var(--adm-accent)] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-                    {editingId ? "Simpan Perubahan" : "Simpan ke Inbox"}
+                    {editingId ? "Simpan Perubahan" : "Simpan ke Leads"}
                   </button>
                 </div>
               </form>
