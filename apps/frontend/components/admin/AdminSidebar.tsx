@@ -19,6 +19,8 @@ import {
   User,
   History,
   Trash2,
+  Image as ImageIcon,
+  MessageSquareQuote,
   type LucideIcon,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
@@ -35,6 +37,8 @@ export const NAV_ITEMS = [
   { label: "RevTech Studio", icon: Sparkles, href: "/admin/studio" },
   { label: "Blog", icon: FileText, href: "/admin/blog" },
   { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio" },
+  { label: "Testimoni", icon: MessageSquareQuote, href: "/admin/testimoni" },
+  { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero" },
 ];
 
 export function SidebarProfileSection() {

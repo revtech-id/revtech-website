@@ -607,3 +607,181 @@ export function SaveButton({ isSaving, label = "Simpan Perubahan", className, ..
     </button>
   );
 }
+
+// ── AdminTabs ─────────────────────────────────────────────────────────────────
+
+export interface TabItem {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+interface AdminTabsProps {
+  tabs: TabItem[];
+  activeTab: string;
+  onTabChange: (id: string) => void;
+}
+
+export function AdminTabs({ tabs, activeTab, onTabChange }: AdminTabsProps) {
+  return (
+    <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide w-full sm:w-auto">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onTabChange(t.id)}
+          className={cn(
+            "shrink-0 pb-3 text-sm font-semibold transition-all flex items-center gap-2 border-b-2 -mb-px",
+            activeTab === t.id
+              ? "border-red-500 text-red-500"
+              : "border-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
+          )}
+        >
+          {t.label}
+          {(t.count ?? 0) > 0 && (
+            <span className={cn(
+              "px-1.5 py-0.5 text-[10px] rounded-full",
+              activeTab === t.id 
+                ? "bg-red-500 text-white" 
+                : "bg-[var(--adm-bg)] text-[var(--adm-text-2)]"
+            )}>
+              {t.count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── AdminConfirmModal ──────────────────────────────────────────────────────────
+
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect } from "react";
+
+interface AdminConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  confirmVariant?: "danger" | "primary" | "warning";
+}
+
+export function AdminConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Lanjutkan", confirmVariant = "danger" }: AdminConfirmModalProps) {
+  const getIcon = () => {
+    if (confirmVariant === "danger") return <Trash2 size={20} />;
+    if (confirmVariant === "warning") return <Archive size={20} />;
+    if (confirmVariant === "primary") return <Send size={20} />;
+    return <AlertTriangle size={20} />;
+  };
+
+  const getIconBg = () => {
+    if (confirmVariant === "danger") return "bg-red-500/10 text-red-500";
+    if (confirmVariant === "warning") return "bg-amber-500/10 text-amber-500";
+    if (confirmVariant === "primary") return "bg-blue-500/10 text-blue-500";
+    return "bg-[var(--adm-accent)]/10 text-[var(--adm-accent)]";
+  };
+
+  const getButtonBg = () => {
+    if (confirmVariant === "danger") return "bg-red-500 hover:bg-red-600 text-white";
+    if (confirmVariant === "warning") return "bg-amber-500 hover:bg-amber-600 text-white";
+    if (confirmVariant === "primary") return "bg-blue-500 hover:bg-blue-600 text-white";
+    return "bg-[var(--adm-accent)] hover:brightness-110 text-white";
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
+          >
+            <div className="bg-[var(--adm-card)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)] pointer-events-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getIconBg()}`}>
+                  {getIcon()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-[var(--adm-text)]">{title}</h3>
+                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+                    {message}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => {
+                    onConfirm();
+                    onClose();
+                  }}
+                  className={`flex-1 py-2 text-sm font-bold rounded-xl transition-colors ${getButtonBg()}`}
+                >
+                  {confirmText}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ── AdminToast ────────────────────────────────────────────────────────────────
+
+interface AdminToastProps {
+  isVisible: boolean;
+  message: string;
+  type?: "success" | "error" | "info";
+  onClose: () => void;
+}
+
+export function AdminToast({ isVisible, message, type = "success", onClose }: AdminToastProps) {
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(() => onClose(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 50, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          className="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-[var(--adm-shadow-lg)] text-sm font-semibold z-[999] flex items-center gap-2 bg-[var(--adm-card)] text-[var(--adm-text)]"
+        >
+          {type === "success" ? (
+            <CheckCircle2 size={18} className="text-emerald-500" />
+          ) : type === "error" ? (
+            <AlertTriangle size={18} className="text-red-500" />
+          ) : (
+            <div className="w-4 h-4 rounded-full bg-blue-500" />
+          )}
+          {message}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+

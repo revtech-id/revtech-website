@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -18,12 +19,35 @@ const heroContainerVariant = {
 };
 
 export default function HeroSection() {
+  const [bgImage, setBgImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem("revtech_hero_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.bgImage) setBgImage(parsed.bgImage);
+        } catch (e) {}
+      }
+    };
+    handleStorageChange();
+    window.addEventListener("storage", handleStorageChange);
+    // Custom event for immediate updates within same window
+    window.addEventListener("hero-settings-updated", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("hero-settings-updated", handleStorageChange);
+    };
+  }, []);
+
   return (
     <section className="relative min-h-[85vh] lg:min-h-[90vh] flex items-center pt-32 lg:pt-40 pb-20 lg:pb-48 overflow-hidden bg-white">
 
       {/* --- DESKTOP & TABLET: Background Image & Gradient --- */}
       <div
-        className="hidden md:block absolute inset-0 z-0 pointer-events-none bg-[url('/assets/revtech-bg.webp')] bg-cover xl:bg-contain bg-right-bottom bg-no-repeat opacity-40 xl:opacity-100"
+        className="hidden md:block absolute inset-0 z-0 pointer-events-none bg-cover xl:bg-contain bg-right-bottom bg-no-repeat opacity-40 xl:opacity-100 transition-all duration-300"
+        style={{ backgroundImage: `url('${bgImage || "/assets/revtech-bg.webp"}')` }}
       />
       <div className="hidden md:block absolute inset-y-0 left-0 w-full md:w-3/4 bg-gradient-to-r from-white via-white/95 to-transparent z-0 pointer-events-none" />
       {/* ----------------------------------------------- */}

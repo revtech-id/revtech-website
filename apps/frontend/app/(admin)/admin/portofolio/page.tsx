@@ -1,8 +1,98 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { StatusBadge, EmptyState } from "@/components/admin/ui";
+import { useDropzone } from "react-dropzone";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
+import { ExternalLink, Pencil, Archive, Trash2, Star, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+
+import "react-quill-new/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { 
+  ssr: false, 
+  loading: () => <div className="h-[450px] w-full flex items-center justify-center bg-[var(--adm-bg)] text-[var(--adm-text-3)] animate-pulse rounded-xl">Memuat Editor...</div> 
+});
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ 'header': [2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    ['link', 'image'],
+    ['clean']
+  ],
+  keyboard: {
+    bindings: {
+      'list autofill': {
+        key: ' ',
+        handler: () => true
+      },
+      divider: {
+        key: 'Enter',
+        collapsed: true,
+        prefix: /^---$/,
+        handler: function(range: any, context: any) {
+          // @ts-ignore
+          this.quill.deleteText(range.index - 3, 3);
+          // @ts-ignore
+          this.quill.insertEmbed(range.index - 3, 'divider', true, 'user');
+          // @ts-ignore
+          this.quill.setSelection(range.index - 2, 'user');
+          return false;
+        }
+      },
+      h2: {
+        key: ' ',
+        collapsed: true,
+        prefix: /^##$/,
+        handler: function(range: any, context: any) {
+          // @ts-ignore
+          this.quill.deleteText(range.index - 2, 2);
+          // @ts-ignore
+          this.quill.formatLine(range.index - 2, 1, 'header', 2);
+          return false;
+        }
+      },
+      h3: {
+        key: ' ',
+        collapsed: true,
+        prefix: /^###$/,
+        handler: function(range: any, context: any) {
+          // @ts-ignore
+          this.quill.deleteText(range.index - 3, 3);
+          // @ts-ignore
+          this.quill.formatLine(range.index - 3, 1, 'header', 3);
+          return false;
+        }
+      },
+      blockquote: {
+        key: ' ',
+        collapsed: true,
+        prefix: /^>$/,
+        handler: function(range: any, context: any) {
+          // @ts-ignore
+          this.quill.deleteText(range.index - 1, 1);
+          // @ts-ignore
+          this.quill.formatLine(range.index - 1, 1, 'blockquote', true);
+          return false;
+        }
+      },
+      bulletListDash: {
+        key: ' ',
+        collapsed: true,
+        prefix: /^-$/,
+        handler: function(range: any, context: any) {
+          // @ts-ignore
+          this.quill.deleteText(range.index - 1, 1);
+          // @ts-ignore
+          this.quill.formatLine(range.index - 1, 1, 'list', 'bullet');
+          return false;
+        }
+      }
+    }
+  }
+};
 
 interface Portfolio {
   id: string;
@@ -10,39 +100,79 @@ interface Portfolio {
   client: string;
   category: string;
   thumbnail: string;
+  content: string;
   url: string | null;
+  projectDate: string;
+  description: string;
   techStack: string[];
   featured: boolean;
+  status: "published" | "draft" | "archived";
   publishedAt: string;
 }
 
 const MOCK_INITIAL: Portfolio[] = [
-  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "E-Commerce", thumbnail: "", url: "https://majujaya.com", techStack: ["Next.js", "Tailwind CSS", "Stripe"], featured: true, publishedAt: "2026-04-15" },
-  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Company Profile", thumbnail: "", url: "https://bintangnusantara.co.id", techStack: ["Next.js", "Framer Motion"], featured: false, publishedAt: "2026-06-01" },
-  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Menu Digital", thumbnail: "", url: "https://rmsederhana.id", techStack: ["HTML", "CSS", "JS"], featured: true, publishedAt: "2026-06-30" },
+  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], featured: true, status: "published", publishedAt: "2026-04-15" },
+  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], featured: false, status: "published", publishedAt: "2026-06-01" },
+  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], featured: true, status: "published", publishedAt: "2026-06-30" },
 ];
 
-const CATEGORIES = ["Semua", "Company Profile", "E-Commerce", "Landing Page", "Menu Digital", "Sistem Custom"];
-
-const EMPTY_FORM = {
-  title: "", client: "", category: "Company Profile",
-  url: "", techStack: "", featured: false
+const EMPTY_FORM: {
+  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; featured: boolean; status: Portfolio["status"]; content: string; thumbnail: string;
+} = {
+  title: "", client: "", category: "",
+  url: "", projectDate: "", description: "", techStack: "", featured: false, status: "published", content: "", thumbnail: ""
 };
 
 export default function PortofolioPage() {
   const [isClient, setIsClient] = useState(false);
   const [items, setItems] = useState<Portfolio[]>([]);
   const [filter, setFilter] = useState("Semua");
+  const [tabFilter, setTabFilter] = useState("all");
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: "success" | "error" }>({ isVisible: false, message: "", type: "success" });
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(prev => ({ ...prev, thumbnail: reader.result as string }));
+      setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': [] },
+    maxFiles: 1,
+  });
 
   useEffect(() => {
     setIsClient(true);
     const saved = localStorage.getItem("revtech_portfolio");
     setItems(saved ? JSON.parse(saved) : MOCK_INITIAL);
     if (!saved) localStorage.setItem("revtech_portfolio", JSON.stringify(MOCK_INITIAL));
+
+    // Register Divider Blot dynamically for ReactQuill
+    import("react-quill-new").then((mod) => {
+      const Quill = mod.default.Quill;
+      if (Quill && !Quill.imports['formats/divider']) {
+        const BlockEmbed: any = Quill.import('blots/block/embed');
+        class DividerBlot extends BlockEmbed {
+          static blotName = 'divider';
+          static tagName = 'hr';
+        }
+        Quill.register(DividerBlot as any);
+      }
+    });
   }, []);
 
   function save(updated: Portfolio[]) {
@@ -53,170 +183,273 @@ export default function PortofolioPage() {
   function handleEdit(item: Portfolio) {
     setForm({
       title: item.title, client: item.client, category: item.category,
-      url: item.url || "", techStack: item.techStack.join(", "),
-      featured: item.featured
+      url: item.url || "", projectDate: item.projectDate || "", description: item.description || "", techStack: item.techStack.join(", "),
+      featured: item.featured, status: item.status, content: item.content || "",
+      thumbnail: item.thumbnail || ""
     });
     setEditingId(item.id);
     setView("form");
   }
 
-  function handleDelete(id: string) {
-    save(items.filter(i => i.id !== id));
-    setDeletingId(null);
+  function confirmDelete(id: string) {
+    setConfirmModal({
+      isOpen: true,
+      title: "Hapus Proyek",
+      message: "Proyek ini akan dihapus dari portofolio secara permanen.",
+      confirmText: "Hapus",
+      confirmVariant: "danger",
+      action: () => {
+        save(items.filter(i => i.id !== id));
+        setToast({ isVisible: true, message: "Proyek berhasil dihapus", type: "success" });
+      }
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
     let updated = [...items];
+    let itemSlug = editingId ? items.find(i => i.id === editingId)?.id : undefined;
+
     if (editingId) {
       updated = items.map(i => i.id === editingId ? {
         ...i, title: form.title, client: form.client, category: form.category,
-        url: form.url || null, techStack: techArr, featured: form.featured
+        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, featured: form.featured, status: form.status, content: form.content,
+        thumbnail: form.thumbnail
       } : i);
     } else {
+      const newId = `PF-${Date.now().toString().slice(-5)}`;
+      itemSlug = newId;
       updated = [{
-        id: `PF-${Date.now().toString().slice(-5)}`,
+        id: newId,
         title: form.title, client: form.client, category: form.category,
-        url: form.url || null, techStack: techArr, featured: form.featured,
-        thumbnail: "", publishedAt: new Date().toISOString().split("T")[0]
+        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, featured: form.featured,
+        thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: new Date().toISOString().split("T")[0]
       }, ...items];
     }
     save(updated);
+
+    // Sync to public page via API when publishing
+    if (form.status === "published") {
+      const slug = form.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+      fetch("/api/admin/portfolio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          title: form.title,
+          client: form.client,
+          category: form.category,
+          url: form.url,
+          projectDate: form.projectDate,
+          description: form.description,
+          content: form.content,
+          thumbnail: form.thumbnail,
+          featured: form.featured,
+        }),
+      }).catch(console.error);
+    }
+
     setView("list");
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
+  }
+
+  function confirmArchive(id: string, currentStatus: string) {
+    const isArchived = currentStatus === "archived";
+    setConfirmModal({
+      isOpen: true,
+      title: isArchived ? "Kembalikan Proyek" : "Arsipkan Proyek",
+      message: isArchived ? "Proyek ini akan dikembalikan ke status Draft." : "Proyek ini akan dipindahkan ke Arsip dan tidak terlihat oleh publik.",
+      confirmText: isArchived ? "Kembalikan" : "Arsipkan",
+      confirmVariant: "warning",
+      action: () => {
+        save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
+        setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
+      }
+    });
+  }
+
+  function confirmPublish(id: string) {
+    setConfirmModal({
+      isOpen: true,
+      title: "Publish Proyek",
+      message: "Proyek ini akan diterbitkan ke portofolio publik.",
+      confirmText: "Publish",
+      confirmVariant: "primary",
+      action: () => {
+        save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
+        setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
+      }
+    });
   }
 
   function toggleFeatured(id: string) {
     save(items.map(i => i.id === id ? { ...i, featured: !i.featured } : i));
   }
 
-  const filtered = filter === "Semua" ? items : items.filter(p => p.category === filter);
+  const published = items.filter(i => (i.status || "published") === "published");
+  const drafts = items.filter(i => i.status === "draft");
+  const archived = items.filter(i => i.status === "archived");
+
+  const TABS = [
+    { id: "all", label: "Semua", count: items.length },
+    { id: "featured", label: "Featured", count: items.filter(i => i.featured).length },
+    { id: "draft", label: "Draft", count: drafts.length },
+    { id: "archived", label: "Arsip", count: archived.length },
+    { id: "published", label: "Published", count: published.length },
+  ];
+
+  const filtered = items.filter(item => {
+    const s = item.status || "published";
+    const matchTab = 
+      tabFilter === "all" ? true :
+      tabFilter === "featured" ? item.featured :
+      tabFilter === "published" ? s === "published" :
+      tabFilter === "draft" ? s === "draft" :
+      tabFilter === "archived" ? s === "archived" : true;
+
+    const matchCategory = filter === "Semua" || item.category === filter;
+    const searchString = `${item.title} ${item.client}`.toLowerCase();
+    const matchSearch = !search || searchString.includes(search.toLowerCase());
+    
+    return matchTab && matchCategory && matchSearch;
+  }).sort((a, b) => {
+    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+  });
   const featured = items.filter(p => p.featured).length;
 
   if (!isClient) return null;
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-5 mt-2">
-        {view === "form" ? (
-          <button onClick={() => setView("list")} className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-slate-600">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            Kembali
-          </button>
-        ) : <div />}
-        {view === "list" && (
-          <button
-            id="add-portfolio"
-            onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setView("form"); }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            Tambah Proyek
-          </button>
-        )}
-      </div>
+      <AdminToolbar
+        view={view === "form" ? "form" : "list"}
+        onBack={() => setView("list")}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari proyek atau klien..."
+        dropdown={
+          <div className="flex items-center h-full">
+            <div className="relative flex items-center shrink-0">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer"
+              >
+                <option value="Semua" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Semua Layanan</option>
+                {Array.from(new Set(items.map(i => i.category))).filter(Boolean).map(c => (
+                  <option key={c} value={c} className="bg-[var(--adm-card)] text-[var(--adm-text)]">{c}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute right-3">
+                <ChevronDown size={14} strokeWidth={2.5} className="text-[var(--adm-text-3)]" />
+              </div>
+            </div>
+          </div>
+        }
+        onAdd={() => { setEditingId(null); setForm(EMPTY_FORM); setView("form"); }}
+        addLabel="Tambah Proyek"
+      />
 
       {view === "list" && (
         <>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {[
-              { label: "Total Proyek", value: items.length, icon: "collections", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-              { label: "Featured", value: featured, icon: "star", iconBg: "bg-amber-50", iconColor: "text-amber-600" },
-              { label: "Kategori", value: new Set(items.map(i => i.category)).size, icon: "category", iconBg: "bg-indigo-50", iconColor: "text-indigo-600" },
-            ].map((s, i) => (
-              <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: i * 0.07 } }} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
-                  <span className={`material-symbols-outlined text-[20px] ${s.iconColor}`} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">{s.label}</p>
-                  <p className="text-xl font-bold text-slate-900">{s.value}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          {/* Tabs & Actions Row */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4 sm:gap-0">
+            {/* Tabs Status */}
+            <AdminTabs tabs={TABS} activeTab={tabFilter} onTabChange={setTabFilter} />
 
-          {/* Category filter */}
-          <div className="flex items-center gap-1.5 mb-5 flex-wrap">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                id={`filter-portfolio-${cat.toLowerCase().replace(/\s+/g, "-")}`}
-                onClick={() => setFilter(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filter === cat ? "bg-blue-600 text-white" : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"}`}
-              >
-                {cat}
-              </button>
-            ))}
+            {/* Actions (Sort) */}
+            <div className="flex items-center pb-2.5 shrink-0 self-start sm:self-auto px-1 sm:px-0">
+              <div className="relative flex items-center justify-center shrink-0 group">
+                <button className="text-[var(--adm-text-3)] group-hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+                  <SlidersHorizontal size={18} strokeWidth={2.5} />
+                </button>
+                <select
+                  dir="rtl"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as "desc" | "asc")}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Urutkan"
+                >
+                  <option value="desc" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terbaru</option>
+                  <option value="asc" className="bg-[var(--adm-card)] text-[var(--adm-text)]" dir="ltr">Terlama</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           {filtered.length === 0 ? (
             <EmptyState icon="collections" title="Belum ada proyek" description="Tambahkan proyek pertama Anda ke portofolio." />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.07, type: "spring", stiffness: 300, damping: 24 } }}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden group hover:shadow-md hover:border-blue-200 transition-all"
-                >
-                  {/* Thumbnail */}
-                  <div className="h-36 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center relative">
-                    <span className="material-symbols-outlined text-blue-200 text-[56px]">web</span>
-                    {item.featured && (
-                      <div className="absolute top-3 right-3">
-                        <StatusBadge label="Featured" variant="amber" />
-                      </div>
-                    )}
-                    {/* Hover overlay actions */}
-                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button onClick={() => handleEdit(item)} className="px-3 py-1.5 rounded-lg bg-white text-slate-800 text-xs font-bold hover:bg-blue-50">
-                        Edit
+            <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--adm-border)] bg-[var(--adm-bg)]">
+                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide">Proyek</div>
+                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide text-right w-36 sm:w-40 shrink-0">Aksi</div>
+              </div>
+              <div className="divide-y divide-[var(--adm-border)]">
+                {filtered.map((item, i) => (
+                  <div key={item.id} className="flex items-center justify-between px-6 py-4">                    {/* Left: Star, Thumbnail & Text */}
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
+                      <button onClick={() => toggleFeatured(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.featured ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.featured ? "Hapus dari Featured" : "Jadikan Featured"}>
+                        <Star size={14} strokeWidth={item.featured ? 0 : 2} className={item.featured ? "fill-amber-500" : ""} />
                       </button>
-                      <button onClick={() => toggleFeatured(item.id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${item.featured ? "bg-amber-400 text-white" : "bg-white text-slate-700"}`}>
-                        {item.featured ? "★ Featured" : "☆ Feature"}
+                      
+                      <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
+                        <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">web</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
+                          {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
+                        </div>
+                        <p className="text-xs text-[var(--adm-text-3)] truncate">
+                          {item.client ? item.client.toLowerCase().replace(/\s+/g, '-') : item.category.toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Right: Date & Actions */}
+                    <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
+                      {item.status !== "draft" && item.publishedAt && (
+                        <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
+                          {new Date(item.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-end gap-1.5 w-auto sm:w-auto shrink-0">
+                      {item.url ? (
+                        <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Tautan">
+                          <ExternalLink size={14} strokeWidth={2} />
+                        </a>
+                      ) : (
+                        <div className="w-[26px] h-[26px]" /> /* placeholder to maintain alignment */
+                      )}
+                      {item.status !== "published" && (
+                        <button onClick={() => confirmPublish(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
+                          <Send size={14} strokeWidth={2} />
+                        </button>
+                      )}
+                      <button onClick={() => handleEdit(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
+                        <Pencil size={14} strokeWidth={2} />
+                      </button>
+                      <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
+                        <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
+                      </button>
+                      <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+                        <Trash2 size={14} strokeWidth={2} />
                       </button>
                     </div>
                   </div>
-                  <div className="p-4 space-y-2">
-                    <div>
-                      <p className="font-semibold text-slate-800 text-sm">{item.title}</p>
-                      <p className="text-xs text-slate-400">{item.client}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <StatusBadge label={item.category} variant="indigo" />
-                      {item.techStack.slice(0, 2).map(t => (
-                        <span key={t} className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{t}</span>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs text-slate-400">{new Date(item.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
-                      <div className="flex items-center gap-1">
-                        {item.url && (
-                          <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
-                            <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                          </a>
-                        )}
-                        {deletingId === item.id ? (
-                          <>
-                            <button onClick={() => handleDelete(item.id)} className="px-2 py-1 text-[10px] font-bold bg-red-600 text-white rounded-lg">Hapus</button>
-                            <button onClick={() => setDeletingId(null)} className="px-2 py-1 text-[10px] bg-slate-100 rounded-lg">Batal</button>
-                          </>
-                        ) : (
-                          <button onClick={() => setDeletingId(item.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                </div>
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -224,51 +457,234 @@ export default function PortofolioPage() {
 
       {/* Form */}
       {view === "form" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-800 mb-6">{editingId ? "Edit Proyek" : "Tambah Proyek Baru"}</h2>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Judul Proyek *</label>
-                <input required type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Website Company Profile PT. Maju Jaya" />
-              </div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {/* Toolbar Atas */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => { setForm(prev => ({ ...prev, status: "draft" })); document.getElementById("porto-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              className="px-4 py-2.5 text-sm font-bold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors"
+            >
+              Simpan Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => { setForm(prev => ({ ...prev, status: "published" })); document.getElementById("porto-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              className="px-5 py-2.5 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:brightness-110 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Send size={16} strokeWidth={2.5} /> Publish
+            </button>
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Nama Klien *</label>
-                  <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="PT. Maju Jaya" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Kolom Kiri: Judul + Editor */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-sm flex flex-col overflow-hidden">
+                <div className="px-5 pt-5 pb-4 border-b border-[var(--adm-border)]">
+                  <h2 className="text-lg font-bold text-[var(--adm-text)] mb-4">{editingId ? "Edit Proyek" : "Tambah Proyek Baru"}</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Judul Proyek *</label>
+                      <input
+                        required
+                        type="text"
+                        value={form.title}
+                        onChange={e => setForm({ ...form, title: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
+                        placeholder="Masukkan judul proyek..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Deskripsi Singkat</label>
+                      <textarea
+                        value={form.description}
+                        onChange={e => setForm({ ...form, description: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)] resize-none"
+                        rows={2}
+                        placeholder="Masukkan deskripsi singkat proyek..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Kategori *</label>
-                  <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                    {CATEGORIES.filter(c => c !== "Semua").map(c => <option key={c}>{c}</option>)}
-                  </select>
+
+                {/* Editor */}
+                <div className="p-4">
+                  <div className="rounded-xl border border-[var(--adm-border)] overflow-hidden [&_.quill]:flex [&_.quill]:flex-col [&_.quill]:h-full [&_.ql-toolbar]:border-x-0 [&_.ql-toolbar]:border-t-0 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-[var(--adm-border)] [&_.ql-toolbar]:bg-[var(--adm-bg)] [&_.ql-container]:border-none [&_.ql-editor]:min-h-[450px] [&_.ql-editor]:max-h-[600px] [&_.ql-editor]:overflow-y-auto [&_.ql-editor]:text-base [&_.ql-editor]:text-[var(--adm-text)] [&_.ql-editor]:leading-relaxed [&_.ql-editor]:p-5 prose prose-slate prose-sm max-w-none prose-headings:font-bold prose-a:text-blue-600 prose-img:rounded-xl dark:prose-invert">
+                    <style>{`
+                      .ql-container.ql-snow { border: none !important; }
+                      .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid var(--adm-border) !important; }
+                      .ql-editor, .ql-editor * { color: var(--adm-text) !important; background-color: transparent !important; }
+                      .ql-editor a, .ql-editor a * { color: var(--adm-accent) !important; }
+                      .ql-editor.ql-blank::before { color: var(--adm-text-3) !important; font-style: italic; }
+                      .ql-editor p, .ql-editor ul, .ql-editor ol, .ql-editor blockquote, .ql-editor pre { margin-bottom: 1rem !important; }
+                      .ql-editor h1, .ql-editor h2, .ql-editor h3 { margin-top: 1.5rem !important; margin-bottom: 0.5rem !important; }
+                      .ql-editor h1:first-child, .ql-editor h2:first-child, .ql-editor h3:first-child, .ql-editor p:first-child { margin-top: 0 !important; }
+                      .ql-editor li { margin-bottom: 0.25rem !important; }
+                      .ql-editor hr { border: none !important; border-top: 1px solid var(--adm-border) !important; margin: 2rem 0 !important; }
+                      .ql-snow .ql-stroke { stroke: var(--adm-text-2); }
+                      .ql-snow .ql-fill { fill: var(--adm-text-2); }
+                      .ql-snow .ql-picker { color: var(--adm-text-2); }
+                      .ql-snow.ql-toolbar button:hover .ql-stroke, .ql-snow .ql-toolbar button:hover .ql-stroke,
+                      .ql-snow.ql-toolbar button.ql-active .ql-stroke, .ql-snow .ql-toolbar button.ql-active .ql-stroke,
+                      .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke, .ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke { stroke: var(--adm-text) !important; }
+                      .ql-snow.ql-toolbar button:hover .ql-fill, .ql-snow .ql-toolbar button:hover .ql-fill,
+                      .ql-snow.ql-toolbar button.ql-active .ql-fill, .ql-snow .ql-toolbar button.ql-active .ql-fill,
+                      .ql-snow.ql-toolbar .ql-picker-label:hover .ql-fill, .ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-fill { fill: var(--adm-text) !important; }
+                      .ql-snow.ql-toolbar button:hover, .ql-snow .ql-toolbar button:hover,
+                      .ql-snow.ql-toolbar button.ql-active, .ql-snow .ql-toolbar button.ql-active,
+                      .ql-snow.ql-toolbar .ql-picker-label:hover, .ql-snow .ql-toolbar .ql-picker-label.ql-active { color: var(--adm-text) !important; }
+                      .ql-snow.ql-toolbar .ql-picker-item.ql-selected, .ql-snow .ql-toolbar .ql-picker-item.ql-selected,
+                      .ql-snow.ql-toolbar .ql-picker-item:hover, .ql-snow .ql-toolbar .ql-picker-item:hover { color: var(--adm-text) !important; }
+                      .ql-snow .ql-picker-options { background-color: var(--adm-card) !important; border: none !important; color: var(--adm-text-2) !important; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); border-radius: 0.75rem; padding: 0.5rem; }
+                      .ql-snow .ql-tooltip { background-color: var(--adm-card) !important; border: none !important; color: var(--adm-text) !important; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+                      .ql-snow .ql-tooltip input[type=text] { background-color: var(--adm-bg) !important; color: var(--adm-text) !important; border: 1px solid var(--adm-border) !important; border-radius: 0.5rem; padding: 0.25rem 0.5rem; }
+                      .ql-snow .ql-tooltip a.ql-action::before { color: var(--adm-accent) !important; }
+                      .ql-snow .ql-tooltip a.ql-remove::before { color: #ef4444 !important; }
+                    `}</style>
+                    <ReactQuill
+                      theme="snow"
+                      value={form.content}
+                      onChange={(value) => setForm({ ...form, content: value })}
+                      modules={QUILL_MODULES}
+                      placeholder="Mulai menulis deskripsi atau studi kasus proyek..."
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">URL Website / Proyek</label>
-                <input type="text" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Cth: majujaya.com" />
-              </div>
+            {/* Kolom Kanan: Thumbnail + Detail */}
+            <div className="lg:col-span-1 h-full">
+              <form id="porto-form" onSubmit={handleSubmit} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-sm flex flex-col overflow-hidden h-full">
 
-              <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1.5 block">Tech Stack (pisahkan dengan koma)</label>
-                <input type="text" value={form.techStack} onChange={e => setForm({ ...form, techStack: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Next.js, Tailwind CSS, Framer Motion" />
-              </div>
+                {/* Thumbnail */}
+                <div className="p-5 border-b border-[var(--adm-border)] space-y-3">
+                  <h3 className="text-sm font-bold text-[var(--adm-text)] border-b border-[var(--adm-border)] pb-3 mb-3">Gambar Thumbnail</h3>
+                  {form.thumbnail ? (
+                    <div className="w-full rounded-xl border border-[var(--adm-border)] overflow-hidden relative group">
+                      <button type="button" onClick={() => setPreviewImage(form.thumbnail)} title="Lihat ukuran penuh" className="block w-full text-left">
+                        <img src={form.thumbnail} alt="Thumbnail" className="w-full h-40 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
+                      </button>
+                      <div className="absolute top-3 right-3 flex items-center gap-2">
+                        <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti">
+                          <Pencil size={14} />
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setForm({ ...form, thumbnail: reader.result as string });
+                              setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
+                            };
+                            reader.readAsDataURL(file);
+                          }} />
+                        </label>
+                        <button type="button" onClick={() => setForm({ ...form, thumbnail: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      {...getRootProps()}
+                      className={`w-full py-6 px-4 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${isDragActive ? "border-[var(--adm-accent)] bg-[var(--adm-accent)]/10" : "border-[var(--adm-border)] hover:border-[var(--adm-accent)] hover:bg-[var(--adm-bg)]"}`}
+                    >
+                      <input {...getInputProps()} />
+                      <div className="p-3 bg-[var(--adm-bg)] rounded-full">
+                        <UploadCloud size={24} className={isDragActive ? "text-[var(--adm-accent)]" : "text-[var(--adm-text-3)]"} />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-[var(--adm-text)]">{isDragActive ? "Lepaskan..." : "Klik atau seret file"}</p>
+                        <p className="text-xs text-[var(--adm-text-3)] mt-1">PNG, JPG, WEBP maks 5MB</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} className="w-4 h-4 rounded" />
-                <span className="text-sm font-medium text-slate-700">Tampilkan sebagai Featured di halaman portofolio publik</span>
-              </label>
+                {/* Detail Proyek */}
+                <div className="p-5 flex-1 flex flex-col gap-4">
+                  <h3 className="text-xs font-bold text-[var(--adm-text-2)] uppercase tracking-wide border-b border-[var(--adm-border)] pb-3">Detail Proyek</h3>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setView("list")} className="px-5 py-2.5 rounded-xl font-semibold text-slate-500 bg-transparent hover:text-slate-800 transition-colors text-sm">Batal</button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm text-sm">{editingId ? "Simpan Perubahan" : "Tambah Proyek"}</button>
-              </div>
-            </form>
+                  <div>
+                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Nama Klien *</label>
+                    <input required type="text" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" placeholder="Masukkan nama klien..." />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Layanan *</label>
+                    <input required type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" placeholder="Masukkan jenis layanan..." />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">URL Website / Proyek</label>
+                    <input type="text" value={form.url || ""} onChange={e => setForm({ ...form, url: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" placeholder="Contoh: google.com" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Bulan & Tahun</label>
+                      <input type="month" value={form.projectDate} onChange={e => setForm({ ...form, projectDate: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <label className="flex items-center gap-2 cursor-pointer py-2">
+                        <input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
+                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Featured Project</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
           </div>
         </motion.div>
       )}
+
+
+      {/* Popups & Toasts */}
+      <AdminConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        confirmVariant={confirmModal.confirmVariant}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={() => { confirmModal.action(); setConfirmModal(prev => ({ ...prev, isOpen: false })); }}
+      />
+      <AdminToast
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+      />
+
+      {/* Image Preview Modal */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" 
+            onClick={() => setPreviewImage(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center" 
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                type="button"
+                onClick={() => setPreviewImage(null)} 
+                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors bg-white/10 rounded-full hover:bg-white/20"
+              >
+                <X size={24} />
+              </button>
+              <img src={previewImage} alt="Preview" className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

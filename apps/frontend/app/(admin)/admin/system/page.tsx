@@ -322,9 +322,9 @@ export default function SystemPage() {
                     </div>
                  </form>
               </AdminCard>
-           </div>
-           
-        </motion.div>
+            </div>
+            
+         </motion.div>
       </div>
 
       {tempImageSrc && (

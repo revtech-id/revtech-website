@@ -5,6 +5,8 @@ import PortfolioGrid from '@/components/portofolio/PortfolioGrid';
 
 import { getSortedPortfoliosData } from '@/lib/portfolio';
 
+export const revalidate = 0;
+
 export const metadata: Metadata = {
     title: "Portofolio & Karya Digital | RevTech",
     description: "Kumpulan mahakarya inovasi digital RevTech, mulai dari arsitektur website, katalog produk, hingga sistem kustom terintegrasi.",

@@ -49,7 +49,7 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/klien": "Database klien terdaftar dan pemantauan situs aktif",
   "/admin/invoice": "Kelola tagihan DP, pelunasan, dan status pembayaran",
   "/admin/maintenance": "Pemantauan masa aktif domain & hosting seluruh klien",
-  "/admin/studio": "Document Generator, AI Review & Export ke Antigravity",
+  "/admin/studio": "AI Copilot untuk merancang arsitektur & men-generate dokumen spesifikasi proyek",
   "/admin/blog": "Kelola artikel edukasi & konten pemasaran",
   "/admin/portofolio": "Showcase studi kasus & proyek terbaik RevTech",
   "/admin/team": "Org chart Solo Founder & AI Co-Pilot",

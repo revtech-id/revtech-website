@@ -1,6 +1,8 @@
 import { getSortedPostsData } from '@/lib/blog';
 import BlogList from '@/components/blog/BlogList';
 
+export const revalidate = 0;
+
 export default function BlogIndex() {
   const allPostsData = getSortedPostsData();
 

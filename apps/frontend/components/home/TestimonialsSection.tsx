@@ -1,13 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import type { Testimonial, TestimonialMessage } from "@/data/testimonials";
 
-export default function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
-  const [activeId, setActiveId] = useState(testimonials[0]?.id || 1);
+export default function TestimonialsSection({ testimonials: initialTestimonials }: { testimonials: Testimonial[] }) {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(initialTestimonials);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem("revtech_testimonials");
+      if (saved) {
+        try {
+          const parsed: Testimonial[] = JSON.parse(saved);
+          // Only show published ones on the frontend
+          const published = parsed.filter(t => (t as any).status !== 'draft');
+          if (published.length > 0) {
+            setTestimonials(published);
+            return;
+          }
+        } catch (e) {}
+      }
+    };
+    handleStorageChange();
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("testimonials-updated", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("testimonials-updated", handleStorageChange);
+    };
+  }, []);
+
+  const [activeId, setActiveId] = useState<number | string>(testimonials[0]?.id || 1);
   const activeChat = testimonials.find(t => t.id === activeId) || testimonials[0];
 
   return (

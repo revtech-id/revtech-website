@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AdminCard, AdminToolbar } from "@/components/admin/ui";
+import { AdminCard, AdminToolbar, AdminTabs } from "@/components/admin/ui";
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle } from "lucide-react";
 import inboxData from "@/data/admin/inbox.json";
 import { countries as COUNTRIES } from "@/lib/countries";
@@ -679,27 +679,8 @@ export default function InboxPage() {
 
           {/* Tabs & Actions Row */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4 sm:gap-0">
-            {/* Tabs Status (Underline Style) */}
-            <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden scrollbar-hide w-full sm:w-auto">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setFilter(t.id)}
-                  className={`shrink-0 pb-3 text-sm font-semibold transition-all flex items-center gap-2 border-b-2 -mb-px ${
-                    filter === t.id
-                      ? "border-red-500 text-red-500"
-                      : "border-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
-                  }`}
-                >
-                  {t.label}
-                  {t.count !== undefined && t.count > 0 && (
-                    <span className={`px-1.5 py-0.5 text-[10px] rounded-full ${filter === t.id ? "bg-red-500 text-white" : "bg-[var(--adm-bg)] text-[var(--adm-text-2)]"}`}>
-                      {t.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {/* Tabs Status */}
+            <AdminTabs tabs={TABS} activeTab={filter} onTabChange={setFilter} />
 
             {/* Actions (Sort) */}
             <div className="flex items-center pb-2.5 shrink-0 self-start sm:self-auto px-1 sm:px-0">
