@@ -1,11 +1,24 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { modificationMenu } from '@/data/pricing';
+import { modificationMenu as defaultMods } from '@/data/pricing';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AfterSalesSupport() {
   const [isOpen, setIsOpen] = useState(false);
+  const [modMenu, setModMenu] = useState(defaultMods);
+
+  useEffect(() => {
+    const load = () => {
+      const saved = localStorage.getItem('revtech_modifications');
+      if (saved) {
+        try { setModMenu(JSON.parse(saved)); } catch (e) {}
+      }
+    };
+    load();
+    window.addEventListener('jasa-web-updated', load);
+    return () => window.removeEventListener('jasa-web-updated', load);
+  }, []);
 
   // Kunci scroll halaman saat modal terbuka
   useEffect(() => {
@@ -73,7 +86,7 @@ export default function AfterSalesSupport() {
 
               {/* Isi Modal */}
               <div className="overflow-y-auto p-5 sm:p-6 bg-gray-50/50">
-                {modificationMenu.map((menu, idx) => (
+                {modMenu.map((menu, idx) => (
                   <div key={idx} className="mb-8 last:mb-0">
                     <div className="mb-4 pb-2 border-b border-gray-200/60">
                       <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-1">{menu.category}</h4>

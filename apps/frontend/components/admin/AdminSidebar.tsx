@@ -21,6 +21,8 @@ import {
   Trash2,
   Image as ImageIcon,
   MessageSquareQuote,
+  Globe,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
@@ -39,6 +41,8 @@ export const NAV_ITEMS = [
   { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio" },
   { label: "Testimoni", icon: MessageSquareQuote, href: "/admin/testimoni" },
   { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero" },
+  { label: "Jasa Web", icon: Globe, href: "/admin/jasa-web" },
+  { label: "Produk Digital", icon: Package, href: "/admin/produk-digital" },
 ];
 
 export function SidebarProfileSection() {

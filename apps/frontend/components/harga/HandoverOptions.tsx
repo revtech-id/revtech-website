@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 interface HandoverSimulation {
@@ -20,7 +21,62 @@ interface HandoverOption {
     bgSim?: string;
 }
 
+const DEFAULT_OPTIONS: HandoverOption[] = [
+    {
+        title: 'Terima Beres (Basic)',
+        desc: 'Website di-hosting di server kami. Biaya mencakup perpanjangan sewa server dan domain. Revisi konten dikenakan biaya terpisah.',
+        simulations: [
+            { label: 'Domain .my.id', value: 'Rp 100rb/thn' },
+            { label: 'Domain .com', value: 'Rp 300rb/thn' },
+            { label: 'Domain .co.id', value: 'Rp 450rb/thn' },
+        ],
+        simNote: '*Harga perpanjangan mulai tahun ke-2',
+        border: 'border-gray-200 shadow-sm'
+    },
+    {
+        title: 'Terima Beres (Plus)',
+        desc: 'Infrastruktur dikelola penuh. Sudah mencakup pemeliharaan server, keamanan, serta fasilitas gratis revisi minor 1x setiap bulannya.',
+        simulations: [
+            { label: 'Maintenance', value: 'Rp 600rb/thn' },
+            { label: '+ Domain (.com)', value: 'Rp 300rb/thn' },
+            { label: 'Total Estimasi', value: 'Rp 900rb/thn', total: true },
+        ],
+        simNote: '*Tagihan pertama dimulai 3 bulan setelah rilis',
+        border: 'border-gray-200 shadow-sm'
+    },
+    {
+        title: 'Sistem Mandiri',
+        desc: 'Kami menyerahkan source code mentah. Instalasi server, domain, dan pemeliharaan menjadi tanggung jawab Anda.',
+        simulations: [
+            { label: 'Source Code', value: 'Rp 0' },
+            { label: 'Maintenance', value: 'Rp 0' },
+            { label: 'Total Tagihan', value: 'Gratis', total: true },
+        ],
+        simNote: '*Bebas tagihan rutin dari kami. Server dikelola mandiri.',
+        border: 'border-gray-200 shadow-sm'
+    }
+];
+
 export default function HandoverOptions() {
+    const [options, setOptions] = useState<HandoverOption[]>(DEFAULT_OPTIONS);
+
+    useEffect(() => {
+        const load = () => {
+            const saved = localStorage.getItem('revtech_jasa_web_handovers');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved) as Array<{ title: string; desc: string; simulations: HandoverSimulation[]; simNote: string }>;
+                    // Merge with default border style
+                    setOptions(parsed.map(o => ({ ...o, border: 'border-gray-200 shadow-sm' })));
+                } catch (e) {}
+            }
+        };
+        load();
+        window.addEventListener('jasa-web-updated', load);
+        return () => window.removeEventListener('jasa-web-updated', load);
+    }, []);
+
+
     return (
         <section className="py-16 lg:py-24 bg-gray-50/50">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -32,46 +88,8 @@ export default function HandoverOptions() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 text-left items-stretch">
-                    {(
-                        [
-                        {
-                            title: 'Terima Beres (Basic)',
-                            desc: 'Website di-hosting di server kami. Biaya mencakup perpanjangan sewa server dan domain. Revisi konten dikenakan biaya terpisah.',
-                            simulations: [
-                                { label: 'Domain .my.id', value: 'Rp 100rb/thn' },
-                                { label: 'Domain .com', value: 'Rp 300rb/thn' },
-                                { label: 'Domain .co.id', value: 'Rp 450rb/thn' },
-                            ],
-                            simNote: '*Harga perpanjangan mulai tahun ke-2',
-                            border: 'border-gray-200 shadow-sm'
-                        },
-                        {
-                            title: 'Terima Beres (Plus)',
-                            desc: 'Infrastruktur dikelola penuh. Sudah mencakup pemeliharaan server, keamanan, serta fasilitas gratis revisi minor 1x setiap bulannya.',
-                            simulations: [
-                                { label: 'Maintenance', value: 'Rp 600rb/thn' },
-                                { label: '+ Domain (.com)', value: 'Rp 300rb/thn' },
-                                { label: 'Total Estimasi', value: 'Rp 900rb/thn', total: true },
-                            ],
-                            simNote: '*Tagihan pertama dimulai 3 bulan setelah rilis',
-                            border: 'border-gray-200 shadow-sm'
-                        },
-                        {
-                            title: 'Sistem Mandiri',
-                            desc: 'Kami menyerahkan source code mentah. Instalasi server, domain, dan pemeliharaan menjadi tanggung jawab Anda.',
-                            simulations: [
-                                { label: 'Source Code', value: 'Rp 0' },
-                                { label: 'Maintenance', value: 'Rp 0' },
-                                { label: 'Total Tagihan', value: 'Gratis', total: true },
-                            ],
-                            simNote: '*Bebas tagihan rutin dari kami. Server dikelola mandiri.',
-                            border: 'border-gray-200 shadow-sm'
-                        }
-                    ] as HandoverOption[]).map((opt, i) => (
+                    {options.map((opt, i) => (
                         <motion.div
-                            
-                            
-                            
                             transition={{ duration: 0.4, delay: i * 0.1 }}
                             key={i}
                             className={`flex flex-col h-full p-8 md:p-5 lg:p-8 rounded-3xl bg-white border hover-card ${opt.border}`}

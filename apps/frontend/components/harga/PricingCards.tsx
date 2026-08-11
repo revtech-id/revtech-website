@@ -3,13 +3,27 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { pricingPlans } from '@/data/pricing';
+import { pricingPlans as defaultPlans } from '@/data/pricing';
+import type { PricingPlan } from '@/data/pricing';
 import { Button } from '@/components/ui/Button';
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
 
 
 export default function PricingCards() {
     const [showEksklusifToast, setShowEksklusifToast] = useState(false);
+    const [plans, setPlans] = useState<PricingPlan[]>(defaultPlans);
+
+    useEffect(() => {
+        const load = () => {
+            const saved = localStorage.getItem('revtech_jasa_web_plans');
+            if (saved) {
+                try { setPlans(JSON.parse(saved)); } catch (e) {}
+            }
+        };
+        load();
+        window.addEventListener('jasa-web-updated', load);
+        return () => window.removeEventListener('jasa-web-updated', load);
+    }, []);
 
     // Dummy trigger for demonstration - if you ever want to show it.
     // useEffect(() => {
@@ -34,7 +48,7 @@ export default function PricingCards() {
             variants={staggerContainerVariant}
             className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-4 lg:gap-8 mb-12 max-w-md md:max-w-none mx-auto"
         >
-                {pricingPlans.map((plan, idx) => {
+                {plans.map((plan, idx) => {
                     const currentPrice = plan.basicPrice;
                     const currentFeatures = plan.basicFeatures;
 
