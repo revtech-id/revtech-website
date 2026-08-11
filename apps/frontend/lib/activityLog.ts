@@ -22,7 +22,9 @@ export type ActivityType =
   | "order_created"
   | "order_status"
   | "order_completed"
-  | "studio_export";
+  | "studio_export"
+  | "testimonial_updated"
+  | "testimonial_deleted";
 
 export interface ActivityEntry {
   id: string;

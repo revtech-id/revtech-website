@@ -656,7 +656,7 @@ export function AdminTabs({ tabs, activeTab, onTabChange }: AdminTabsProps) {
 // ── AdminConfirmModal ──────────────────────────────────────────────────────────
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
+import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle, Edit3, Star, CheckCircle } from "lucide-react";
 import { useEffect } from "react";
 
 interface AdminConfirmModalProps {
@@ -667,10 +667,12 @@ interface AdminConfirmModalProps {
   message: string;
   confirmText?: string;
   confirmVariant?: "danger" | "primary" | "warning";
+  icon?: React.ReactNode;
 }
 
-export function AdminConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Lanjutkan", confirmVariant = "danger" }: AdminConfirmModalProps) {
+export function AdminConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Lanjutkan", confirmVariant = "danger", icon }: AdminConfirmModalProps) {
   const getIcon = () => {
+    if (icon) return icon;
     if (confirmVariant === "danger") return <Trash2 size={20} />;
     if (confirmVariant === "warning") return <Archive size={20} />;
     if (confirmVariant === "primary") return <Send size={20} />;

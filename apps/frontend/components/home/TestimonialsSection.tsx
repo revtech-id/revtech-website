@@ -15,12 +15,16 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
       if (saved) {
         try {
           const parsed: Testimonial[] = JSON.parse(saved);
-          // Only show published ones on the frontend
-          const published = parsed.filter(t => (t as any).status !== 'draft');
-          if (published.length > 0) {
-            setTestimonials(published);
-            return;
-          }
+          const published = parsed
+            .filter(t => t.status === 'published')
+            .sort((a, b) => {
+              if (a.starred && !b.starred) return -1;
+              if (!a.starred && b.starred) return 1;
+              return 0;
+            });
+          
+          setTestimonials(published);
+          return;
         } catch (e) {}
       }
     };
@@ -89,12 +93,19 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
                     </div>
                     <div className={`flex-1 min-w-0 pb-3 pt-1 border-b ${isActive ? 'border-transparent' : 'border-gray-100'}`}>
                       <div className="flex justify-between items-baseline mb-1">
-                        <h4 className="font-medium text-[17px] text-gray-900 truncate">{t.name}</h4>
-                        <span className="text-xs text-gray-400 shrink-0 ml-2">{lastMsg.time}</span>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <h4 className="font-medium text-[17px] text-gray-900 truncate">{t.name}</h4>
+                          {t.starred && (
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-500 shrink-0">
+                              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400 shrink-0 ml-2">{lastMsg?.time}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        {lastMsg.sender === "me" && <span className="material-symbols-outlined text-[14px] text-blue-500 leading-none">done_all</span>}
-                        <p className="text-[14px] text-gray-500 truncate">{lastMsg.text}</p>
+                        {lastMsg?.sender === "me" && <span className="material-symbols-outlined text-[14px] text-blue-500 leading-none">done_all</span>}
+                        <p className="text-[14px] text-gray-500 truncate">{lastMsg?.text || "Belum ada pesan"}</p>
                       </div>
                     </div>
                   </div>
@@ -114,12 +125,12 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
                 >
                   arrow_back
                 </span>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm border border-white ${activeChat.avatarBg}`}>
-                  {activeChat.initials}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm border border-white ${activeChat?.avatarBg || 'bg-gray-300 text-white'}`}>
+                  {activeChat?.initials || 'U'}
                 </div>
                 <div>
-                  <h4 className="font-medium text-[16px] text-gray-900 leading-tight">{activeChat.name}</h4>
-                  <p className="text-[13px] text-gray-500 truncate">terakhir dilihat {activeChat.lastSeen}</p>
+                  <h4 className="font-medium text-[16px] text-gray-900 leading-tight">{activeChat?.name || 'Belum ada obrolan'}</h4>
+                  <p className="text-[13px] text-gray-500 truncate">terakhir dilihat {activeChat?.lastSeen || '-'}</p>
                 </div>
               </div>
               <div className="flex gap-4 text-gray-500">
@@ -140,42 +151,48 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
               </div>
 
               <AnimatePresence mode="wait">
-                <motion.div 
-                  key={activeChat.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 28, mass: 0.5 }}
-                  className="space-y-3 md:space-y-4"
-                >
-                  {activeChat.messages.map((msg: TestimonialMessage, idx: number) => {
-                    const isMe = msg.sender === "me";
-                    return (
-                      <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`relative max-w-[85%] md:max-w-[75%] px-3 py-2 md:px-4 md:py-2.5 rounded-lg shadow-sm ${isMe ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'}`}>
-                          
-                          {/* Triangle tail for chat bubbles */}
-                          <div className={`absolute top-0 w-3 h-3 ${isMe ? '-right-2' : '-left-2'}`}>
-                            <svg viewBox="0 0 8 13" width="8" height="13" className={`fill-current ${isMe ? 'text-[#d9fdd3]' : 'text-white'}`}>
-                              {isMe 
-                                ? <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z" />
-                                : <path d="M1.533 3.568L8 12.193V1H2.812C1.042 1 .474 2.156 1.533 3.568z" />
-                              }
-                            </svg>
-                          </div>
+                {activeChat ? (
+                  <motion.div 
+                    key={activeChat.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 28, mass: 0.5 }}
+                    className="space-y-3 md:space-y-4"
+                  >
+                    {activeChat.messages?.map((msg: TestimonialMessage, idx: number) => {
+                      const isMe = msg.sender === "me";
+                      return (
+                        <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`relative min-w-0 max-w-[85%] md:max-w-[75%] px-3 py-2 md:px-4 md:py-2.5 rounded-lg shadow-sm ${isMe ? 'bg-[#d9fdd3] rounded-tr-none' : 'bg-white rounded-tl-none'}`} style={{ wordBreak: 'break-word' }}>
+                            
+                            {/* Triangle tail for chat bubbles */}
+                            <div className={`absolute top-0 w-3 h-3 ${isMe ? '-right-2' : '-left-2'}`}>
+                              <svg viewBox="0 0 8 13" width="8" height="13" className={`fill-current ${isMe ? 'text-[#d9fdd3]' : 'text-white'}`}>
+                                {isMe 
+                                  ? <path d="M5.188 1H0v11.193l6.467-8.625C7.526 2.156 6.958 1 5.188 1z" />
+                                  : <path d="M1.533 3.568L8 12.193V1H2.812C1.042 1 .474 2.156 1.533 3.568z" />
+                                }
+                              </svg>
+                            </div>
 
-                          <p className="text-[14px] md:text-[15px] leading-relaxed text-[#111b21] break-words whitespace-pre-wrap">
-                            {msg.text}
-                          </p>
-                          <div className="flex items-center justify-end gap-1 text-[11px] text-gray-500 mt-1 float-right clear-both ml-4">
-                            {msg.time}
-                            {isMe && <span className="material-symbols-outlined text-[15px] text-[#53bdeb] leading-none">done_all</span>}
+                            <p className="text-[14px] md:text-[15px] leading-relaxed text-[#111b21] break-words whitespace-pre-wrap">
+                              {msg.text}
+                            </p>
+                            <div className="flex items-center justify-end gap-1 text-[11px] text-gray-500 mt-1 float-right clear-both ml-4">
+                              {msg.time}
+                              {isMe && <span className="material-symbols-outlined text-[15px] text-[#53bdeb] leading-none">done_all</span>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    Belum ada obrolan
+                  </div>
+                )}
               </AnimatePresence>
             </div>
 

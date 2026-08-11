@@ -80,12 +80,6 @@ export default function HeroBannerPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader
-        title="Hero Banner"
-        description="Kelola gambar background utama yang tampil di beranda (landing page)."
-        icon="image"
-      />
-
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Kolom Pengaturan */}
         <div className="lg:col-span-1 space-y-6">

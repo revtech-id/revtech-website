@@ -156,12 +156,6 @@ export default function JasaWebAdminPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader
-        title="Jasa Web"
-        description="Kelola harga paket jasa web, opsi serah terima, dan katalog modifikasi yang tampil di halaman publik."
-        icon="language"
-      />
-
       {/* Tabs */}
       <div className="flex gap-1 bg-[var(--adm-bg)] p-1 rounded-xl border border-[var(--adm-border)] w-fit">
         {([
