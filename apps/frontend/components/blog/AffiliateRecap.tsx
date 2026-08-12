@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -32,7 +33,7 @@ export default function AffiliateRecap({ productId }: AffiliateRecapProps) {
                 
                 <Button asChild size="lg" variant="secondary" className="font-bold text-gray-900 bg-white hover:bg-gray-100 shadow-xl w-full sm:w-auto px-8 py-6 text-base group">
                     <a href={product.link} target="_blank" rel="sponsored nofollow">
-                        {product.ctaText} <span className="material-symbols-outlined ml-2 transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        {product.ctaText} <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform" size={16} />
                     </a>
                 </Button>
             </div>

@@ -11,11 +11,12 @@ export default function AffiliateArticleRenderer({ htmlContent }: AffiliateArtic
     // Regex untuk memecah string: mencari [AFFILIATE:id] ATAU [AFFILIATE_RECAP:id]
     // regex.split akan menghasilkan array: [html1, type1, id1, html2, type2, id2, html3...]
     // Catatan: regex harus menangkap kedua group (type dan id) agar muncul di hasil split.
-    const parts = htmlContent.split(/\[(AFFILIATE|AFFILIATE_RECAP):([a-zA-Z0-9-]+)\]/);
+    const cleanHtml = htmlContent.replace(/&nbsp;/g, ' ');
+    const parts = cleanHtml.split(/\[(AFFILIATE|AFFILIATE_RECAP):([a-zA-Z0-9-]+)\]/);
 
     return (
         <div 
-          className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700 
+          className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700 break-words 
             [&_h2]:text-3xl [&_h2]:font-black [&_h2]:text-gray-900 [&_h2]:mt-16 [&_h2]:mb-6 [&_h2]:tracking-tight
             [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-10 [&_h3]:mb-4 [&_h3]:tracking-tight
             [&_p]:mb-6 [&_p]:leading-relaxed

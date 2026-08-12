@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
@@ -62,7 +63,7 @@ export default function CatalogPillar() {
         
         <Button asChild size="lg" className="w-full sm:w-auto bg-blue-900 hover:bg-blue-950 shadow-md text-[13px] sm:text-sm md:text-base">
           <Link href="/katalog">
-            Lihat Semua Katalog <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
+            Lihat Semua Katalog <ArrowRight className="ml-2 text-sm" size={16} />
           </Link>
         </Button>
       </div>

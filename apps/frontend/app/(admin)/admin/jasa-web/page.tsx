@@ -6,6 +6,7 @@ import { Globe, Plus, Trash2, Pencil, X, Save, Check, ChevronDown } from "lucide
 import { PageHeader, AdminToast, AdminConfirmModal } from "@/components/admin/ui";
 import { Button } from "@/components/ui/Button";
 import { pricingPlans as defaultPlans, modificationMenu as defaultMods } from "@/data/pricing";
+import { calculateDiscount } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,8 @@ interface PricingPlan {
   description: string;
   popular?: boolean;
   basicFeatures: PricingFeature[];
+  fullFeatures?: PricingFeature[];
+  demoLink?: string;
 }
 
 interface HandoverSimRow { label: string; value: string; total?: boolean; }
@@ -105,19 +108,31 @@ export default function JasaWebAdminPage() {
     const savedHandovers = localStorage.getItem("revtech_jasa_web_handovers");
     const savedMods = localStorage.getItem("revtech_modifications");
 
-    setPlans(savedPlans
-      ? JSON.parse(savedPlans)
-      : defaultPlans.map(p => ({
-          id: p.id,
-          name: p.name,
-          basicPrice: p.basicPrice,
-          originalPrice: p.originalPrice,
-          promoBadge: p.promoBadge,
-          description: p.description,
-          popular: p.popular,
-          basicFeatures: p.basicFeatures,
-        }))
-    );
+    if (savedPlans) {
+      const parsedPlans: PricingPlan[] = JSON.parse(savedPlans);
+      // Merge with default data for any missing fields (like fullFeatures from pricing.ts)
+      setPlans(parsedPlans.map(p => {
+        const defaultMatch = defaultPlans.find(dp => dp.id === p.id);
+        return {
+          ...p,
+          fullFeatures: p.fullFeatures || defaultMatch?.fullFeatures || [],
+          demoLink: p.demoLink || ""
+        };
+      }));
+    } else {
+      setPlans(defaultPlans.map(p => ({
+        id: p.id,
+        name: p.name,
+        basicPrice: p.basicPrice,
+        originalPrice: p.originalPrice,
+        promoBadge: p.promoBadge,
+        description: p.description,
+        popular: p.popular,
+        basicFeatures: p.basicFeatures,
+        fullFeatures: p.fullFeatures || [],
+        demoLink: "",
+      })));
+    }
 
     setHandovers(savedHandovers ? JSON.parse(savedHandovers) : toHandoverOptions());
     setMods(savedMods ? JSON.parse(savedMods) : defaultMods.map(m => ({
@@ -159,7 +174,7 @@ export default function JasaWebAdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-[var(--adm-bg)] p-1 rounded-xl border border-[var(--adm-border)] w-fit">
         {([
-          { key: "paket", label: "Paket Harga" },
+          { key: "paket", label: "Kelola Paket" },
           { key: "serah", label: "Opsi Serah Terima" },
           { key: "modifikasi", label: "Katalog Modifikasi" },
         ] as const).map(tab => (
@@ -189,7 +204,7 @@ export default function JasaWebAdminPage() {
             >
               {plan.popular && (
                 <span className="text-[10px] font-black uppercase tracking-widest bg-blue-600 text-white px-3 py-1 rounded-full w-fit">
-                  {plan.promoBadge || "BEST SELLER"}
+                  BEST SELLER
                 </span>
               )}
               <div>
@@ -198,7 +213,17 @@ export default function JasaWebAdminPage() {
               </div>
               <div>
                 {plan.originalPrice && (
-                  <span className="text-xs text-[var(--adm-text-3)] line-through block">{plan.originalPrice}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-[var(--adm-text-3)] line-through block">{plan.originalPrice}</span>
+                    {(() => {
+                      const discount = calculateDiscount(plan.basicPrice, plan.originalPrice);
+                      return discount ? (
+                        <span className="text-[10px] font-black bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+                          {discount}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
                 )}
                 <span className="text-2xl font-black text-[var(--adm-text)]">{plan.basicPrice}</span>
               </div>
@@ -215,7 +240,7 @@ export default function JasaWebAdminPage() {
               </ul>
 
               <Button onClick={() => setEditingPlanId(plan.id)} variant="outline" className="w-full gap-2 rounded-xl mt-auto">
-                <Pencil size={14} /> Edit Harga
+                <Pencil size={14} /> Edit
               </Button>
             </div>
           ))}
@@ -427,7 +452,7 @@ export default function JasaWebAdminPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
-              className="w-full max-w-lg bg-[var(--adm-card)] rounded-2xl shadow-2xl border border-[var(--adm-border)] overflow-hidden"
+              className="w-full max-w-4xl bg-[var(--adm-card)] rounded-2xl shadow-2xl border border-[var(--adm-border)] overflow-hidden"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--adm-border)]">
                 <h2 className="font-bold text-[var(--adm-text)]">Edit Paket — {editingPlan.name}</h2>
@@ -436,88 +461,185 @@ export default function JasaWebAdminPage() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
-                {[
-                  { label: "Nama Paket", key: "name" },
-                  { label: "Harga Utama (basicPrice)", key: "basicPrice", placeholder: "Rp 499.000" },
-                  { label: "Harga Coret / Promo (opsional)", key: "originalPrice", placeholder: "Rp 999.000" },
-                  { label: "Badge Promo (opsional)", key: "promoBadge", placeholder: "TERLARIS" },
-                  { label: "Deskripsi Singkat", key: "description" },
-                ].map(field => (
-                  <div key={field.key}>
-                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">{field.label}</label>
+              <div className="p-6 grid md:grid-cols-2 gap-8">
+                {/* Left Column: Details */}
+                <div className="space-y-4">
+                  {[
+                    { label: "Nama Paket", key: "name" },
+                    { label: "Harga Utama (basicPrice)", key: "basicPrice", placeholder: "Rp 499.000" },
+                    { label: "Harga Coret / Promo (opsional)", key: "originalPrice", placeholder: "Rp 999.000" },
+                    { label: "Deskripsi Singkat", key: "description" },
+                    { label: "Link Live Demo (opsional)", key: "demoLink", placeholder: "https://contoh.com" },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">{field.label}</label>
+                      <input
+                        type="text"
+                        placeholder={field.placeholder}
+                        value={(editingPlan as any)[field.key] || ""}
+                        onChange={e => {
+                          const newPlans = plans.map(p =>
+                            p.id === editingPlan.id ? { ...p, [field.key]: e.target.value } : p
+                          );
+                          setPlans(newPlans);
+                        }}
+                        className="w-full h-10 px-3 rounded-xl text-sm bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none transition-colors"
+                      />
+                    </div>
+                  ))}
+
+                  <div className="flex items-center gap-3 pt-2">
                     <input
-                      type="text"
-                      placeholder={field.placeholder}
-                      value={(editingPlan as any)[field.key] || ""}
+                      type="checkbox"
+                      id="popular"
+                      checked={editingPlan.popular || false}
                       onChange={e => {
+                        const isChecked = e.target.checked;
                         const newPlans = plans.map(p =>
-                          p.id === editingPlan.id ? { ...p, [field.key]: e.target.value } : p
+                          p.id === editingPlan.id 
+                            ? { ...p, popular: isChecked } 
+                            // If checking this plan, remove popular from all others.
+                            // If unchecking, leave others as they are (none popular).
+                            : (isChecked ? { ...p, popular: false } : p)
                         );
                         setPlans(newPlans);
                       }}
-                      className="w-full h-10 px-3 rounded-xl text-sm bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none transition-colors"
+                      className="w-4 h-4 rounded"
                     />
+                    <label htmlFor="popular" className="text-sm font-semibold text-[var(--adm-text)]">Tandai sebagai Paket Populer (Best Seller)</label>
                   </div>
-                ))}
-
-                <div className="flex items-center gap-3 pt-2">
-                  <input
-                    type="checkbox"
-                    id="popular"
-                    checked={editingPlan.popular || false}
-                    onChange={e => {
-                      const newPlans = plans.map(p =>
-                        p.id === editingPlan.id ? { ...p, popular: e.target.checked } : p
-                      );
-                      setPlans(newPlans);
-                    }}
-                    className="w-4 h-4 rounded"
-                  />
-                  <label htmlFor="popular" className="text-sm font-semibold text-[var(--adm-text)]">Tandai sebagai Paket Populer (Best Seller)</label>
                 </div>
 
-                {/* Feature List */}
-                <div>
-                  <label className="text-xs font-bold text-[var(--adm-text-2)] mb-2 block">Fitur Paket</label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {editingPlan.basicFeatures.map((f, fi) => (
-                      <div key={fi} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={f.included}
-                          onChange={e => {
-                            const newPlans = plans.map(p => {
-                              if (p.id !== editingPlan.id) return p;
-                              const newFeatures = [...p.basicFeatures];
-                              newFeatures[fi] = { ...newFeatures[fi], included: e.target.checked };
-                              return { ...p, basicFeatures: newFeatures };
-                            });
-                            setPlans(newPlans);
-                          }}
-                          className="w-4 h-4 rounded shrink-0"
-                        />
-                        <input
-                          value={f.name}
-                          onChange={e => {
-                            const newPlans = plans.map(p => {
-                              if (p.id !== editingPlan.id) return p;
-                              const newFeatures = [...p.basicFeatures];
-                              newFeatures[fi] = { ...newFeatures[fi], name: e.target.value };
-                              return { ...p, basicFeatures: newFeatures };
-                            });
-                            setPlans(newPlans);
-                          }}
-                          className="flex-1 h-8 px-2 rounded-lg text-xs bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none"
-                        />
+                {/* Right Column: Feature List */}
+                <div className="flex flex-col h-full overflow-hidden">
+                  <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-6" style={{ maxHeight: "calc(100vh - 250px)" }}>
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-2 block">Fitur Singkat (Card)</label>
+                      <div className="space-y-2">
+                        {editingPlan.basicFeatures.map((f, fi) => (
+                          <div key={fi} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={f.included}
+                              onChange={e => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...p.basicFeatures];
+                                  newFeatures[fi] = { ...newFeatures[fi], included: e.target.checked };
+                                  return { ...p, basicFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="w-4 h-4 rounded shrink-0"
+                            />
+                            <input
+                              value={f.name}
+                              onChange={e => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...p.basicFeatures];
+                                  newFeatures[fi] = { ...newFeatures[fi], name: e.target.value };
+                                  return { ...p, basicFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="flex-1 h-8 px-2 rounded-lg text-xs bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none"
+                            />
+                            <button
+                              onClick={() => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...p.basicFeatures];
+                                  newFeatures.splice(fi, 1);
+                                  return { ...p, basicFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="p-1 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                      <button
+                        onClick={() => {
+                          const newPlans = plans.map(p => p.id === editingPlan.id ? { ...p, basicFeatures: [...p.basicFeatures, { name: "", included: true }] } : p);
+                          setPlans(newPlans);
+                        }}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        <Plus size={13} /> Tambah Fitur Singkat
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-2 block">Daftar Spesifikasi & Fitur Teknis (Modal Lengkap)</label>
+                      <div className="space-y-2">
+                        {editingPlan.fullFeatures?.map((f, fi) => (
+                          <div key={fi} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={f.included}
+                              onChange={e => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...(p.fullFeatures || [])];
+                                  newFeatures[fi] = { ...newFeatures[fi], included: e.target.checked };
+                                  return { ...p, fullFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="w-4 h-4 rounded shrink-0"
+                            />
+                            <input
+                              value={f.name}
+                              onChange={e => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...(p.fullFeatures || [])];
+                                  newFeatures[fi] = { ...newFeatures[fi], name: e.target.value };
+                                  return { ...p, fullFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="flex-1 h-8 px-2 rounded-lg text-xs bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none"
+                            />
+                            <button
+                              onClick={() => {
+                                const newPlans = plans.map(p => {
+                                  if (p.id !== editingPlan.id) return p;
+                                  const newFeatures = [...(p.fullFeatures || [])];
+                                  newFeatures.splice(fi, 1);
+                                  return { ...p, fullFeatures: newFeatures };
+                                });
+                                setPlans(newPlans);
+                              }}
+                              className="p-1 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newPlans = plans.map(p => p.id === editingPlan.id ? { ...p, fullFeatures: [...(p.fullFeatures || []), { name: "", included: true }] } : p);
+                          setPlans(newPlans);
+                        }}
+                        className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        <Plus size={13} /> Tambah Spesifikasi
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="px-6 py-4 border-t border-[var(--adm-border)] flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setEditingPlanId(null)} className="rounded-xl">Batal</Button>
+                <button onClick={() => setEditingPlanId(null)} className="text-sm font-semibold text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors px-3">
+                  Batal
+                </button>
                 <Button onClick={() => savePlans(plans)} className="gap-2 rounded-xl">
                   <Save size={15} /> Simpan Perubahan
                 </Button>
@@ -550,16 +672,29 @@ export default function JasaWebAdminPage() {
                 ].map(field => (
                   <div key={field.key}>
                     <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">{field.label}</label>
-                    <input
-                      type="text"
-                      value={(handovers[editingHandoverIdx] as any)[field.key] || ""}
-                      onChange={e => {
-                        const newH = [...handovers];
-                        (newH[editingHandoverIdx] as any)[field.key] = e.target.value;
-                        setHandovers(newH);
-                      }}
-                      className="w-full h-10 px-3 rounded-xl text-sm bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none"
-                    />
+                    {field.key === 'desc' ? (
+                      <textarea
+                        rows={2}
+                        value={(handovers[editingHandoverIdx] as any)[field.key] || ""}
+                        onChange={e => {
+                          const newH = [...handovers];
+                          (newH[editingHandoverIdx] as any)[field.key] = e.target.value;
+                          setHandovers(newH);
+                        }}
+                        className="w-full p-3 rounded-xl text-sm bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none resize-y"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={(handovers[editingHandoverIdx] as any)[field.key] || ""}
+                        onChange={e => {
+                          const newH = [...handovers];
+                          (newH[editingHandoverIdx] as any)[field.key] = e.target.value;
+                          setHandovers(newH);
+                        }}
+                        className="w-full h-10 px-3 rounded-xl text-sm bg-[var(--adm-bg)] border border-[var(--adm-border)] text-[var(--adm-text)] focus:border-[var(--adm-accent)] outline-none"
+                      />
+                    )}
                   </div>
                 ))}
 
@@ -626,7 +761,9 @@ export default function JasaWebAdminPage() {
               </div>
 
               <div className="px-6 py-4 border-t border-[var(--adm-border)] flex justify-end gap-3 shrink-0">
-                <Button variant="outline" onClick={() => setEditingHandoverIdx(null)} className="rounded-xl">Batal</Button>
+                <button onClick={() => setEditingHandoverIdx(null)} className="text-sm font-semibold text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors px-3">
+                  Batal
+                </button>
                 <Button onClick={() => saveHandovers(handovers)} className="gap-2 rounded-xl">
                   <Save size={15} /> Simpan
                 </Button>

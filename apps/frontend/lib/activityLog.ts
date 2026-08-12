@@ -24,7 +24,11 @@ export type ActivityType =
   | "order_completed"
   | "studio_export"
   | "testimonial_updated"
-  | "testimonial_deleted";
+  | "testimonial_deleted"
+  | "blog_updated"
+  | "blog_deleted"
+  | "portofolio_updated"
+  | "portofolio_deleted";
 
 export interface ActivityEntry {
   id: string;

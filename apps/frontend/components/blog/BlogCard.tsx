@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -16,14 +17,20 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                 className="group bg-white rounded-[1.5rem] overflow-hidden border border-gray-200 shadow-sm hover-card flex flex-col h-full"
             >
                 <div className="aspect-[16/10] bg-gray-100 relative overflow-hidden">
-                    <Image 
-                        src={post.coverImage} 
-                        alt={post.title} 
-                        fill 
-                        priority={true}
-                        sizes="(max-width: 768px) 100vw, 33vw" 
-                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
-                    />
+                    {post.coverImage ? (
+                        <Image 
+                            src={post.coverImage} 
+                            alt={post.title} 
+                            fill 
+                            priority={true}
+                            sizes="(max-width: 768px) 100vw, 33vw" 
+                            className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <span className="material-symbols-outlined text-4xl">image</span>
+                        </div>
+                    )}
                     <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-500"></div>
                 </div>
                 <div className="p-6 md:p-8 flex flex-col flex-1">
@@ -35,7 +42,7 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                             Baca Artikel
                         </span>
                         <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
-                            <span className="material-symbols-outlined text-[16px] text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all">arrow_forward</span>
+                            <ArrowRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" size={16} />
                         </div>
                     </div>
                 </div>

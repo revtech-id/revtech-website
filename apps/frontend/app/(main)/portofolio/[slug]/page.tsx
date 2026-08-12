@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { getPortfolioData, getAllPortfolioSlugs } from '@/lib/portfolio';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -32,7 +33,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
         {/* Breadcrumb & Navigation */}
         <div className="flex justify-start mb-10 w-full">
             <Link href="/portofolio" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                <ArrowLeft className="" size={16} />
                 Kembali
             </Link>
         </div>
@@ -87,7 +88,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
         </div>
 
         {/* Konten Markdown HTML (CMS Ready) */}
-        <article className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700">
+        <article className="prose prose-sm sm:prose-base md:prose-lg prose-gray max-w-none text-gray-700 break-words">
             {/* Styling standar Typography untuk render konten dari CMS */}
             <div 
                 className="[&>h2]:text-3xl [&>h2]:font-black [&>h2]:text-gray-900 [&>h2]:mt-16 [&>h2]:mb-6 [&>h2]:tracking-tight
@@ -95,7 +96,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
                            [&>p]:mb-6 [&>p]:leading-relaxed
                            [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-6 [&>li]:mb-2
                            [&>blockquote]:border-l-4 [&>blockquote]:border-gray-900 [&>blockquote]:pl-6 [&>blockquote]:italic [&>blockquote]:text-gray-600 [&>blockquote]:bg-gray-50 [&>blockquote]:py-4 [&>blockquote]:pr-4 [&>blockquote]:rounded-r-xl"
-                dangerouslySetInnerHTML={{ __html: portfolioData.contentHtml }} 
+                dangerouslySetInnerHTML={{ __html: portfolioData.contentHtml.replace(/&nbsp;/g, ' ') }} 
             />
         </article>
 

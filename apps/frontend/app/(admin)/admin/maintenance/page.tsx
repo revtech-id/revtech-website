@@ -7,6 +7,7 @@ import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Gl
 import rawClients from "@/data/admin/clients.json";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
+import { logActivity } from "@/lib/activityLog";
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
 
@@ -407,9 +408,23 @@ export default function MaintenancePage() {
     
     setRenewingClient(null);
     showToast(`Layanan ${c.name} berhasil diperpanjang`);
+    logActivity({ type: "system", title: "Layanan Diperpanjang", description: `Layanan maintenance untuk klien ${c.name} diperpanjang hingga ${renewForm.newExpiryDate}.`, user: "Admin" });
   }
 
   function handleDelete(id: string) {
+    const clientToDelete = clients.find(c => c.id === id);
+    if (clientToDelete) {
+      // Simpan ke trash
+      const savedTrash = localStorage.getItem("revtech_clients_trash");
+      const currentTrash = savedTrash ? JSON.parse(savedTrash) : [];
+      const trashItem = {
+        ...clientToDelete,
+        deletedAt: new Date().toISOString(),
+        deletedBy: "Admin"
+      };
+      localStorage.setItem("revtech_clients_trash", JSON.stringify([trashItem, ...currentTrash]));
+    }
+
     save(clients.filter(c => c.id !== id));
     
     // Cascade delete: hapus tagihan maintenance terkait
@@ -427,6 +442,7 @@ export default function MaintenancePage() {
     setDeletingId(null);
     if (selectedClient?.id === id) setSelectedClient(null);
     showToast("Data klien beserta tagihannya berhasil dihapus");
+    logActivity({ type: "system", title: "Klien Maintenance Dihapus", description: `Klien maintenance dengan ID ${id} dihapus.`, user: "Admin" });
   }
 
   function handleMessageClick(c: Client) {
@@ -472,6 +488,7 @@ export default function MaintenancePage() {
     setModNotes("");
     setModDeadline("");
     showToast("Revisi dicatat dan masuk ke Antrean Pesanan!");
+    logActivity({ type: "system", title: "Klaim Kuota Revisi", description: `Klien ${clientName} menggunakan kuota revisi maintenance.`, user: "Admin" });
   }
 
   function updateSelectedClient(field: keyof Client, value: any) {
@@ -536,8 +553,9 @@ export default function MaintenancePage() {
       } catch (err) {
         console.error("Failed to sync invoice updates from maintenance edit", err);
       }
+      logActivity({ type: "system", title: "Data Klien Maintenance Diedit", description: `Profil klien diperbarui untuk ${form.name}.`, user: "Admin" });
     } else {
-      updated = [{
+      const newClient = {
         id: `CLN-${Date.now().toString().slice(-5)}`,
         name: form.name, contact: form.contact, phone: form.phone,
         email: form.email, website: form.website || null, domain: form.domain || null,
@@ -547,12 +565,15 @@ export default function MaintenancePage() {
         totalSpend: 0, activeProjects: 0, service: form.service || undefined,
         handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
         modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : ((form.handover || "").toLowerCase().includes("plus") ? 1 : 0)
-      }, ...clients];
+      };
+      updated = [newClient, ...clients];
+      logActivity({ type: "client_added", title: "Klien Maintenance Baru", description: `Klien maintenance baru ditambahkan: ${form.name}.`, user: "Admin" });
     }
     save(updated);
     setView("list");
     setEditingId(null);
     setForm(EMPTY_FORM);
+    showToast(editingId ? "Perubahan data klien berhasil disimpan" : "Klien maintenance baru berhasil ditambahkan!");
   }
 
   const filtered = clients.filter(c => {
@@ -596,7 +617,6 @@ export default function MaintenancePage() {
 
   return (
     <div>
-      {/* Toolbar */}
       {/* Toolbar */}
       <AdminToolbar
         view={view}
@@ -1009,27 +1029,7 @@ export default function MaintenancePage() {
                     Batal
                   </button>
                   <button
-                    onClick={() => {
-                      const clientToDelete = clients.find(c => c.id === deletingId);
-                      if (clientToDelete) {
-                        // Simpan ke trash
-                        const savedTrash = localStorage.getItem("revtech_clients_trash");
-                        const currentTrash = savedTrash ? JSON.parse(savedTrash) : [];
-                        const trashItem = {
-                          ...clientToDelete,
-                          deletedAt: new Date().toISOString(),
-                          deletedBy: "Admin"
-                        };
-                        localStorage.setItem("revtech_clients_trash", JSON.stringify([trashItem, ...currentTrash]));
-
-                        // Hapus dari data aktif
-                        const updatedClients = clients.filter(c => c.id !== deletingId);
-                        setClients(updatedClients);
-                        localStorage.setItem("revtech_clients", JSON.stringify(updatedClients));
-                        setDeletingId(null);
-                        showToast(`Klien ${clientToDelete.name} berhasil dihapus`);
-                      }
-                    }}
+                    onClick={() => handleDelete(deletingId)}
                     className="flex-1 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 text-sm"
                   >
                     Ya, Hapus

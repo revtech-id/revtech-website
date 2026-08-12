@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from 'next/link';
 import BlogCard from '../blog/BlogCard';
@@ -24,7 +25,7 @@ export default function BlogSection({ recentPosts }: { recentPosts: BlogPostData
                   </motion.div>
                   <div className="flex-shrink-0 mb-2">
                       <Link href="/blog" className="inline-flex items-center gap-2 text-sm sm:text-base text-gray-900 font-bold hover:text-blue-600 transition-colors group">
-                          Lihat Semua Artikel <span className="material-symbols-outlined text-[13px] sm:text-sm transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                          Lihat Semua Artikel <ArrowRight className="sm:text-sm transform group-hover:translate-x-1 transition-transform" size={16} />
                       </Link>
                   </div>
               </div>

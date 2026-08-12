@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Star, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { logActivity } from "@/lib/activityLog";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -105,22 +106,22 @@ interface Portfolio {
   projectDate: string;
   description: string;
   techStack: string[];
-  featured: boolean;
+  pinned: boolean;
   status: "published" | "draft" | "archived";
   publishedAt: string;
 }
 
 const MOCK_INITIAL: Portfolio[] = [
-  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], featured: true, status: "published", publishedAt: "2026-04-15" },
-  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], featured: false, status: "published", publishedAt: "2026-06-01" },
-  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], featured: true, status: "published", publishedAt: "2026-06-30" },
+  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], pinned: true, status: "published", publishedAt: "2026-04-15" },
+  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], pinned: false, status: "published", publishedAt: "2026-06-01" },
+  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], pinned: true, status: "published", publishedAt: "2026-06-30" },
 ];
 
 const EMPTY_FORM: {
-  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; featured: boolean; status: Portfolio["status"]; content: string; thumbnail: string;
+  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; pinned: boolean; status: Portfolio["status"]; content: string; thumbnail: string;
 } = {
   title: "", client: "", category: "",
-  url: "", projectDate: "", description: "", techStack: "", featured: false, status: "published", content: "", thumbnail: ""
+  url: "", projectDate: "", description: "", techStack: "", pinned: false, status: "published", content: "", thumbnail: ""
 };
 
 export default function PortofolioPage() {
@@ -184,7 +185,7 @@ export default function PortofolioPage() {
     setForm({
       title: item.title, client: item.client, category: item.category,
       url: item.url || "", projectDate: item.projectDate || "", description: item.description || "", techStack: item.techStack.join(", "),
-      featured: item.featured, status: item.status, content: item.content || "",
+      pinned: item.pinned, status: item.status, content: item.content || "",
       thumbnail: item.thumbnail || ""
     });
     setEditingId(item.id);
@@ -201,6 +202,7 @@ export default function PortofolioPage() {
       action: () => {
         save(items.filter(i => i.id !== id));
         setToast({ isVisible: true, message: "Proyek berhasil dihapus", type: "success" });
+        logActivity({ type: "portofolio_deleted", title: "Proyek Dihapus", description: `Proyek portofolio dengan ID ${id} dihapus.`, user: "Admin" });
       }
     });
   }
@@ -209,21 +211,19 @@ export default function PortofolioPage() {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
     let updated = [...items];
-    let itemSlug = editingId ? items.find(i => i.id === editingId)?.id : undefined;
 
     if (editingId) {
       updated = items.map(i => i.id === editingId ? {
         ...i, title: form.title, client: form.client, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, featured: form.featured, status: form.status, content: form.content,
+        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned, status: form.status, content: form.content,
         thumbnail: form.thumbnail
       } : i);
     } else {
       const newId = `PF-${Date.now().toString().slice(-5)}`;
-      itemSlug = newId;
       updated = [{
         id: newId,
         title: form.title, client: form.client, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, featured: form.featured,
+        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
         thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: new Date().toISOString().split("T")[0]
       }, ...items];
     }
@@ -250,7 +250,7 @@ export default function PortofolioPage() {
           description: form.description,
           content: form.content,
           thumbnail: form.thumbnail,
-          featured: form.featured,
+          pinned: form.pinned,
         }),
       }).catch(console.error);
     }
@@ -259,6 +259,12 @@ export default function PortofolioPage() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
+    logActivity({ 
+      type: "portofolio_updated", 
+      title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
+      description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
+      user: "Admin" 
+    });
   }
 
   function confirmArchive(id: string, currentStatus: string) {
@@ -272,6 +278,7 @@ export default function PortofolioPage() {
       action: () => {
         save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
         setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
+        logActivity({ type: "portofolio_updated", title: isArchived ? "Proyek Dipulihkan" : "Proyek Diarsipkan", description: `Proyek portofolio ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
       }
     });
   }
@@ -286,12 +293,17 @@ export default function PortofolioPage() {
       action: () => {
         save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
         setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
+        logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
       }
     });
   }
 
-  function toggleFeatured(id: string) {
-    save(items.map(i => i.id === id ? { ...i, featured: !i.featured } : i));
+  function togglePinned(id: string) {
+    save(items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
+    const item = items.find(i => i.id === id);
+    if (item) {
+      logActivity({ type: "portofolio_updated", title: !item.pinned ? "Proyek Disematkan" : "Pin Dilepas", description: `Status pin diperbarui untuk proyek ${item.title}.`, user: "Admin" });
+    }
   }
 
   const published = items.filter(i => (i.status || "published") === "published");
@@ -300,7 +312,7 @@ export default function PortofolioPage() {
 
   const TABS = [
     { id: "all", label: "Semua", count: items.length },
-    { id: "featured", label: "Featured", count: items.filter(i => i.featured).length },
+    { id: "pinned", label: "Disematkan", count: items.filter(i => i.pinned).length },
     { id: "draft", label: "Draft", count: drafts.length },
     { id: "archived", label: "Arsip", count: archived.length },
     { id: "published", label: "Published", count: published.length },
@@ -310,7 +322,7 @@ export default function PortofolioPage() {
     const s = item.status || "published";
     const matchTab = 
       tabFilter === "all" ? true :
-      tabFilter === "featured" ? item.featured :
+      tabFilter === "pinned" ? item.pinned :
       tabFilter === "published" ? s === "published" :
       tabFilter === "draft" ? s === "draft" :
       tabFilter === "archived" ? s === "archived" : true;
@@ -325,7 +337,6 @@ export default function PortofolioPage() {
     const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
     return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
   });
-  const featured = items.filter(p => p.featured).length;
 
   if (!isClient) return null;
 
@@ -397,10 +408,10 @@ export default function PortofolioPage() {
               </div>
               <div className="divide-y divide-[var(--adm-border)]">
                 {filtered.map((item, i) => (
-                  <div key={item.id} className="flex items-center justify-between px-6 py-4">                    {/* Left: Star, Thumbnail & Text */}
+                  <div key={item.id} className="flex items-center justify-between px-6 py-4">                    {/* Left: Pin, Thumbnail & Text */}
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
-                      <button onClick={() => toggleFeatured(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.featured ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.featured ? "Hapus dari Featured" : "Jadikan Featured"}>
-                        <Star size={14} strokeWidth={item.featured ? 0 : 2} className={item.featured ? "fill-amber-500" : ""} />
+                      <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
+                        <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-amber-500 rotate-45" : ""} />
                       </button>
                       
                       <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
@@ -626,8 +637,8 @@ export default function PortofolioPage() {
                     </div>
                     <div className="flex flex-col justify-end">
                       <label className="flex items-center gap-2 cursor-pointer py-2">
-                        <input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
-                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Featured Project</span>
+                        <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
+                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Proyek (Tampil Lebih Awal)</span>
                       </label>
                     </div>
                   </div>

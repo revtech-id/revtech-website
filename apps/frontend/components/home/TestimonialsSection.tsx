@@ -95,11 +95,6 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
                       <div className="flex justify-between items-baseline mb-1">
                         <div className="flex items-center gap-1 min-w-0">
                           <h4 className="font-medium text-[17px] text-gray-900 truncate">{t.name}</h4>
-                          {t.starred && (
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-yellow-500 shrink-0">
-                              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                            </svg>
-                          )}
                         </div>
                         <span className="text-xs text-gray-400 shrink-0 ml-2">{lastMsg?.time}</span>
                       </div>
@@ -119,12 +114,6 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
             {/* Chat Header */}
             <div className="bg-[#f0f2f5] px-4 py-3 border-b border-gray-200 flex items-center justify-between h-16 shrink-0 z-20">
               <div className="flex items-center gap-2 md:gap-4">
-                <span 
-                  className="material-symbols-outlined text-[24px] text-gray-500 cursor-pointer md:hidden hover:text-gray-700" 
-                  onClick={() => setShowChatOnMobile(false)}
-                >
-                  arrow_back
-                </span>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm border border-white ${activeChat?.avatarBg || 'bg-gray-300 text-white'}`}>
                   {activeChat?.initials || 'U'}
                 </div>

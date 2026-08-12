@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Image from 'next/image';
 
@@ -34,9 +35,7 @@ export default function PortfolioCard({ item, className = "" }: PortfolioCardPro
                     <span className="text-xs font-semibold text-gray-500 group-hover:text-blue-600 transition-colors">
                         {item.slug ? 'Lihat Studi Kasus' : 'Lihat Live Demo'}
                     </span>
-                    <span className="material-symbols-outlined text-[16px] text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">
-                        arrow_forward
-                    </span>
+                    <ArrowRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" size={16} />
                 </div>
             </div>
         </a>

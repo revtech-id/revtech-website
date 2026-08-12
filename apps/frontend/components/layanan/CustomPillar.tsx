@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
@@ -43,7 +44,7 @@ export default function CustomPillar() {
         
         <Button asChild size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-black shadow-md text-[13px] sm:text-sm md:text-base">
           <Link href="/kontak?paket=custom">
-            Ceritakan Ide Anda <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
+            Ceritakan Ide Anda <ArrowRight className="ml-2 text-sm" size={16} />
           </Link>
         </Button>
       </div>

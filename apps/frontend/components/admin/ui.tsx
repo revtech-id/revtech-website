@@ -59,12 +59,7 @@ export function StatCard({
           >
             {icon}
           </span>
-          <span
-            className="material-symbols-outlined text-[20px] absolute opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
-            style={{ color: "var(--adm-text)" }}
-          >
-            arrow_forward
-          </span>
+          <ArrowRight className="absolute opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" size={16} />
         </div>
       </div>
       <div className="relative z-10">
@@ -574,7 +569,7 @@ export function AdminToolbar({
           onClick={onBack}
           className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium transition-all text-[var(--adm-text-2)] hover:text-[var(--adm-text)]"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <ArrowLeft className="" size={16} />
           Kembali
         </button>
       )}
@@ -656,7 +651,7 @@ export function AdminTabs({ tabs, activeTab, onTabChange }: AdminTabsProps) {
 // ── AdminConfirmModal ──────────────────────────────────────────────────────────
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle, Edit3, Star, CheckCircle } from "lucide-react";
+import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle, Edit3, Star, CheckCircle , ArrowRight, ArrowLeft} from "lucide-react";
 import { useEffect } from "react";
 
 interface AdminConfirmModalProps {

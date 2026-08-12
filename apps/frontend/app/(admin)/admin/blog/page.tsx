@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin } from "lucide-react";
+import { logActivity } from "@/lib/activityLog";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -104,6 +105,7 @@ interface BlogPost {
   metaTitle: string;
   metaDescription: string;
   keywords: string;
+  pinned?: boolean;
 }
 
 // TODO: replace with API call — currently using static mock
@@ -118,6 +120,7 @@ const MOCK_POSTS: BlogPost[] = [
     metaTitle: "5 Alasan Utama Bisnis Anda Membutuhkan Website di Tahun 2026 | RevTech",
     metaDescription: "Pelajari mengapa kehadiran online melalui website profesional krusial untuk pertumbuhan bisnis Anda di era digital 2026.",
     keywords: "website bisnis, pentingnya website, digital marketing",
+    pinned: true,
   },
   {
     id: "2",
@@ -129,6 +132,7 @@ const MOCK_POSTS: BlogPost[] = [
     metaTitle: "Cara Membuat Katalog Digital WhatsApp untuk Pemula",
     metaDescription: "",
     keywords: "",
+    pinned: false,
   },
 ];
 
@@ -190,7 +194,7 @@ export default function BlogPage() {
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
-  const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "" });
+  const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "", pinned: false });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -235,6 +239,15 @@ export default function BlogPage() {
     localStorage.setItem("revtech_blog", JSON.stringify(updated));
   }
 
+  function togglePin(id: string) {
+    const updated = posts.map(p => p.id === id ? { ...p, pinned: !p.pinned } : p);
+    savePosts(updated);
+    const post = updated.find(p => p.id === id);
+    if (post) {
+      logActivity({ type: "blog_updated", title: post.pinned ? "Artikel Disematkan" : "Pin Artikel Dilepas", description: `Status pin diperbarui untuk artikel ${post.title}.`, user: "Admin" });
+    }
+  }
+
   function confirmDelete(id: string) {
     setConfirmModal({
       isOpen: true,
@@ -245,6 +258,7 @@ export default function BlogPage() {
       action: () => {
         savePosts(posts.filter(p => p.id !== id));
         setToast({ isVisible: true, message: "Perubahan berhasil disimpan", type: "success" });
+        logActivity({ type: "blog_deleted", title: "Artikel Dihapus", description: `Artikel blog dengan ID ${id} dihapus.`, user: "Admin" });
         setView("list");
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
@@ -262,6 +276,7 @@ export default function BlogPage() {
       action: () => {
         savePosts(posts.map(p => p.id === id ? { ...p, status: isArchived ? "draft" : "archived" } : p));
         setToast({ isVisible: true, message: isArchived ? "Artikel dikembalikan ke Draft" : "Artikel berhasil diarsipkan", type: "success" });
+        logActivity({ type: "blog_updated", title: isArchived ? "Artikel Dipulihkan" : "Artikel Diarsipkan", description: `Artikel blog ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -277,6 +292,7 @@ export default function BlogPage() {
       action: () => {
         savePosts(posts.map(p => p.id === id ? { ...p, status: "published" } : p));
         setToast({ isVisible: true, message: "Artikel berhasil diterbitkan", type: "success" });
+        logActivity({ type: "blog_updated", title: "Artikel Diterbitkan", description: `Artikel blog ID ${id} dipublish.`, user: "Admin" });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -284,7 +300,7 @@ export default function BlogPage() {
 
   function openNew() {
     setEditPost(null);
-    setContentForm({ title: "", coverImage: "", content: "" });
+    setContentForm({ title: "", coverImage: "", content: "", pinned: false });
     setSeoForm({ metaTitle: "", metaDescription: "", keywords: "" });
     setView("editor");
   }
@@ -292,7 +308,7 @@ export default function BlogPage() {
   function handleEdit(post: BlogPost) {
     const postContent = localStorage.getItem(`revtech_blog_content_${post.id}`) || "";
     setSeoForm({ metaTitle: post.metaTitle, metaDescription: post.metaDescription, keywords: post.keywords });
-    setContentForm({ title: post.title, coverImage: post.coverImage, content: postContent });
+    setContentForm({ title: post.title, coverImage: post.coverImage, content: postContent, pinned: post.pinned || false });
     setEditPost(post);
     setView("editor");
   }
@@ -329,6 +345,7 @@ export default function BlogPage() {
         metaTitle: seoForm.metaTitle,
         metaDescription: seoForm.metaDescription,
         keywords: seoForm.keywords,
+        pinned: contentForm.pinned,
       };
       savePosts(posts.map(p => p.id === editPost.id ? updated : p));
       localStorage.setItem(`revtech_blog_content_${editPost.id}`, contentForm.content);
@@ -345,6 +362,7 @@ export default function BlogPage() {
         metaTitle: seoForm.metaTitle,
         metaDescription: seoForm.metaDescription,
         keywords: seoForm.keywords,
+        pinned: contentForm.pinned,
       };
       savePosts([...posts, newPost]);
       localStorage.setItem(`revtech_blog_content_${newId}`, contentForm.content);
@@ -369,21 +387,29 @@ export default function BlogPage() {
 
     setView("list");
     setToast({ isVisible: true, message: asDraft ? "Draft berhasil disimpan" : "Artikel berhasil dipublish", type: "success" });
+    logActivity({ 
+      type: "blog_updated", 
+      title: asDraft ? "Draft Artikel Disimpan" : (editPost ? "Artikel Diperbarui" : "Artikel Baru Diterbitkan"), 
+      description: `Artikel "${contentForm.title}" ${asDraft ? "disimpan sebagai draft" : "dipublish"}.`, 
+      user: "Admin" 
+    });
   }
 
   const published = posts.filter((p) => p.status === "published");
   const drafts = posts.filter((p) => p.status === "draft");
   const archived = posts.filter((p) => p.status === "archived");
+  const pinnedCount = posts.filter((p) => p.pinned).length;
 
   const TABS = [
     { id: "all", label: "Semua", count: posts.length },
+    { id: "pinned", label: "Disematkan", count: pinnedCount },
     { id: "draft", label: "Draft", count: drafts.length },
     { id: "archived", label: "Arsip", count: archived.length },
     { id: "published", label: "Published", count: published.length },
   ];
 
   const filteredPosts = posts.filter(p => {
-    const matchStatus = filter === "all" || p.status === filter;
+    const matchStatus = filter === "all" ? true : filter === "pinned" ? p.pinned : p.status === filter;
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
@@ -466,6 +492,9 @@ export default function BlogPage() {
                         </div>
                       )}
                       <div className="flex items-center justify-end gap-1.5 w-auto sm:w-auto shrink-0">
+                      <button onClick={() => togglePin(post.id)} className={`inline-flex items-center justify-center p-1.5 transition-colors focus:outline-none ${post.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={post.pinned ? "Lepaskan Pin" : "Sematkan Artikel"}>
+                        <Pin size={14} strokeWidth={2} className={post.pinned ? "fill-amber-500 rotate-45" : ""} />
+                      </button>
                       <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Artikel">
                         <ExternalLink size={14} strokeWidth={2} />
                       </a>
@@ -532,6 +561,10 @@ export default function BlogPage() {
                     className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" 
                     placeholder="Masukkan judul artikel..." 
                   />
+                  <label className="flex items-center gap-2 cursor-pointer mt-4">
+                    <input type="checkbox" checked={contentForm.pinned} onChange={e => setContentForm({ ...contentForm, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
+                    <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Artikel (Tampil Lebih Awal)</span>
+                  </label>
                 </div>
 
               {/* WYSIWYG Editor */}

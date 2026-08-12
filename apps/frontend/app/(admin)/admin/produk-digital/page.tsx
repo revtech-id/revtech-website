@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Star, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -41,8 +41,7 @@ const QUILL_MODULES = {
   }
 };
 
-// ─── Kategori Produk Digital ────────────────────────────────────────────────
-const PRODUK_CATEGORIES = ["Template Website", "Plugin / Extension", "UI Kit", "Script / Tools", "Template Dokumen", "Lainnya"];
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ProdukDigital {
@@ -53,34 +52,45 @@ interface ProdukDigital {
   thumbnail: string;
   content: string;
   url: string | null;
-  projectDate: string;
   description: string;
   techStack: string[];
-  featured: boolean;
+  pinned: boolean;
+  price: string;
   status: "published" | "draft" | "archived";
-  publishedAt: string;
 }
 
 const MOCK_INITIAL: ProdukDigital[] = [
   {
-    id: "PD-1", title: "Template Website Klinik Modern", vendor: "RevTech Studio", category: "Template Website",
-    thumbnail: "", content: "", url: null, projectDate: "2026-05",
-    description: "Template landing page modern untuk klinik dan layanan kesehatan.", techStack: ["Next.js", "Tailwind CSS"],
-    featured: true, status: "published", publishedAt: "2026-05-10"
+    id: "PD-1", title: "Template Website E-Commerce Pro", vendor: "RevTech Studio", category: "Template Website",
+    thumbnail: "https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
+    content: "<p>Template <strong>E-Commerce Pro</strong> adalah solusi terbaik untuk membangun toko online Anda dalam hitungan hari, bukan bulan.</p><h3>Fitur Utama</h3><ul><li>Desain Responsif 100%</li><li>SEO Optimized (Skor Lighthouse 90+)</li><li>Sistem Keranjang & Checkout Siap Pakai</li><li>Integrasi Mode Gelap/Terang</li></ul><p>Dibuat menggunakan teknologi terkini yaitu Next.js 14 App Router, TypeScript, dan Tailwind CSS. Template ini sangat mudah disesuaikan dengan panduan dokumentasi yang komprehensif.</p>", 
+    url: "https://demo.revtech.id/ecommerce-pro",
+    description: "Template Next.js super cepat untuk toko online dengan integrasi payment gateway dan desain konversi tinggi.", techStack: ["Next.js", "Tailwind CSS", "TypeScript"],
+    pinned: true, price: "Rp 250.000", status: "published"
   },
   {
-    id: "PD-2", title: "UI Kit Admin Dashboard", vendor: "RevTech Studio", category: "UI Kit",
-    thumbnail: "", content: "", url: null, projectDate: "2026-06",
-    description: "Paket komponen UI admin modern dengan mode gelap dan terang.", techStack: ["Figma", "React"],
-    featured: false, status: "published", publishedAt: "2026-06-20"
+    id: "PD-2", title: "RevAdmin - UI Kit Dashboard", vendor: "RevTech Studio", category: "UI Kit",
+    thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
+    content: "<p><strong>RevAdmin</strong> mempercepat proses development aplikasi internal atau SaaS Anda hingga 50%. UI Kit komprehensif ini dirancang khusus untuk React dan Figma.</p><h3>Komponen Tersedia</h3><ul><li>Tabel Data Lanjutan dengan Sorting & Filtering</li><li>Chart & Statistik Interaktif (Recharts)</li><li>Form Multi-step dengan Validasi Zod</li><li>Autentikasi UI (Login, Register, Lupa Password)</li></ul><p>Setiap komponen dibuat dengan fokus pada aksesibilitas (a11y) dan pengalaman pengguna yang premium.</p>", 
+    url: "https://figma.com/community/revadmin",
+    description: "Dashboard UI Kit komprehensif untuk React dan Figma dengan 100+ komponen premium.", techStack: ["Figma", "React", "Framer Motion"],
+    pinned: false, price: "Gratis", status: "published"
   },
+  {
+    id: "PD-3", title: "Sistem Kasir & POS Cloud", vendor: "RevTech Studio", category: "Script / Tools",
+    thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
+    content: "<p>Aplikasi Point of Sale (POS) lengkap berbasis web yang siap dideploy untuk bisnis retail atau F&B Anda. Sistem ini mendukung pelacakan stok real-time melintasi berbagai cabang.</p><h3>Fitur Sistem</h3><ul><li>Manajemen Inventori & Peringatan Stok Menipis</li><li>Laporan Penjualan Harian, Mingguan, Bulanan</li><li>Dukungan Scanner Barcode & Printer Thermal</li><li>Manajemen Hak Akses Karyawan</li></ul><p>Tersedia beserta <em>source code</em> lengkap dan panduan instalasi di server VPS atau shared hosting Anda.</p>", 
+    url: "#",
+    description: "Aplikasi kasir Point of Sale lengkap dengan manajemen inventori dan laporan multi-cabang.", techStack: ["Laravel 11", "Vue 3", "MySQL"],
+    pinned: true, price: "Mulai dari Rp 1.500.000", status: "published"
+  }
 ];
 
 const EMPTY_FORM: {
-  title: string; vendor: string; category: string; url: string; projectDate: string; description: string; techStack: string; featured: boolean; status: ProdukDigital["status"]; content: string; thumbnail: string;
+  title: string; vendor: string; category: string; url: string; description: string; techStack: string; pinned: boolean; price: string; status: ProdukDigital["status"]; content: string; thumbnail: string;
 } = {
   title: "", vendor: "", category: "",
-  url: "", projectDate: "", description: "", techStack: "", featured: false, status: "published", content: "", thumbnail: ""
+  url: "", description: "", techStack: "", pinned: false, price: "", status: "published", content: "", thumbnail: ""
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -115,9 +125,9 @@ export default function ProdukDigitalPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_produk_digital");
+    const saved = localStorage.getItem("revtech_produk_digital_v2");
     setItems(saved ? JSON.parse(saved) : MOCK_INITIAL);
-    if (!saved) localStorage.setItem("revtech_produk_digital", JSON.stringify(MOCK_INITIAL));
+    if (!saved) localStorage.setItem("revtech_produk_digital_v2", JSON.stringify(MOCK_INITIAL));
 
     import("react-quill-new").then((mod) => {
       const Quill = mod.default.Quill;
@@ -132,16 +142,16 @@ export default function ProdukDigitalPage() {
     });
   }, []);
 
-  function save(updated: ProdukDigital[]) {
-    setItems(updated);
-    localStorage.setItem("revtech_produk_digital", JSON.stringify(updated));
+  function save(newItems: ProdukDigital[]) {
+    setItems(newItems);
+    localStorage.setItem("revtech_produk_digital_v2", JSON.stringify(newItems));
   }
 
   function handleEdit(item: ProdukDigital) {
     setForm({
       title: item.title, vendor: item.vendor, category: item.category,
-      url: item.url || "", projectDate: item.projectDate || "", description: item.description || "", techStack: item.techStack.join(", "),
-      featured: item.featured, status: item.status, content: item.content || "", thumbnail: item.thumbnail || ""
+      url: item.url || "", description: item.description || "", techStack: item.techStack.join(", "),
+      pinned: item.pinned, price: item.price || "", status: item.status, content: item.content || "", thumbnail: item.thumbnail || ""
     });
     setEditingId(item.id);
     setView("form");
@@ -167,8 +177,8 @@ export default function ProdukDigitalPage() {
     if (editingId) {
       updated = items.map(i => i.id === editingId ? {
         ...i, title: form.title, vendor: form.vendor, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description,
-        techStack: techArr, featured: form.featured, status: form.status,
+        url: form.url || null, description: form.description,
+        techStack: techArr, pinned: form.pinned, price: form.price, status: form.status,
         content: form.content, thumbnail: form.thumbnail
       } : i);
     } else {
@@ -176,9 +186,9 @@ export default function ProdukDigitalPage() {
       updated = [{
         id: newId,
         title: form.title, vendor: form.vendor, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description,
-        techStack: techArr, featured: form.featured, thumbnail: form.thumbnail,
-        content: form.content, status: form.status, publishedAt: new Date().toISOString().split("T")[0]
+        url: form.url || null, description: form.description,
+        techStack: techArr, pinned: form.pinned, price: form.price, thumbnail: form.thumbnail,
+        content: form.content, status: form.status
       }, ...items];
     }
 
@@ -214,8 +224,8 @@ export default function ProdukDigitalPage() {
     });
   }
 
-  function toggleFeatured(id: string) {
-    save(items.map(i => i.id === id ? { ...i, featured: !i.featured } : i));
+  function togglePinned(id: string) {
+    save(items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
   }
 
   const published = items.filter(i => (i.status || "published") === "published");
@@ -224,7 +234,7 @@ export default function ProdukDigitalPage() {
 
   const TABS = [
     { id: "all", label: "Semua", count: items.length },
-    { id: "featured", label: "Featured", count: items.filter(i => i.featured).length },
+    { id: "pinned", label: "Disematkan", count: items.filter(i => i.pinned).length },
     { id: "draft", label: "Draft", count: drafts.length },
     { id: "archived", label: "Arsip", count: archived.length },
     { id: "published", label: "Published", count: published.length },
@@ -234,7 +244,7 @@ export default function ProdukDigitalPage() {
     const s = item.status || "published";
     const matchTab =
       tabFilter === "all" ? true :
-      tabFilter === "featured" ? item.featured :
+      tabFilter === "pinned" ? item.pinned :
       tabFilter === "published" ? s === "published" :
       tabFilter === "draft" ? s === "draft" :
       tabFilter === "archived" ? s === "archived" : true;
@@ -244,10 +254,6 @@ export default function ProdukDigitalPage() {
     const matchSearch = !search || searchString.includes(search.toLowerCase());
 
     return matchTab && matchCategory && matchSearch;
-  }).sort((a, b) => {
-    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-    return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
   });
 
   if (!isClient) return null;
@@ -269,7 +275,7 @@ export default function ProdukDigitalPage() {
                 className="appearance-none bg-transparent py-2.5 pl-4 pr-8 text-sm font-semibold text-[var(--adm-text)] focus:outline-none cursor-pointer"
               >
                 <option value="Semua" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Semua Kategori</option>
-                {PRODUK_CATEGORIES.map(c => (
+                {Array.from(new Set(items.map(i => i.category))).filter(Boolean).map(c => (
                   <option key={c} value={c} className="bg-[var(--adm-card)] text-[var(--adm-text)]">{c}</option>
                 ))}
               </select>
@@ -318,8 +324,8 @@ export default function ProdukDigitalPage() {
                 {filtered.map((item) => (
                   <div key={item.id} className="flex items-center justify-between px-6 py-4">
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
-                      <button onClick={() => toggleFeatured(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.featured ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.featured ? "Hapus dari Featured" : "Jadikan Featured"}>
-                        <Star size={14} strokeWidth={item.featured ? 0 : 2} className={item.featured ? "fill-amber-500" : ""} />
+                      <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
+                        <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-amber-500 rotate-45" : ""} />
                       </button>
                       <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 overflow-hidden">
                         {item.thumbnail ? (
@@ -333,15 +339,10 @@ export default function ProdukDigitalPage() {
                           <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
                           {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
                         </div>
-                        <p className="text-xs text-[var(--adm-text-3)] truncate">{item.category} · {item.vendor}</p>
+                        <p className="text-xs text-[var(--adm-text-3)] truncate">{item.category} · {item.vendor}{item.price ? ` · ${item.price}` : ''}</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
-                      {item.status !== "draft" && item.publishedAt && (
-                        <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
-                          {new Date(item.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                        </div>
-                      )}
                       <div className="flex items-center justify-end gap-1.5 shrink-0">
                         {item.url ? (
                           <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors" title="Buka Tautan">
@@ -498,12 +499,16 @@ export default function ProdukDigitalPage() {
 
                   <div>
                     <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Kategori *</label>
-                    <select required value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
-                    >
-                      <option value="">Pilih kategori...</option>
-                      {PRODUK_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <input required type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
+                      placeholder="Contoh: Template Web, Plugin, dll" />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Harga</label>
+                    <input type="text" value={form.price || ""} onChange={e => setForm({ ...form, price: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
+                      placeholder="Contoh: Rp 50.000 atau Gratis" />
                   </div>
 
                   <div>
@@ -519,20 +524,15 @@ export default function ProdukDigitalPage() {
                       className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
                       placeholder="Contoh: Next.js, Tailwind CSS" />
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Bulan & Tahun</label>
-                      <input type="month" value={form.projectDate} onChange={e => setForm({ ...form, projectDate: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" />
-                    </div>
-                    <div className="flex flex-col justify-end">
+                    <div className="col-span-2">
                       <label className="flex items-center gap-2 cursor-pointer py-2">
-                        <input type="checkbox" checked={form.featured} onChange={e => setForm({ ...form, featured: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
-                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Featured</span>
+                        <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
+                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Produk (Tampil Lebih Awal)</span>
                       </label>
                     </div>
                   </div>
+
                 </div>
               </form>
             </div>

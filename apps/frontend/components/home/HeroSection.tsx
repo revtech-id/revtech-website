@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -18,37 +19,59 @@ const heroContainerVariant = {
   },
 };
 
+type MediaSlot = { bgMedia: string; bgType: "image" | "video" };
+
+function getDeviceSlot(parsed: Record<string, MediaSlot>): MediaSlot | null {
+  const w = typeof window !== "undefined" ? window.innerWidth : 1280;
+  if (w < 768)  return parsed.mobile  ?? null;
+  if (w < 1024) return parsed.tablet  ?? null;
+  return parsed.desktop ?? null;
+}
+
 export default function HeroSection() {
-  const [bgImage, setBgImage] = useState<string | null>(null);
+  const [media, setMedia] = useState<MediaSlot | null>(null);
 
   useEffect(() => {
-    const handleStorageChange = () => {
+    const load = () => {
       const saved = localStorage.getItem("revtech_hero_settings");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.bgImage) setBgImage(parsed.bgImage);
-        } catch (e) {}
-      }
+      if (!saved) return;
+      try {
+        const parsed = JSON.parse(saved);
+        // Support both old flat format and new per-device format
+        if (parsed.bgImage) {
+          setMedia({ bgMedia: parsed.bgImage, bgType: "image" });
+        } else if (parsed.desktop) {
+          const slot = getDeviceSlot(parsed);
+          if (slot?.bgMedia) setMedia(slot);
+        }
+      } catch { /* ignore */ }
     };
-    handleStorageChange();
-    window.addEventListener("storage", handleStorageChange);
-    // Custom event for immediate updates within same window
-    window.addEventListener("hero-settings-updated", handleStorageChange);
+    load();
+    window.addEventListener("storage", load);
+    window.addEventListener("hero-settings-updated", load);
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("hero-settings-updated", handleStorageChange);
+      window.removeEventListener("storage", load);
+      window.removeEventListener("hero-settings-updated", load);
     };
   }, []);
 
   return (
     <section className="relative min-h-[85vh] lg:min-h-[90vh] flex items-center pt-32 lg:pt-40 pb-20 lg:pb-48 overflow-hidden bg-white">
 
-      {/* --- DESKTOP & TABLET: Background Image & Gradient --- */}
-      <div
-        className="hidden md:block absolute inset-0 z-0 pointer-events-none bg-cover xl:bg-contain bg-right-bottom bg-no-repeat opacity-40 xl:opacity-100 transition-all duration-300"
-        style={{ backgroundImage: `url('${bgImage || "/assets/revtech-bg.webp"}')` }}
-      />
+      {/* --- DESKTOP & TABLET: Background Media & Gradient --- */}
+      {media?.bgType === "video" ? (
+        <video
+          key={media.bgMedia}
+          src={media.bgMedia}
+          autoPlay loop muted playsInline
+          className="hidden md:block absolute inset-0 z-0 w-full h-full object-cover pointer-events-none"
+        />
+      ) : (
+        <div
+          className="hidden md:block absolute inset-0 z-0 pointer-events-none bg-cover xl:bg-contain bg-right-bottom bg-no-repeat opacity-40 xl:opacity-100 transition-all duration-300"
+          style={{ backgroundImage: `url('${media?.bgMedia || "/assets/revtech-bg.webp"}')` }}
+        />
+      )}
       <div className="hidden md:block absolute inset-y-0 left-0 w-full md:w-3/4 bg-gradient-to-r from-white via-white/95 to-transparent z-0 pointer-events-none" />
       {/* ----------------------------------------------- */}
 
@@ -83,7 +106,7 @@ export default function HeroSection() {
             >
               <a href="#pilar-layanan" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full text-[15px]">
-                  Lihat Layanan <span className="material-symbols-outlined ml-2 text-[20px]">arrow_forward</span>
+                  Lihat Layanan <ArrowRight className="ml-2" size={16} />
                 </Button>
               </a>
               <Link href="/portofolio" className="w-full sm:w-auto">

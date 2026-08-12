@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader, StatusBadge, AdminToolbar } from "@/components/admin/ui";
 import { CheckCircle2, MessageSquare, Trash2, X, MoreHorizontal, ChevronDown, AlertTriangle, CircleDollarSign } from "lucide-react";
+import { logActivity } from "@/lib/activityLog";
 import rawInvoices from "@/data/admin/invoices.json";
 import rawInbox from "@/data/admin/inbox.json";
 
@@ -204,6 +205,7 @@ export default function InvoicePage() {
     );
     setInvoiceList(updated);
     localStorage.setItem("revtech_invoices", JSON.stringify(updated));
+    logActivity({ type: "system", title: "Invoice Dilunasi", description: `Invoice ${lunasInvoice.id} untuk klien ${lunasInvoice.client} telah dilunasi.`, user: "Admin" });
   }
 
   function save(updated: Invoice[]) {
@@ -219,6 +221,7 @@ export default function InvoicePage() {
   function handleDelete(id: string) {
     if (window.confirm("Apakah Anda yakin ingin menghapus tagihan ini?")) {
       save(invoiceList.filter(inv => inv.id !== id));
+      logActivity({ type: "system", title: "Invoice Dihapus", description: `Invoice dengan ID ${id} telah dihapus.`, user: "Admin" });
     }
   }
 

@@ -1,11 +1,12 @@
 export interface TestimonialMessage {
+  id?: string;
   sender: 'me' | 'client';
   text: string;
   time: string;
 }
 
 export interface Testimonial {
-  id: number;
+  id: string | number;
   name: string;
   role: string;
   initials: string;
@@ -13,6 +14,8 @@ export interface Testimonial {
   avatarBg: string;
   lastSeen: string;
   messages: TestimonialMessage[];
+  status?: "published" | "draft" | "archived";
+  starred?: boolean;
 }
 
 export const testimonialsData: Testimonial[] = [

@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
@@ -63,7 +64,7 @@ export default function WebDevPillar() {
         <div className="flex flex-col sm:flex-row gap-4">
           <Button asChild size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 shadow-md text-[13px] sm:text-sm md:text-base">
             <Link href="/jasa-web">
-              Pelajari Selengkapnya <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
+              Pelajari Selengkapnya <ArrowRight className="ml-2 text-sm" size={16} />
             </Link>
           </Button>
         </div>

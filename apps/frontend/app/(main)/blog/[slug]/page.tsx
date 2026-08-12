@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { getPostData, getSortedPostsData } from '@/lib/blog';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -59,7 +60,7 @@ export default async function BlogPost({ params }: Props) {
         {/* Breadcrumb & Navigation */}
         <div className="flex justify-start mb-10 w-full">
             <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                <ArrowLeft className="" size={16} />
                 Kembali
             </Link>
         </div>
@@ -73,18 +74,24 @@ export default async function BlogPost({ params }: Props) {
 
         {/* Cover Image */}
         <div className="w-full relative rounded-[2rem] overflow-hidden mb-16 shadow-lg border border-gray-100 bg-gray-50">
-            <Image 
-                src={postData.coverImage} 
-                alt={postData.title} 
-                width={1920}
-                height={1080}
-                className="w-full h-auto"
-                priority
-            />
+            {postData.coverImage ? (
+                <Image 
+                    src={postData.coverImage} 
+                    alt={postData.title} 
+                    width={1920}
+                    height={1080}
+                    className="w-full h-auto"
+                    priority
+                />
+            ) : (
+                <div className="w-full aspect-[21/9] flex items-center justify-center text-gray-300">
+                    <span className="material-symbols-outlined text-6xl">image</span>
+                </div>
+            )}
         </div>
 
         {/* Konten Artikel */}
-        <article className="max-w-none">
+        <article className="max-w-none break-words">
             <AffiliateArticleRenderer htmlContent={postData.contentHtml} />
         </article>
 

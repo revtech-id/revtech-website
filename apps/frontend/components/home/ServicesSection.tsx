@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
@@ -111,7 +112,7 @@ export default function ServicesSection() {
                   className={`w-full ${pillar.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700' : pillar.color === 'navy' ? 'bg-blue-900 hover:bg-blue-950' : 'bg-slate-900 hover:bg-black'}`}
                 >
                   <Link href={pillar.link}>
-                    {pillar.buttonText} <span className="material-symbols-outlined ml-2 text-sm">arrow_forward</span>
+                    {pillar.buttonText} <ArrowRight className="ml-2 text-sm" size={16} />
                   </Link>
                 </Button>
               </div>

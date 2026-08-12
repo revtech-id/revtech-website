@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import { StatusBadge, AdminToolbar } from "@/components/admin/ui";
-import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle, CircleDollarSign, CheckSquare, Calendar } from "lucide-react";
+import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle, CircleDollarSign, CheckSquare, Calendar, Star, FolderKanban } from "lucide-react";
 import rawOrders from "@/data/admin/orders.json";
 import { logActivity } from "@/lib/activityLog";
 
@@ -29,6 +30,8 @@ interface Order {
   progressLog?: { date: string; note: string; by: string }[]; // log progress bertanggal
   maxRevisions?: number;          // berapa kali bisa revisi
   usedRevisions?: number;         // jumlah revisi yang sudah terpakai
+  isTestimoniAdded?: boolean;
+  isPortofolioAdded?: boolean;
 }
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project", "Jasa Modifikasi"];
@@ -204,7 +207,7 @@ function WAModal({ order, onClose }: WAModalProps) {
 
 // ── Order Card ────────────────────────────────────────────────────────────────
 
-function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover, onIncrementRevision, onCardClick }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; onIncrementRevision: () => void; onCardClick: () => void; }) {
+function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover, onIncrementRevision, onCardClick, onTestimoniClick, onPortofolioClick }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; onIncrementRevision: () => void; onCardClick: () => void; onTestimoniClick: () => void; onPortofolioClick: () => void; }) {
   const pipelineIndex = PIPELINE.findIndex((p) => p.status === order.status);
   const badge = PIPELINE[pipelineIndex] || PIPELINE[0];
 
@@ -270,9 +273,18 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
               </button>
             )}
             {order.status === "selesai" ? (
-              <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0 ml-1" style={getStyle(badge.badgeVariant)}>
-                <span className="truncate">{badge.label}</span>
-                <CheckCircle2 size={13} strokeWidth={2.5} />
+              <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                <button onClick={(e) => { e.stopPropagation(); onTestimoniClick(); }} className={`inline-flex items-center justify-center p-1 transition-colors focus:outline-none ${order.isTestimoniAdded ? 'text-[var(--adm-warning)]' : 'text-[var(--adm-text-3)] hover:text-white'}`} title="Opsi Testimoni">
+                  <Star size={15} strokeWidth={2.5} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onPortofolioClick(); }} className={`inline-flex items-center justify-center p-1 transition-colors focus:outline-none ${order.isPortofolioAdded ? 'text-[var(--adm-accent)]' : 'text-[var(--adm-text-3)] hover:text-white'}`} title="Opsi Portofolio">
+                  <FolderKanban size={15} strokeWidth={2.5} />
+                </button>
+                <div className="w-px h-4 bg-[var(--adm-border)] mx-0.5"></div>
+                <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold" style={getStyle(badge.badgeVariant)}>
+                  <span className="truncate">{badge.label}</span>
+                  <CheckCircle2 size={13} strokeWidth={2.5} />
+                </div>
               </div>
             ) : (
               <select
@@ -433,6 +445,9 @@ export default function PesananPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("oldest");
   const [view, setView] = useState<"list" | "form">("list");
+  
+  // States for Modals
+  const [actionPopup, setActionPopup] = useState<{ type: "testimoni" | "portofolio", orderId: string } | null>(null);
   
   // States for Toast
   const [toastMessage, setToastMessage] = useState<{ text: string, type: "success" | "error" | "info" } | null>(null);
@@ -1102,6 +1117,8 @@ export default function PesananPage() {
                   onEdit={() => handleEdit(order)}
                   onDelete={() => setDeletingId(order.id)}
                   onIncrementRevision={() => triggerRevision(order.id)}
+                  onTestimoniClick={() => setActionPopup({ type: "testimoni", orderId: order.id })}
+                  onPortofolioClick={() => setActionPopup({ type: "portofolio", orderId: order.id })}
                   onCardClick={() => {
                     setDetailOrder(order);
                     setDetailTab("info");
@@ -1719,6 +1736,53 @@ export default function PesananPage() {
                 }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
                   Ya, Ubah Status
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {actionPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[var(--adm-bg)] w-full max-w-sm rounded-2xl shadow-xl overflow-hidden border border-[var(--adm-border)] flex flex-col">
+              <div className="p-5 flex flex-col gap-3">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${actionPopup.type === 'testimoni' ? 'bg-[var(--adm-warning)]/20 text-[var(--adm-warning)]' : 'bg-[var(--adm-accent)]/20 text-[var(--adm-accent)]'}`}>
+                  {actionPopup.type === 'testimoni' ? <Star size={24} strokeWidth={2.5} /> : <FolderKanban size={24} strokeWidth={2.5} />}
+                </div>
+                <h2 className="text-lg font-bold text-[var(--adm-text)] capitalize">{actionPopup.type}</h2>
+                <p className="text-sm text-[var(--adm-text-2)] mb-2">Pilih aksi untuk project ini.</p>
+                
+                <Link 
+                  href={`/admin/${actionPopup.type}`}
+                  onClick={() => setActionPopup(null)}
+                  className={`w-full py-2.5 text-sm font-bold text-center text-white rounded-xl hover:opacity-90 transition-all ${actionPopup.type === 'testimoni' ? 'bg-[var(--adm-warning)]' : 'bg-[var(--adm-accent)]'}`}
+                >
+                  Buka Halaman {actionPopup.type}
+                </Link>
+
+                <button 
+                  onClick={() => {
+                    const isAdded = actionPopup.type === 'testimoni' ? 'isTestimoniAdded' : 'isPortofolioAdded';
+                    const orderToUpdate = orders.find(o => o.id === actionPopup.orderId);
+                    if(orderToUpdate) {
+                      const updated = orders.map(o => o.id === actionPopup.orderId ? { ...o, [isAdded]: !o[isAdded] } : o);
+                      saveOrders(updated);
+                      showToast(`Status ${actionPopup.type} diperbarui`, "success");
+                    }
+                    setActionPopup(null);
+                  }}
+                  className={`w-full py-2.5 text-sm font-bold rounded-xl transition-all border ${
+                    orders.find(o => o.id === actionPopup.orderId)?.[actionPopup.type === 'testimoni' ? 'isTestimoniAdded' : 'isPortofolioAdded']
+                      ? "border-[var(--adm-border)] text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"
+                      : "border-[var(--adm-success)]/30 text-[var(--adm-success)] bg-[var(--adm-success)]/10 hover:bg-[var(--adm-success)]/20"
+                  }`}
+                >
+                  {orders.find(o => o.id === actionPopup.orderId)?.[actionPopup.type === 'testimoni' ? 'isTestimoniAdded' : 'isPortofolioAdded'] ? "Batalkan Tandai" : "Tandai Sudah Ditambahkan"}
+                </button>
+              </div>
+              <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex justify-end">
+                <button onClick={() => setActionPopup(null)} className="px-5 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors">Tutup</button>
               </div>
             </motion.div>
           </div>

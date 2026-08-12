@@ -7,6 +7,7 @@ import { pricingPlans as defaultPlans } from '@/data/pricing';
 import type { PricingPlan } from '@/data/pricing';
 import { Button } from '@/components/ui/Button';
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+import { calculateDiscount } from '@/lib/utils';
 
 
 export default function PricingCards() {
@@ -17,12 +18,27 @@ export default function PricingCards() {
         const load = () => {
             const saved = localStorage.getItem('revtech_jasa_web_plans');
             if (saved) {
-                try { setPlans(JSON.parse(saved)); } catch (e) {}
+                try { 
+                    const parsed = JSON.parse(saved) as PricingPlan[];
+                    const merged = defaultPlans.map(dp => {
+                        const matching = parsed.find(p => p.id === dp.id);
+                        return matching ? { ...dp, ...matching } : dp;
+                    });
+                    setPlans(merged); 
+                } catch (e) {}
             }
         };
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'revtech_jasa_web_plans') load();
+        };
+        
         load();
         window.addEventListener('jasa-web-updated', load);
-        return () => window.removeEventListener('jasa-web-updated', load);
+        window.addEventListener('storage', handleStorage);
+        return () => {
+            window.removeEventListener('jasa-web-updated', load);
+            window.removeEventListener('storage', handleStorage);
+        };
     }, []);
 
     // Dummy trigger for demonstration - if you ever want to show it.
@@ -64,7 +80,7 @@ export default function PricingCards() {
                         >
                             {plan.popular && (
                                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-white text-blue-600 text-[10px] md:text-[9px] lg:text-[11px] sm:text-xs font-black px-4 md:px-3 lg:px-5 py-1 rounded-full shadow-sm tracking-widest z-10 uppercase whitespace-nowrap">
-                                    {plan.promoBadge || "BEST SELLER"}
+                                    BEST SELLER
                                 </div>
                             )}
                             <div className={`rounded-[29px] p-8 sm:p-10 md:p-5 lg:p-10 h-full flex flex-col ${plan.popular ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'}`}>
@@ -75,6 +91,14 @@ export default function PricingCards() {
                                     {plan.originalPrice && (
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm md:text-xs lg:text-sm text-gray-400 line-through font-bold">{plan.originalPrice}</span>
+                                            {(() => {
+                                                const discount = calculateDiscount(plan.basicPrice, plan.originalPrice);
+                                                return discount ? (
+                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${plan.popular ? 'bg-white text-red-600 shadow-sm' : 'bg-red-100 text-red-600'}`}>
+                                                        {discount}
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                         </div>
                                     )}
                                     <span className={`font-black tracking-tighter leading-none whitespace-nowrap text-[32px] md:text-2xl lg:text-[28px] xl:text-[36px] ${plan.popular ? 'text-white' : 'text-gray-900'}`}>

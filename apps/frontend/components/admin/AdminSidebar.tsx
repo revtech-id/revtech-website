@@ -20,13 +20,14 @@ import {
   History,
   Trash2,
   Image as ImageIcon,
-  MessageSquareQuote,
+  Star,
   Globe,
   Package,
   type LucideIcon,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/Button";
+import { logActivity } from "@/lib/activityLog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
@@ -39,7 +40,7 @@ export const NAV_ITEMS = [
   { label: "RevTech Studio", icon: Sparkles, href: "/admin/studio" },
   { label: "Blog", icon: FileText, href: "/admin/blog" },
   { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio" },
-  { label: "Testimoni", icon: MessageSquareQuote, href: "/admin/testimoni" },
+  { label: "Testimoni", icon: Star, href: "/admin/testimoni" },
   { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero" },
   { label: "Jasa Web", icon: Globe, href: "/admin/jasa-web" },
   { label: "Produk Digital", icon: Package, href: "/admin/produk-digital" },
@@ -121,7 +122,10 @@ export function SidebarProfileSection() {
               asChild
               variant="ghost"
               className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-bold transition-colors hover:bg-transparent text-rose-600 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-400"
-              onClick={() => setProfileOpen(false)}
+              onClick={() => {
+                setProfileOpen(false);
+                logActivity({ type: "system", title: "Logout", description: "Admin telah keluar dari dashboard.", user: "Admin" });
+              }}
             >
               <Link href="/">
                 <LogOut className="h-4 w-4 shrink-0" />

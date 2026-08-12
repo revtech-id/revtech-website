@@ -1,17 +1,48 @@
 "use client";
+import { ArrowLeft } from "lucide-react";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { PricingPlan } from '@/data/pricing';
 import { CheckCircle2, XCircle, Lightbulb, LayoutTemplate, Layers, Settings, ExternalLink } from 'lucide-react';
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
+import { calculateDiscount } from '@/lib/utils';
 
 
 interface PackageDetailClientProps {
     plan: PricingPlan;
 }
 
-export default function PackageDetailClient({ plan }: PackageDetailClientProps) {
+export default function PackageDetailClient({ plan: initialPlan }: PackageDetailClientProps) {
+    const [plan, setPlan] = useState(initialPlan);
+
+    useEffect(() => {
+        const load = () => {
+            const saved = localStorage.getItem('revtech_jasa_web_plans');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved) as PricingPlan[];
+                    const matchingPlan = parsed.find(p => p.id === initialPlan.id);
+                    if (matchingPlan) {
+                        setPlan({ ...initialPlan, ...matchingPlan });
+                    }
+                } catch (e) {}
+            }
+        };
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'revtech_jasa_web_plans') load();
+        };
+
+        load();
+        window.addEventListener('jasa-web-updated', load);
+        window.addEventListener('storage', handleStorage);
+        return () => {
+            window.removeEventListener('jasa-web-updated', load);
+            window.removeEventListener('storage', handleStorage);
+        };
+    }, [initialPlan.id]);
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* HERO SECTION - SUPER SIMPLE */}
@@ -19,7 +50,7 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                 {/* Back Button */}
                 <div className="max-w-4xl mx-auto flex justify-start mb-8 w-full">
                     <Link href="/jasa-web" className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                        <ArrowLeft className="" size={16} />
                         Kembali
                     </Link>
                 </div>
@@ -29,9 +60,9 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                     transition={{ type: 'spring', stiffness: 80, damping: 20, mass: 0.8 }}
                     className="max-w-3xl mx-auto flex flex-col items-center"
                 >
-                    {plan.promoBadge && (
+                    {plan.popular && (
                         <div className="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-4 py-1.5 rounded-full mb-6 uppercase tracking-widest">
-                            {plan.promoBadge}
+                            BEST SELLER
                         </div>
                     )}
                     <h1 className="text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">
@@ -180,10 +211,16 @@ export default function PackageDetailClient({ plan }: PackageDetailClientProps) 
                                 </span>
                             </div>
                         <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
-                            <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg">
-                                Lihat Live Demo 
-                                <ExternalLink className="w-4 h-4" />
-                            </button>
+                            {plan.demoLink ? (
+                                <Link href={plan.demoLink} target="_blank" className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg">
+                                    Lihat Live Demo 
+                                    <ExternalLink className="w-4 h-4" />
+                                </Link>
+                            ) : (
+                                <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg cursor-not-allowed opacity-50" disabled>
+                                    Demo Belum Tersedia
+                                </button>
+                            )}
                         </div>
                     </div>
                 </section>

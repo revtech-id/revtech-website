@@ -37,6 +37,7 @@ export interface PricingPlan {
   buttonLinkBasic?: string;
   buttonLinkFull?: string;
   isUMKM?: boolean;
+  demoLink?: string;
 }
 
 export const pricingPlans: PricingPlan[] = [

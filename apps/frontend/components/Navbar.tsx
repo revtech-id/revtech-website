@@ -1,4 +1,5 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -54,7 +55,7 @@ export default function Navbar() {
                     <Link href="/kontak" className="relative group inline-flex items-center justify-center">
                         <button className="relative bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full hover:bg-blue-700 hover:shadow-md transition-[background-color,box-shadow] duration-200 flex items-center gap-2">
                             Hubungi Kami
-                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                            <ArrowRight className="" size={16} />
                         </button>
                     </Link>
                 </div>
@@ -83,7 +84,7 @@ export default function Navbar() {
                 <div className="p-4 pt-0 mt-2 border-t border-gray-100">
                     <Link href="/kontak" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 w-full bg-primary text-white font-bold px-4 py-3 rounded-xl hover:bg-blue-700 transition-colors mt-4">
                         Hubungi Kami
-                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                        <ArrowRight className="text-sm" size={16} />
                     </Link>
                 </div>
             </div>

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, MoreVertical, Paperclip, Mic, Smile,
-  Plus, CheckCheck, Trash2, X, Settings, User, Save, Edit3, Star, Check, Archive, ChevronDown
+  Plus, CheckCheck, Trash2, X, Settings, User, Save, Edit3, Pin, Check, Archive, ChevronDown
 } from "lucide-react";
 import { AdminToast, AdminConfirmModal } from "@/components/admin/ui";
 import { logActivity } from "@/lib/activityLog";
@@ -29,7 +29,7 @@ interface Testimonial {
   lastSeen: string;
   messages: TestimonialMessage[];
   status: "published" | "draft" | "archived";
-  starred?: boolean;
+  pinned?: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -47,7 +47,7 @@ export default function TestimonialWhatsAppAdmin() {
   const [items, setItems] = useState<Testimonial[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "published" | "draft" | "starred" | "archived">("all");
+  const [filter, setFilter] = useState<"all" | "published" | "draft" | "pinned" | "archived">("all");
   const [menuOpen, setMenuOpen] = useState(false);
   const [filterDropOpen, setFilterDropOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -120,14 +120,15 @@ export default function TestimonialWhatsAppAdmin() {
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const newTestimonial: Testimonial = {
       id: Date.now().toString(),
-      name: "",
-      role: "",
-      initials: "",
-      service: "",
-      avatarBg: "bg-gray-200 text-gray-500",
-      lastSeen: `hari ini pukul ${timeStr}`,
+      name: "Klien Baru",
+      role: "Perusahaan",
+      initials: "KB",
+      service: "Jasa Web",
+      avatarBg: "bg-gray-100 text-gray-600",
+      lastSeen: new Date().toISOString(),
       status: "draft",
       messages: [],
+      pinned: false
     };
     setDraftClient(newTestimonial);
   };
@@ -276,18 +277,19 @@ export default function TestimonialWhatsAppAdmin() {
   };
 
   const activeItem = items.find(i => i.id === activeId);
+  const pinnedCount = items.filter(i => i.pinned).length;
 
   const filteredItems = items.filter(i => {
     if (filter === "published") return i.status === "published";
     if (filter === "draft") return i.status === "draft";
     if (filter === "archived") return i.status === "archived";
-    if (filter === "starred") return i.starred === true;
+    if (filter === "pinned") return i.pinned === true;
     if (filter === "all") return i.status !== "archived";
     return true;
   }).filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.messages.some(m => m.text.toLowerCase().includes(search.toLowerCase())))
   .sort((a, b) => {
-    if (a.starred && !b.starred) return -1;
-    if (!a.starred && b.starred) return 1;
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
     return 0;
   });
 
@@ -295,14 +297,14 @@ export default function TestimonialWhatsAppAdmin() {
     const item = items.find(i => i.id === id);
     if (!item) return;
     const newStatus = item.status === "archived" ? "draft" : "archived";
-    const newItems = items.map(i => i.id === id ? { ...i, status: newStatus } : i);
+    const newItems = items.map(i => i.id === id ? { ...i, status: newStatus as any } : i);
     saveToStorage(newItems);
     setToast({ isVisible: true, message: newStatus === "archived" ? "Chat diarsipkan" : "Chat dipulihkan ke Draft", type: "success" });
     if (activeId === id && newStatus === "archived") setActiveId(null);
   };
 
-  const toggleStar = (id: string) => {
-    const newItems = items.map(i => i.id === id ? { ...i, starred: !i.starred } : i);
+  const togglePin = (id: string) => {
+    const newItems = items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i);
     saveToStorage(newItems);
   };
 
@@ -403,12 +405,12 @@ export default function TestimonialWhatsAppAdmin() {
                 </button>
               ))}
 
-              {/* Chevron dropdown for Favorit & Arsip */}
+              {/* Chevron dropdown for Disematkan & Arsip */}
               <div className="relative ml-auto shrink-0">
                 <button
                   onClick={() => setFilterDropOpen(p => !p)}
                   className={`flex items-center justify-center w-7 h-7 rounded-full transition-all border ${
-                    filter === "starred" || filter === "archived"
+                    filter === "pinned" || filter === "archived"
                       ? (dark ? "bg-[#0a332c] text-[#00a884] border-[#00a884]/20" : "bg-[#d9fdd3] text-[#059669] border-[#059669]/20")
                       : (dark ? "bg-[#202c33] text-[#aebac1] border-transparent hover:bg-[#2a3942]" : "bg-[#f0f2f5] text-[#54656f] border-transparent hover:bg-gray-200")
                   }`}
@@ -420,20 +422,20 @@ export default function TestimonialWhatsAppAdmin() {
                     <div className="fixed inset-0 z-40" onClick={() => setFilterDropOpen(false)} />
                     <div className={`absolute top-9 right-0 w-44 shadow-xl rounded-xl border py-1 z-50 overflow-hidden ${dark ? 'bg-[#1f2c34] border-gray-700' : 'bg-white border-gray-100'}`}>
                       <button
-                        onClick={() => { setFilter(f => f === "starred" ? "all" : "starred"); setFilterDropOpen(false); }}
+                        onClick={() => { setFilter(f => f === "pinned" ? "all" : "pinned"); setFilterDropOpen(false); }}
                         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
                           dark ? 'hover:bg-[#2a3942]' : 'hover:bg-gray-50'
                         } ${
-                          filter === "starred" 
+                          filter === "pinned" 
                             ? (dark ? "text-[#00a884] font-semibold" : "text-[#059669] font-semibold") 
                             : (dark ? "text-[#e9edef]" : "text-[#111b21]")
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Star size={16} className={filter === "starred" ? "fill-amber-400 text-amber-400" : (dark ? "text-[#8696a0]" : "text-[#54656f]")} />
-                          Favorit
+                          <Pin size={16} className={filter === "pinned" ? "rotate-45 text-amber-500" : (dark ? "text-[#8696a0]" : "text-[#54656f]")} />
+                          Disematkan
                         </div>
-                        {filter === "starred" && <Check size={14} className={dark ? "text-[#00a884]" : "text-[#059669]"} />}
+                        {filter === "pinned" && <Check size={14} className={dark ? "text-[#00a884]" : "text-[#059669]"} />}
                       </button>
                       <button
                         onClick={() => { setFilter(f => f === "archived" ? "all" : "archived"); setFilterDropOpen(false); }}
@@ -470,8 +472,10 @@ export default function TestimonialWhatsAppAdmin() {
                   onClick={() => setActiveId(item.id)}
                   className={`flex items-center gap-3 p-3 cursor-pointer transition-colors relative group ${isActive ? (dark ? 'bg-[#2a3942]' : 'bg-[#f0f2f5]') : (dark ? 'hover:bg-[#202c33]' : 'hover:bg-[#f5f6f6]')}`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg shadow-sm border border-white transition-colors duration-300 ${item.status === 'draft' ? 'bg-gray-200 text-gray-500' : item.avatarBg}`}>
-                    {item.initials || <User size={22} strokeWidth={2.5} />}
+                  <div className="relative">
+                    <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg shadow-sm border border-white transition-colors duration-300 ${item.status === 'draft' ? 'bg-gray-200 text-gray-500' : item.avatarBg}`}>
+                      {item.initials || <User size={22} strokeWidth={2.5} />}
+                    </div>
                   </div>
                   
                   <div className={`flex-1 min-w-0 pb-3 pt-1 border-b ${isActive ? 'border-transparent' : (dark ? 'border-[#222e35]' : 'border-gray-100')} ${item.status === 'draft' ? 'opacity-60 grayscale' : ''}`}>
@@ -482,15 +486,19 @@ export default function TestimonialWhatsAppAdmin() {
                         </h4>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {item.starred && <Star size={12} className={dark ? "text-[#8696a0]" : "text-[#667781]"} fill="currentColor" />}
                         <span className={`text-[11px] ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.time || ''}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 min-w-0 flex-1">
                         {lastMsg?.sender === "me" && <span className="material-symbols-outlined text-[15px] text-[#53bdeb] leading-none">done_all</span>}
-                        <p className={`text-[13px] truncate ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.text || <span className="italic">Belum ada obrolan</span>}</p>
+                        <p className={`text-[13px] truncate pr-2 ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.text || <span className="italic">Belum ada obrolan</span>}</p>
                       </div>
+                      {item.pinned && (
+                        <div className="shrink-0 flex items-center justify-center pl-2">
+                          <Pin size={15} className={dark ? "text-[#8696a0]" : "text-[#8696a0]"} fill="currentColor" />
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -533,8 +541,10 @@ export default function TestimonialWhatsAppAdmin() {
                 className="flex items-center gap-4 cursor-pointer hover:bg-black/5 p-1 -ml-1 rounded-lg transition-colors flex-1"
                 onClick={() => setDraftClient({ ...activeItem })}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${activeItem.avatarBg}`}>
-                  {activeItem.initials || <User size={18} strokeWidth={2.5} />}
+                <div className="relative">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${activeItem.avatarBg}`}>
+                    {activeItem.initials || <User size={18} strokeWidth={2.5} />}
+                  </div>
                 </div>
                 <div>
                   <h4 className={`font-semibold text-[15px] leading-tight flex items-center gap-2 ${dark ? 'text-[#e9edef]' : 'text-[#111b21]'}`}>
@@ -596,16 +606,14 @@ export default function TestimonialWhatsAppAdmin() {
                         >
                           <button 
                             onClick={() => {
-                              const newItems = items.map(i => i.id === activeId ? { ...i, starred: !i.starred } : i);
-                              saveToStorage(newItems);
+                              togglePin(activeItem.id);
                               setChatMenuOpen(false);
-                              setToast({ isVisible: true, message: activeItem.starred ? "Bintang dihapus" : "Pesan dibintangi", type: "success" });
-                              logActivity({ type: "testimonial_updated", title: activeItem.starred ? "Bintang Testimoni Dihapus" : "Testimoni Dibintangi", description: `Status bintang diperbarui untuk klien ${activeItem.name}`, user: "Admin" });
+                              setToast({ isVisible: true, message: activeItem.pinned ? "Pin dihapus" : "Pesan disematkan", type: "success" });
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${dark ? 'text-[#e9edef] hover:bg-[#202c33]' : 'text-[#111b21] hover:bg-gray-50'}`}
                           >
-                            <Star size={16} className={activeItem.starred ? "text-yellow-500 fill-current" : (dark ? "text-[#8696a0]" : "text-[#54656f]")} />
-                            {activeItem.starred ? "Hapus Bintang" : "Bintangi Pesan"}
+                            <Pin size={16} className={dark ? "text-[#8696a0]" : "text-[#54656f]"} />
+                            {activeItem.pinned ? "Lepas Semat" : "Sematkan Chat"}
                           </button>
                           
                           <button 
@@ -824,6 +832,13 @@ export default function TestimonialWhatsAppAdmin() {
               <div className={`h-16 flex items-center px-4 gap-4 shrink-0 ${dark ? 'bg-[#202c33] text-[#e9edef]' : 'bg-[#008069] text-white'}`}>
                 <button onClick={() => setDraftClient(null)} className={`p-2 rounded-full transition-colors -ml-2 ${dark ? 'hover:bg-[#2a3942]' : 'hover:bg-white/10'}`}><X size={24} /></button>
                 <h2 className="font-medium text-lg">Info Klien</h2>
+                <button 
+                  onClick={() => togglePin(draftClient.id)} 
+                  className={`ml-auto p-2 rounded-xl transition-colors ${draftClient.pinned ? 'bg-amber-50 text-amber-500' : (dark ? 'text-gray-400 hover:bg-[#2a3942]' : 'text-gray-400 hover:bg-gray-100')}`} 
+                  title={draftClient.pinned ? "Lepas Pin" : "Sematkan"}
+                >
+                  <Pin className={`w-5 h-5 ${draftClient.pinned ? "rotate-45" : ""}`} />
+                </button>
               </div>
               
               <div className={`flex-1 overflow-y-auto custom-scrollbar ${dark ? 'bg-[#0b141a]' : 'bg-[#f0f2f5]'}`}>
