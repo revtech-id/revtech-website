@@ -3,6 +3,7 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import ScrollToTop from '@/components/ScrollToTop';
 
 const fontMain = DM_Sans({
   variable: "--font-main",
@@ -54,6 +55,7 @@ export default function RootLayout({
       <body
         className={`${fontMain.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] bg-[#F8FAFC]`}
       >
+        <ScrollToTop />
         {children}
         <Analytics />
         <SpeedInsights />

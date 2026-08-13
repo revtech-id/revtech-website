@@ -114,6 +114,13 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
             {/* Chat Header */}
             <div className="bg-[#f0f2f5] px-4 py-3 border-b border-gray-200 flex items-center justify-between h-16 shrink-0 z-20">
               <div className="flex items-center gap-2 md:gap-4">
+                <span 
+                  className="material-symbols-outlined text-[22px] text-gray-600 cursor-pointer md:hidden mr-1"
+                  onClick={() => setShowChatOnMobile(false)}
+                  title="Kembali"
+                >
+                  arrow_back
+                </span>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm border border-white ${activeChat?.avatarBg || 'bg-gray-300 text-white'}`}>
                   {activeChat?.initials || 'U'}
                 </div>

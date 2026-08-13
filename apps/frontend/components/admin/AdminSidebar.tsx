@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -179,7 +180,7 @@ export function SidebarProfileSection() {
   );
 }
 
-export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
+export function VerticalNav({ onItemClick, dark }: { onItemClick?: () => void, dark?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -192,15 +193,7 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
         <div className="px-3.5 space-y-3">
           {/* Brand Header */}
           <div className="flex items-center gap-2.5 px-1 py-1 mb-1">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm font-black shrink-0 shadow-sm"
-              style={{ background: "linear-gradient(135deg, #a855f7, #ec4899, #3b82f6)" }}
-            >
-              ✦
-            </div>
-            <h2 className="text-base font-bold tracking-tight" style={{ color: "var(--adm-text)" }}>
-              RevTech
-            </h2>
+             <Image src="/assets/logo.webp" alt="RevTech" width={120} height={35} className={`object-contain ${dark ? "brightness-0 invert" : ""}`} priority />
           </div>
 
           {/* Navigation List */}
@@ -247,7 +240,7 @@ export function AdminSidebar({ dark }: { dark: boolean }) {
       }}
       className="hidden lg:flex fixed left-0 top-0 bottom-0 h-full flex-col z-30 overflow-hidden"
     >
-      <VerticalNav />
+      <VerticalNav dark={dark} />
     </aside>
   );
 }

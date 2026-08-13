@@ -152,14 +152,15 @@ export default function HeroBannerPage() {
                   )}
                 </button>
                 <label
-                  className="p-1 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors cursor-pointer"
-                  title={`Upload background ${d.label}`}
+                  className="p-1 text-[var(--adm-text-3)] transition-colors cursor-not-allowed opacity-50"
+                  title="Fitur dinonaktifkan"
                 >
                   <FileUp size={11} />
                   <input
                     type="file"
                     accept="image/*,video/*"
                     className="hidden"
+                    disabled
                     onChange={(e) => handleFile(d.key, e.target.files?.[0])}
                   />
                 </label>
@@ -170,10 +171,13 @@ export default function HeroBannerPage() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <AdminButton onClick={handleReset} variant="ghost" size="sm">
+          <span className="text-xs font-semibold text-[var(--adm-text-3)] bg-[var(--adm-border)]/50 px-3 py-1.5 rounded-lg">
+            Segera Hadir
+          </span>
+          <AdminButton disabled onClick={handleReset} variant="ghost" size="sm">
             Reset
           </AdminButton>
-          <AdminButton onClick={handleSave} icon={<Save size={14} />}>
+          <AdminButton disabled onClick={handleSave} icon={<Save size={14} />}>
             Simpan
           </AdminButton>
         </div>

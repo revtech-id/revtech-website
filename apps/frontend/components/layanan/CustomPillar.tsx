@@ -43,7 +43,7 @@ export default function CustomPillar() {
         </div>
         
         <Button asChild size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-black text-[13px] sm:text-sm md:text-base">
-          <Link href="/kontak?paket=custom">
+          <Link href="/kontak?paket=custom#form-pesanan">
             Ceritakan Ide Anda <ArrowRight className="ml-2 text-sm" size={16} />
           </Link>
         </Button>

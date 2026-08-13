@@ -26,7 +26,7 @@ type FormState = Record<string, string>;
 const DEFAULTS: FormState = {
   businessName: "RevTech",
   primaryDomain: "hi-revtech.my.id",
-  waBisnis: "6281290018819", waPribadi: "6281290018819",
+  waPribadi: "6281290018819",
   marketingEmail: "revtech.id.contact@gmail.com", marketingPass: "",
   coreEmail: "revtech.id.core@gmail.com", corePass: "",
 };
@@ -51,7 +51,6 @@ export default function SystemPage() {
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [countryBisnis, setCountryBisnis] = useState(COUNTRIES[0]);
   const [countryPribadi, setCountryPribadi] = useState(COUNTRIES[0]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,15 +187,10 @@ export default function SystemPage() {
                        <span className="truncate flex-1">{form.coreEmail || "Belum diatur"}</span>
                        <span className="text-[10px] font-bold tracking-wide uppercase text-[var(--adm-text-3)]">Sistem</span>
                     </div>
-                    <div className="flex items-center gap-3" title="WhatsApp Bisnis">
-                       <Phone size={16} className="opacity-60 shrink-0" /> 
-                       <span className="truncate flex-1">+{form.waBisnis || "Belum diatur"}</span>
-                       <span className="text-[10px] font-bold tracking-wide uppercase text-[var(--adm-text-3)]">Bisnis</span>
-                    </div>
-                    <div className="flex items-center gap-3" title="WhatsApp Pribadi">
+                    <div className="flex items-center gap-3" title="WhatsApp (Konsultasi)">
                        <Phone size={16} className="opacity-60 shrink-0" /> 
                        <span className="truncate flex-1">+{form.waPribadi || "Belum diatur"}</span>
-                       <span className="text-[10px] font-bold tracking-wide uppercase text-[var(--adm-text-3)]">Pribadi</span>
+                       <span className="text-[10px] font-bold tracking-wide uppercase text-[var(--adm-text-3)]">WhatsApp</span>
                     </div>
                  </div>
               </AdminCard>
@@ -271,25 +265,7 @@ export default function SystemPage() {
                          </div>
 
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <Field label="WhatsApp Bisnis (Form Pesanan)">
-                              <div className="flex rounded-xl bg-transparent focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-colors border border-[var(--adm-border)] relative">
-                                <CountrySelector selected={countryBisnis} onSelect={setCountryBisnis} theme="admin" />
-                                <input
-                                  type="tel"
-                                  onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
-                                  value={form.waBisnis ? form.waBisnis.replace(new RegExp(`^${countryBisnis.dial_code.replace('+', '')}`), '') : ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '');
-                                    const cleanVal = val.startsWith('0') ? val.substring(1) : val;
-                                    const code = countryBisnis.dial_code.replace('+', '');
-                                    update("waBisnis", cleanVal ? `${code}${cleanVal}` : '');
-                                  }}
-                                  className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder:text-[var(--adm-text-3)]"
-                                  placeholder={countryBisnis.code === 'ID' ? "8123456..." : "123456789..."}
-                                />
-                              </div>
-                            </Field>
-                            <Field label="WhatsApp Pribadi (Konsultasi)">
+                            <Field label="WhatsApp (Konsultasi)">
                               <div className="flex rounded-xl bg-transparent focus-within:ring-2 focus-within:ring-[var(--adm-accent)]/30 focus-within:border-[var(--adm-accent)] transition-colors border border-[var(--adm-border)] relative">
                                 <CountrySelector selected={countryPribadi} onSelect={setCountryPribadi} theme="admin" />
                                 <input

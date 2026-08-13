@@ -74,7 +74,7 @@ export default function PricingCards() {
                             variants={fadeUpVariant}
                             className={`rounded-[32px] p-[3px] transition-[box-shadow,border-color] duration-500 relative flex flex-col ${
                                 plan.popular 
-                                    ? 'bg-gradient-to-br from-blue-400 via-blue-600 to-indigo-600 shadow-2xl shadow-blue-600/40 lg:scale-105 z-10' 
+                                    ? 'bg-blue-400 shadow-2xl shadow-blue-600/40 lg:scale-105 z-10' 
                                     : 'bg-white border border-gray-200 hover:shadow-2xl hover:shadow-gray-200/50 hover:border-gray-300'
                             }`}
                         >

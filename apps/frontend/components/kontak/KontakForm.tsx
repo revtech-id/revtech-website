@@ -204,7 +204,7 @@ export default function KontakForm() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-10 border border-gray-200 shadow-sm">
+        <div id="form-pesanan" className="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-10 border border-gray-200 shadow-sm scroll-mt-24">
             <div className="mb-8 border-b border-gray-100 pb-6 text-center md:text-left">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Formulir Pemesanan</h2>
                 <p className="text-gray-500 text-sm font-medium">Lengkapi detail pesanan Anda. Kami akan merespons cepat via WhatsApp.</p>

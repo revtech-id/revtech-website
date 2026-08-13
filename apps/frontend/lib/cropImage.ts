@@ -63,6 +63,6 @@ export default async function getCroppedImg(
       }
       const previewUrl = URL.createObjectURL(blob);
       resolve(previewUrl);
-    }, 'image/jpeg');
+    }, 'image/webp', 0.8);
   });
 }

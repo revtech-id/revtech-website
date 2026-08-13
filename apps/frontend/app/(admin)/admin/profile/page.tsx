@@ -43,11 +43,7 @@ export default function ProfilePage() {
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
 
-  const [passwords, setPasswords] = useState({
-    current: "RevTech-Contact-4646!!",
-    newPass: "",
-    confirm: "",
-  });
+  // Password states removed for Google Login integration
 
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar);
   const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
@@ -74,10 +70,7 @@ export default function ProfilePage() {
 
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [passSaved, setPassSaved] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+
 
   const handleReset = () => {
     setProfile({
@@ -89,11 +82,7 @@ export default function ProfilePage() {
       location: user.location,
       website: user.website,
     });
-    setPasswords({
-      current: "RevTech-Contact-4646!!",
-      newPass: "",
-      confirm: "",
-    });
+
     setAvatarPreview(user.avatar);
   };
   
@@ -102,7 +91,7 @@ export default function ProfilePage() {
     setIsSaving(true);
     
     try {
-      const res = await updateProfile({ profile, passwords });
+      const res = await updateProfile({ profile });
       if (res.success) {
         setSaved(true);
         setUser({ ...user, ...profile, avatar: avatarPreview });
@@ -114,9 +103,7 @@ export default function ProfilePage() {
           user: user.name,
         });
 
-        if (passwords.newPass) {
-          setPasswords({ ...passwords, newPass: "", confirm: "" });
-        }
+
         setTimeout(() => setSaved(false), 2500);
       } else {
         alert(res.message);
@@ -248,14 +235,14 @@ export default function ProfilePage() {
                        </div>
 
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                          <Field label="Email Pengguna *">
+                          <Field label="Email Pengguna (Google)">
                             <input
                               id="profile-email"
                               type="email"
                               value={profile.email}
-                              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                              className={inputCls}
-                              required
+                              readOnly
+                              className={`${inputCls} opacity-60 cursor-not-allowed`}
+                              title="Email disinkronkan otomatis dari Google"
                             />
                           </Field>
                           <Field label="Nomor WhatsApp *">
@@ -289,50 +276,7 @@ export default function ProfilePage() {
                           </Field>
                        </div>
                        
-                       <div className="pt-6 border-t border-[var(--adm-border)] mt-8">
-                         <h3 className="text-lg font-bold text-[var(--adm-text)] mb-6">Ubah Kata Sandi</h3>
-                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                           <Field label="Kata Sandi Saat Ini">
-                             <div className="relative group">
-                               <input
-                                 type={showCurrent ? "text" : "password"}
-                                 value={passwords.current}
-                                 onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                                 className={`${inputCls} pr-10`}
-                               />
-                               <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 group-focus-within:opacity-40 transition-opacity outline-none">
-                                 <span className="material-symbols-outlined text-[16px]">{showCurrent ? "visibility_off" : "visibility"}</span>
-                               </button>
-                             </div>
-                           </Field>
-                           <Field label="Kata Sandi Baru">
-                             <div className="relative group">
-                               <input
-                                 type={showNew ? "text" : "password"}
-                                 value={passwords.newPass}
-                                 onChange={(e) => setPasswords({ ...passwords, newPass: e.target.value })}
-                                 className={`${inputCls} pr-10`}
-                               />
-                               <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 group-focus-within:opacity-40 transition-opacity outline-none">
-                                 <span className="material-symbols-outlined text-[16px]">{showNew ? "visibility_off" : "visibility"}</span>
-                               </button>
-                             </div>
-                           </Field>
-                           <Field label="Konfirmasi Sandi">
-                             <div className="relative group">
-                               <input
-                                 type={showConfirm ? "text" : "password"}
-                                 value={passwords.confirm}
-                                 onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                                 className={`${inputCls} pr-10`}
-                               />
-                               <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 group-focus-within:opacity-40 transition-opacity outline-none">
-                                 <span className="material-symbols-outlined text-[16px]">{showConfirm ? "visibility_off" : "visibility"}</span>
-                               </button>
-                             </div>
-                           </Field>
-                         </div>
-                       </div>
+
                     </div>
 
                     <div className="px-6 py-5 border-t border-[var(--adm-border)] flex items-center justify-end gap-3 bg-[var(--adm-bg)]/30">

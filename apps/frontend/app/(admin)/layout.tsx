@@ -159,7 +159,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               background: "transparent",
               borderBottom: "none",
             }}
-            className="sticky top-0 z-20 px-6 sm:px-10 lg:px-14 xl:px-16 pt-12 pb-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-4 gap-x-3"
+            className="relative z-10 px-6 sm:px-10 lg:px-14 xl:px-16 pt-12 pb-6 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-4 gap-x-3"
           >
             {/* 1. Mobile Sheet Trigger (Hamburger) */}
             <div className="order-1 flex-none sm:order-none">
@@ -179,7 +179,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   className="w-[200px] p-0 border-r"
                   style={{ background: "var(--adm-sidebar)", borderColor: "var(--adm-border)" }}
                 >
-                  <VerticalNav onItemClick={() => setMobileNavOpen(false)} />
+                  <VerticalNav onItemClick={() => setMobileNavOpen(false)} dark={dark} />
                 </SheetContent>
               </Sheet>
             </div>
