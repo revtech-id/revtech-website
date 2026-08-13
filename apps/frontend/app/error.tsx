@@ -26,7 +26,7 @@ export default function Error({
         Maaf, sistem kami mengalami kendala teknis. Tim kami telah diberitahu dan sedang menangani masalah ini.
       </p>
       <div className="flex flex-col sm:flex-row gap-4">
-        <Button onClick={() => reset()} className="bg-primary text-white hover:bg-blue-700 shadow-lg shadow-primary/20">
+        <Button onClick={() => reset()} className="bg-primary text-white hover:bg-blue-700 ">
           Coba Lagi
         </Button>
         <Button variant="outline" asChild>

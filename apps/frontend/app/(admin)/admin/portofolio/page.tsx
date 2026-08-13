@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 
@@ -108,7 +108,7 @@ interface Portfolio {
   techStack: string[];
   pinned: boolean;
   status: "published" | "draft" | "archived";
-  publishedAt: string;
+  publishedAt: string | null;
 }
 
 const MOCK_INITIAL: Portfolio[] = [
@@ -118,10 +118,10 @@ const MOCK_INITIAL: Portfolio[] = [
 ];
 
 const EMPTY_FORM: {
-  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; pinned: boolean; status: Portfolio["status"]; content: string; thumbnail: string;
+  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; pinned: boolean; status: Portfolio["status"]; content: string; thumbnail: string; publishedAt: string;
 } = {
-  title: "", client: "", category: "",
-  url: "", projectDate: "", description: "", techStack: "", pinned: false, status: "published", content: "", thumbnail: ""
+  title: "", client: "", category: "Jasa Web",
+  url: "", projectDate: "", description: "", techStack: "", pinned: false, status: "published", content: "", thumbnail: "", publishedAt: ""
 };
 
 export default function PortofolioPage() {
@@ -186,7 +186,7 @@ export default function PortofolioPage() {
       title: item.title, client: item.client, category: item.category,
       url: item.url || "", projectDate: item.projectDate || "", description: item.description || "", techStack: item.techStack.join(", "),
       pinned: item.pinned, status: item.status, content: item.content || "",
-      thumbnail: item.thumbnail || ""
+      thumbnail: item.thumbnail || "", publishedAt: item.publishedAt || ""
     });
     setEditingId(item.id);
     setView("form");
@@ -216,7 +216,7 @@ export default function PortofolioPage() {
       updated = items.map(i => i.id === editingId ? {
         ...i, title: form.title, client: form.client, category: form.category,
         url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned, status: form.status, content: form.content,
-        thumbnail: form.thumbnail
+        thumbnail: form.thumbnail, publishedAt: form.publishedAt || null
       } : i);
     } else {
       const newId = `PF-${Date.now().toString().slice(-5)}`;
@@ -224,7 +224,7 @@ export default function PortofolioPage() {
         id: newId,
         title: form.title, client: form.client, category: form.category,
         url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
-        thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: new Date().toISOString().split("T")[0]
+        thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: form.publishedAt || null
       }, ...items];
     }
     save(updated);
@@ -245,8 +245,9 @@ export default function PortofolioPage() {
           title: form.title,
           client: form.client,
           category: form.category,
-          url: form.url,
+          url: form.url || null,
           projectDate: form.projectDate,
+          publishedAt: form.publishedAt || null,
           description: form.description,
           content: form.content,
           thumbnail: form.thumbnail,
@@ -269,33 +270,15 @@ export default function PortofolioPage() {
 
   function confirmArchive(id: string, currentStatus: string) {
     const isArchived = currentStatus === "archived";
-    setConfirmModal({
-      isOpen: true,
-      title: isArchived ? "Kembalikan Proyek" : "Arsipkan Proyek",
-      message: isArchived ? "Proyek ini akan dikembalikan ke status Draft." : "Proyek ini akan dipindahkan ke Arsip dan tidak terlihat oleh publik.",
-      confirmText: isArchived ? "Kembalikan" : "Arsipkan",
-      confirmVariant: "warning",
-      action: () => {
-        save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
-        setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
-        logActivity({ type: "portofolio_updated", title: isArchived ? "Proyek Dipulihkan" : "Proyek Diarsipkan", description: `Proyek portofolio ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
-      }
-    });
+    save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
+    setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
+    logActivity({ type: "portofolio_updated", title: isArchived ? "Proyek Dipulihkan" : "Proyek Diarsipkan", description: `Proyek portofolio ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
   }
 
   function confirmPublish(id: string) {
-    setConfirmModal({
-      isOpen: true,
-      title: "Publish Proyek",
-      message: "Proyek ini akan diterbitkan ke portofolio publik.",
-      confirmText: "Publish",
-      confirmVariant: "primary",
-      action: () => {
-        save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
-        setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
-        logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
-      }
-    });
+    save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
+    setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
+    logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
   }
 
   function togglePinned(id: string) {
@@ -318,25 +301,88 @@ export default function PortofolioPage() {
     { id: "published", label: "Published", count: published.length },
   ];
 
-  const filtered = items.filter(item => {
-    const s = item.status || "published";
-    const matchTab = 
+  const filtered = items.filter((item) => {
+    const matchTab =
       tabFilter === "all" ? true :
       tabFilter === "pinned" ? item.pinned :
-      tabFilter === "published" ? s === "published" :
-      tabFilter === "draft" ? s === "draft" :
-      tabFilter === "archived" ? s === "archived" : true;
+      tabFilter === "draft" ? item.status === "draft" :
+      tabFilter === "published" ? item.status === "published" :
+      tabFilter === "archived" ? item.status === "archived" : true;
 
     const matchCategory = filter === "Semua" || item.category === filter;
     const searchString = `${item.title} ${item.client}`.toLowerCase();
     const matchSearch = !search || searchString.includes(search.toLowerCase());
-    
+
     return matchTab && matchCategory && matchSearch;
   }).sort((a, b) => {
     const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
     const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
     return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
   });
+
+  const portofolioColumns = [
+    {
+      key: "proyek",
+      label: "Proyek",
+      render: (item: Portfolio) => (
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-[var(--adm-text)]" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
+            <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-current rotate-45" : ""} />
+          </button>
+          
+          <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
+            {item.thumbnail ? <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">web</span>}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
+              {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
+            </div>
+            <p className="text-xs text-[var(--adm-text-3)] truncate">
+              {item.client ? item.client.toLowerCase().replace(/\s+/g, '-') : item.category.toLowerCase()}
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      className: "text-right",
+      render: (item: Portfolio) => (
+        <div className="flex items-center justify-end gap-3 sm:gap-5">
+          {item.status !== "draft" && item.publishedAt && (
+            <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
+              {new Date(item.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1.5 shrink-0">
+            {item.url ? (
+              <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Tautan">
+                <ExternalLink size={14} strokeWidth={2} />
+              </a>
+            ) : (
+              <div className="w-[26px] h-[26px]" />
+            )}
+            {item.status !== "published" && (
+              <button onClick={() => confirmPublish(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
+                <Send size={14} strokeWidth={2} />
+              </button>
+            )}
+            <button onClick={() => handleEdit(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
+              <Pencil size={14} strokeWidth={2} />
+            </button>
+            <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
+              <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
+            </button>
+            <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      )
+    }
+  ];
 
   if (!isClient) return null;
 
@@ -398,71 +444,15 @@ export default function PortofolioPage() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <EmptyState icon="collections" title="Belum ada proyek" description="Tambahkan proyek pertama Anda ke portofolio." />
-          ) : (
-            <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--adm-border)] bg-[var(--adm-bg)]">
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide">Proyek</div>
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide text-right w-36 sm:w-40 shrink-0">Aksi</div>
-              </div>
-              <div className="divide-y divide-[var(--adm-border)]">
-                {filtered.map((item, i) => (
-                  <div key={item.id} className="flex items-center justify-between px-6 py-4">                    {/* Left: Pin, Thumbnail & Text */}
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
-                      <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
-                        <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-amber-500 rotate-45" : ""} />
-                      </button>
-                      
-                      <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
-                        <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">web</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
-                          {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
-                        </div>
-                        <p className="text-xs text-[var(--adm-text-3)] truncate">
-                          {item.client ? item.client.toLowerCase().replace(/\s+/g, '-') : item.category.toLowerCase()}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Right: Date & Actions */}
-                    <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
-                      {item.status !== "draft" && item.publishedAt && (
-                        <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
-                          {new Date(item.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-end gap-1.5 w-auto sm:w-auto shrink-0">
-                      {item.url ? (
-                        <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Tautan">
-                          <ExternalLink size={14} strokeWidth={2} />
-                        </a>
-                      ) : (
-                        <div className="w-[26px] h-[26px]" /> /* placeholder to maintain alignment */
-                      )}
-                      {item.status !== "published" && (
-                        <button onClick={() => confirmPublish(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
-                          <Send size={14} strokeWidth={2} />
-                        </button>
-                      )}
-                      <button onClick={() => handleEdit(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
-                        <Pencil size={14} strokeWidth={2} />
-                      </button>
-                      <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
-                        <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
-                      </button>
-                      <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
-                        <Trash2 size={14} strokeWidth={2} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Portofolio List Unified Table */}
+          <div className="mt-4">
+            <AdminTable
+              columns={portofolioColumns}
+              data={filtered}
+              keyField="id"
+              emptyMessage="Belum ada proyek ditambahkan."
+            />
+          </div>
         </>
       )}
 
@@ -537,7 +527,7 @@ export default function PortofolioPage() {
                       .ql-snow .ql-picker { color: var(--adm-text-2); }
                       .ql-snow.ql-toolbar button:hover .ql-stroke, .ql-snow .ql-toolbar button:hover .ql-stroke,
                       .ql-snow.ql-toolbar button.ql-active .ql-stroke, .ql-snow .ql-toolbar button.ql-active .ql-stroke,
-                      .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke, .ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke { stroke: var(--adm-text) !important; }
+                      .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke, .ql-snow .ql-picker-label.ql-active .ql-stroke { stroke: var(--adm-text) !important; }
                       .ql-snow.ql-toolbar button:hover .ql-fill, .ql-snow .ql-toolbar button:hover .ql-fill,
                       .ql-snow.ql-toolbar button.ql-active .ql-fill, .ql-snow .ql-toolbar button.ql-active .ql-fill,
                       .ql-snow.ql-toolbar .ql-picker-label:hover .ql-fill, .ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-fill { fill: var(--adm-text) !important; }
@@ -635,12 +625,16 @@ export default function PortofolioPage() {
                       <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Bulan & Tahun</label>
                       <input type="month" value={form.projectDate} onChange={e => setForm({ ...form, projectDate: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" />
                     </div>
-                    <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-2 cursor-pointer py-2">
-                        <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
-                        <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Proyek (Tampil Lebih Awal)</span>
-                      </label>
+                    <div>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Publish</label>
+                      <input type="date" value={form.publishedAt} onChange={e => setForm({ ...form, publishedAt: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" />
                     </div>
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="flex items-center gap-2 cursor-pointer py-2">
+                      <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
+                      <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Proyek (Tampil Lebih Awal)</span>
+                    </label>
                   </div>
                 </div>
               </form>

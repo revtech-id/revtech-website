@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { DM_Sans, Outfit } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const fontMain = DM_Sans({
   variable: "--font-main",
-  subsets: ["latin"],
-});
-
-const fontHeading = Outfit({
-  variable: "--font-heading",
   subsets: ["latin"],
 });
 
@@ -57,7 +52,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
       </head>
       <body
-        className={`${fontMain.variable} ${fontHeading.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] bg-[#F8FAFC]`}
+        className={`${fontMain.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] bg-[#F8FAFC]`}
       >
         {children}
         <Analytics />

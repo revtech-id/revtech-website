@@ -2,6 +2,7 @@
 import { ArrowRight } from "lucide-react";
 
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { PortfolioCaseStudyData } from '@/lib/portfolio';
 
@@ -12,8 +13,8 @@ interface PortfolioCardProps {
 
 export default function PortfolioCard({ item, className = "" }: PortfolioCardProps) {
     return (
-        <a 
-            href={item.slug ? `/portofolio/${item.slug}` : item.liveUrl}
+        <Link 
+            href={item.slug ? `/portofolio/${item.slug}` : (item.liveUrl || '#')}
             target={item.slug ? "_self" : "_blank"}
             rel={item.slug ? undefined : "noreferrer"}
             className={`group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full ${className}`}
@@ -29,6 +30,11 @@ export default function PortfolioCard({ item, className = "" }: PortfolioCardPro
                 <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-500 z-20 pointer-events-none"></div>
             </div>
             <div className="p-5 flex flex-col flex-1">
+                {item.date && (
+                    <div className="text-xs font-bold text-blue-600 mb-2">
+                        {item.date}
+                    </div>
+                )}
                 <h4 className="text-gray-900 font-bold text-base md:text-lg mb-4 line-clamp-2 leading-snug">{item.title}</h4>
                 
                 <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
@@ -38,6 +44,6 @@ export default function PortfolioCard({ item, className = "" }: PortfolioCardPro
                     <ArrowRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" size={16} />
                 </div>
             </div>
-        </a>
+        </Link>
     );
 }

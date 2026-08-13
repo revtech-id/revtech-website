@@ -60,11 +60,7 @@ export default function PackageDetailClient({ plan: initialPlan }: PackageDetail
                     transition={{ type: 'spring', stiffness: 80, damping: 20, mass: 0.8 }}
                     className="max-w-3xl mx-auto flex flex-col items-center"
                 >
-                    {plan.popular && (
-                        <div className="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-4 py-1.5 rounded-full mb-6 uppercase tracking-widest">
-                            BEST SELLER
-                        </div>
-                    )}
+
                     <h1 className="text-4xl md:text-[2.5rem] lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">
                         Paket <span className="text-blue-600">{plan.name.replace('Paket ', '')}</span>
                     </h1>
@@ -212,12 +208,12 @@ export default function PackageDetailClient({ plan: initialPlan }: PackageDetail
                             </div>
                         <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
                             {plan.demoLink ? (
-                                <Link href={plan.demoLink} target="_blank" className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg">
+                                <Link href={plan.demoLink} target="_blank" className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm ">
                                     Lihat Live Demo 
                                     <ExternalLink className="w-4 h-4" />
                                 </Link>
                             ) : (
-                                <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm shadow-md hover:shadow-lg cursor-not-allowed opacity-50" disabled>
+                                <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm  cursor-not-allowed opacity-50" disabled>
                                     Demo Belum Tersedia
                                 </button>
                             )}

@@ -53,7 +53,7 @@ export default function Navbar() {
 
                 <div className="hidden lg:flex">
                     <Link href="/kontak" className="relative group inline-flex items-center justify-center">
-                        <button className="relative bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full hover:bg-blue-700 hover:shadow-md transition-[background-color,box-shadow] duration-200 flex items-center gap-2">
+                        <button className="relative bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full hover:bg-blue-700 transition-[background-color] duration-200 flex items-center gap-2">
                             Hubungi Kami
                             <ArrowRight className="" size={16} />
                         </button>

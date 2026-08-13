@@ -26,9 +26,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import { Button } from "@/components/ui/Button";
 import { logActivity } from "@/lib/activityLog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { AdminModal, AdminButton } from "@/components/admin/ui";
 import { Separator } from "@/components/ui/separator";
 
 export const NAV_ITEMS = [
@@ -48,6 +47,7 @@ export const NAV_ITEMS = [
 
 export function SidebarProfileSection() {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { user } = useUser();
   const pathname = usePathname();
 
@@ -99,49 +99,38 @@ export function SidebarProfileSection() {
               const isActive = pathname === opt.href;
               const Icon = opt.icon;
               return (
-                <Button
+                <Link
                   key={opt.href}
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-[var(--adm-card-hover)]"
-                  style={{ 
-                    color: "var(--adm-text)",
-                    background: isActive ? "rgba(37,99,235,0.08)" : "transparent"
-                  }}
+                  href={opt.href}
+                  className={`flex items-center w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all ${isActive ? 'bg-[var(--adm-card-hover)]' : 'hover:bg-[var(--adm-card-hover)]'}`}
+                  style={{ color: "var(--adm-text)" }}
                   onClick={() => setProfileOpen(false)}
                 >
-                  <Link href={opt.href}>
-                    <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--adm-text)" }} />
-                    <span>{opt.label}</span>
-                  </Link>
-                </Button>
+                  <Icon className="h-4 w-4 shrink-0" style={{ color: "var(--adm-text)" }} />
+                  <span>{opt.label}</span>
+                </Link>
               );
             })}
 
-            <Button
-              asChild
-              variant="ghost"
-              className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-bold transition-colors hover:bg-transparent text-rose-600 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-400"
+            <button
+              className="flex items-center w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-bold transition-colors hover:bg-[var(--adm-card-hover)] text-rose-600 dark:text-rose-400"
               onClick={() => {
                 setProfileOpen(false);
-                logActivity({ type: "system", title: "Logout", description: "Admin telah keluar dari dashboard.", user: "Admin" });
+                setLogoutConfirmOpen(true);
               }}
             >
-              <Link href="/">
-                <LogOut className="h-4 w-4 shrink-0" />
-                <span>Keluar</span>
-              </Link>
-            </Button>
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span>Keluar</span>
+            </button>
           </div>
         </div>
       )}
 
       {/* Profile Trigger Button */}
-      <Button
+      <button
         id="sidebar-profile-button"
-        variant="ghost"
         onClick={() => setProfileOpen((o) => !o)}
-        className="w-full justify-start gap-2.5 p-2 h-auto rounded-xl transition-all text-left group hover:bg-transparent"
+        className="flex items-center w-full justify-start gap-2.5 p-2 h-auto rounded-xl transition-all text-left group hover:bg-[var(--adm-card-hover)] focus:outline-none"
       >
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm overflow-hidden"
@@ -162,7 +151,30 @@ export function SidebarProfileSection() {
           </p>
         </div>
         <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" style={{ color: "var(--adm-text)" }} />
-      </Button>
+      </button>
+
+      {/* Logout Confirmation Modal */}
+      <AdminModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        title="Konfirmasi Keluar"
+        subtitle="Apakah Anda yakin ingin keluar dari dashboard admin?"
+      >
+        <div className="flex justify-end gap-3 mt-2">
+          <AdminButton variant="ghost" onClick={() => setLogoutConfirmOpen(false)}>
+            Batal
+          </AdminButton>
+          <AdminButton
+            variant="danger"
+            onClick={() => {
+              logActivity({ type: "system", title: "Logout", description: "Admin telah keluar dari dashboard.", user: "Admin" });
+              window.location.href = "/";
+            }}
+          >
+            Ya, Keluar
+          </AdminButton>
+        </div>
+      </AdminModal>
     </div>
   );
 }
@@ -172,7 +184,11 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 pt-12 pb-4">
+      <style dangerouslySetInnerHTML={{__html: `
+        .sidebar-scroll::-webkit-scrollbar { display: none !important; }
+        .sidebar-scroll { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}} />
+      <div className="sidebar-scroll flex-1 pt-12 pb-4 overflow-y-auto">
         <div className="px-3.5 space-y-3">
           {/* Brand Header */}
           <div className="flex items-center gap-2.5 px-1 py-1 mb-1">
@@ -196,30 +212,24 @@ export function VerticalNav({ onItemClick }: { onItemClick?: () => void }) {
               const Icon = item.icon;
 
               return (
-                <Button
+                <Link
                   key={item.href}
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all hover:bg-[var(--adm-card-hover)]"
-                  style={{
-                    background: isActive ? "rgba(37,99,235,0.08)" : "transparent",
-                    color: "var(--adm-text)",
-                  }}
+                  href={item.href}
+                  className={`flex items-center w-full justify-start gap-3 h-10 px-3 rounded-xl text-xs font-semibold transition-all ${isActive ? 'bg-[var(--adm-card-hover)]' : 'hover:bg-[var(--adm-card-hover)]'}`}
+                  style={{ color: "var(--adm-text)" }}
                   onClick={onItemClick}
                 >
-                  <Link href={item.href}>
-                    <Icon
-                      className="h-4 w-4 shrink-0"
-                      style={{ color: "var(--adm-text)" }}
-                    />
-                    <span>{item.label}</span>
-                  </Link>
-                </Button>
+                  <Icon
+                    className="h-4 w-4 shrink-0"
+                    style={{ color: "var(--adm-text)" }}
+                  />
+                  <span>{item.label}</span>
+                </Link>
               );
             })}
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Pinned Profile Footer */}
       <SidebarProfileSection />

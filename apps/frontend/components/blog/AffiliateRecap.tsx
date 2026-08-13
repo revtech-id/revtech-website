@@ -31,7 +31,7 @@ export default function AffiliateRecap({ productId }: AffiliateRecapProps) {
                     Jangan biarkan ide hebat Anda tertunda karena masalah teknis. Segera gunakan <strong className="text-white">{product.name}</strong> dan wujudkan website impian Anda hari ini juga.
                 </p>
                 
-                <Button asChild size="lg" variant="secondary" className="font-bold text-gray-900 bg-white hover:bg-gray-100 shadow-xl w-full sm:w-auto px-8 py-6 text-base group">
+                <Button asChild size="lg" variant="secondary" className="font-bold text-gray-900 bg-white hover:bg-gray-100 w-full sm:w-auto px-8 py-6 text-base group">
                     <a href={product.link} target="_blank" rel="sponsored nofollow">
                         {product.ctaText} <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform" size={16} />
                     </a>

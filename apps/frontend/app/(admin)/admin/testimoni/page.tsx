@@ -8,7 +8,7 @@ import {
   Search, MoreVertical, Paperclip, Mic, Smile,
   Plus, CheckCheck, Trash2, X, Settings, User, Save, Edit3, Pin, Check, Archive, ChevronDown
 } from "lucide-react";
-import { AdminToast, AdminConfirmModal } from "@/components/admin/ui";
+import { AdminToast, AdminConfirmModal, AdminModal, AdminButton } from "@/components/admin/ui";
 import { logActivity } from "@/lib/activityLog";
 
 // Types
@@ -30,6 +30,7 @@ interface Testimonial {
   messages: TestimonialMessage[];
   status: "published" | "draft" | "archived";
   pinned?: boolean;
+  date?: string;
 }
 
 const AVATAR_COLORS = [
@@ -40,6 +41,78 @@ const AVATAR_COLORS = [
   { label: "Kuning", value: "bg-amber-100 text-amber-600", hex: "#f59e0b" },
   { label: "Ungu", value: "bg-purple-100 text-purple-600", hex: "#a855f7" },
 ];
+
+function TestimoniClientItem({
+  item,
+  isActive,
+  dark,
+  selectMode,
+  isSelected,
+  onClick,
+  onToggleSelect,
+}: {
+  item: Testimonial;
+  isActive: boolean;
+  dark: boolean;
+  selectMode: boolean;
+  isSelected: boolean;
+  onClick: () => void;
+  onToggleSelect: (id: string) => void;
+}) {
+  const lastMsg = item.messages[item.messages.length - 1];
+
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center gap-3 p-3 cursor-pointer transition-colors relative group ${isActive ? (dark ? 'bg-[#2a3942]' : 'bg-[#f0f2f5]') : (dark ? 'hover:bg-[#202c33]' : 'hover:bg-[#f5f6f6]')}`}
+    >
+      <div className="relative">
+        <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg shadow-sm border border-white transition-colors duration-300 ${item.status === 'draft' ? 'bg-gray-200 text-gray-500' : item.avatarBg}`}>
+          {item.initials || <User size={22} strokeWidth={2.5} />}
+        </div>
+      </div>
+
+      <div className={`flex-1 min-w-0 pb-3 pt-1 border-b ${isActive ? 'border-transparent' : (dark ? 'border-[#222e35]' : 'border-gray-100')} ${item.status === 'draft' ? 'opacity-60 grayscale' : ''}`}>
+        <div className="flex justify-between items-baseline mb-1">
+          <div className="flex items-center gap-1 min-w-0">
+            <h4 className={`font-semibold text-[16px] truncate pr-2 ${dark ? 'text-[#e9edef]' : 'text-[#111b21]'}`}>
+              {item.name}
+            </h4>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className={`text-[11px] ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.time || ''}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            {lastMsg?.sender === "me" && <span className="material-symbols-outlined text-[15px] text-[#53bdeb] leading-none">done_all</span>}
+            <p className={`text-[13px] truncate pr-2 ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.text || <span className="italic">Belum ada obrolan</span>}</p>
+          </div>
+          {item.pinned && (
+            <div className="shrink-0 flex items-center justify-center pl-2">
+              <Pin size={15} className={dark ? "text-[#8696a0]" : "text-[#8696a0]"} fill="currentColor" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selectMode && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(item.id); }}
+            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+              isSelected
+                ? 'bg-[#00a884] border-[#00a884]'
+                : (dark ? 'bg-[#111b21] border-[#8696a0]' : 'bg-white border-gray-300')
+            }`}
+          >
+            {isSelected && <Check size={11} className="text-white" />}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TestimonialWhatsAppAdmin() {
   const { dark } = useAdminTheme();
@@ -146,7 +219,7 @@ export default function TestimonialWhatsAppAdmin() {
         if (activeId === id) {
           setActiveId(newItems.length > 0 ? newItems[0].id : null);
         }
-        setToast({ isVisible: true, message: "Testimoni dihapus", type: "success" });
+        setToast({ isVisible: true, message: "Testimoni berhasil dihapus", type: "success" });
       }
     });
   };
@@ -299,7 +372,7 @@ export default function TestimonialWhatsAppAdmin() {
     const newStatus = item.status === "archived" ? "draft" : "archived";
     const newItems = items.map(i => i.id === id ? { ...i, status: newStatus as any } : i);
     saveToStorage(newItems);
-    setToast({ isVisible: true, message: newStatus === "archived" ? "Chat diarsipkan" : "Chat dipulihkan ke Draft", type: "success" });
+    setToast({ isVisible: true, message: newStatus === "archived" ? "Chat berhasil diarsipkan" : "Chat berhasil dipulihkan", type: "success" });
     if (activeId === id && newStatus === "archived") setActiveId(null);
   };
 
@@ -329,7 +402,7 @@ export default function TestimonialWhatsAppAdmin() {
         if (activeId && selectedIds.has(activeId)) setActiveId(newItems[0]?.id ?? null);
         setSelectedIds(new Set());
         setSelectMode(false);
-        setToast({ isVisible: true, message: "Testimoni terpilih dihapus", type: "success" });
+        setToast({ isVisible: true, message: "Testimoni terpilih berhasil dihapus", type: "success" });
       }
     });
   };
@@ -351,7 +424,7 @@ export default function TestimonialWhatsAppAdmin() {
           <div className={`h-16 px-4 py-3 flex items-center justify-between shrink-0 border-b ${dark ? 'bg-[#202c33] border-[#222e35]' : 'bg-[#f0f2f5] border-gray-200'}`}>
             {selectMode ? (
               <div className="flex items-center gap-3 flex-1">
-                <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} className="text-[#00a884] text-sm font-semibold">Batal</button>
+                <AdminButton variant="ghost" size="sm" onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} className="text-[#00a884] hover:bg-[#00a884]/10 hover:text-[#00a884]">Batal</AdminButton>
                 <span className={`text-sm font-semibold ${dark ? 'text-[#e9edef]' : 'text-[#111b21]'}`}>{selectedIds.size} dipilih</span>
                 {selectedIds.size > 0 && (
                   <button onClick={deleteSelected} className="ml-auto p-1.5 rounded-full text-red-500 hover:bg-red-50">
@@ -462,64 +535,18 @@ export default function TestimonialWhatsAppAdmin() {
 
           {/* Chat List */}
           <div className={`flex-1 overflow-y-auto custom-scrollbar ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
-            {filteredItems.map(item => {
-              const lastMsg = item.messages[item.messages.length - 1];
-              const isActive = activeId === item.id;
-              
-              return (
-                <div 
-                  key={item.id}
-                  onClick={() => setActiveId(item.id)}
-                  className={`flex items-center gap-3 p-3 cursor-pointer transition-colors relative group ${isActive ? (dark ? 'bg-[#2a3942]' : 'bg-[#f0f2f5]') : (dark ? 'hover:bg-[#202c33]' : 'hover:bg-[#f5f6f6]')}`}
-                >
-                  <div className="relative">
-                    <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg shadow-sm border border-white transition-colors duration-300 ${item.status === 'draft' ? 'bg-gray-200 text-gray-500' : item.avatarBg}`}>
-                      {item.initials || <User size={22} strokeWidth={2.5} />}
-                    </div>
-                  </div>
-                  
-                  <div className={`flex-1 min-w-0 pb-3 pt-1 border-b ${isActive ? 'border-transparent' : (dark ? 'border-[#222e35]' : 'border-gray-100')} ${item.status === 'draft' ? 'opacity-60 grayscale' : ''}`}>
-                    <div className="flex justify-between items-baseline mb-1">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <h4 className={`font-semibold text-[16px] truncate pr-2 ${dark ? 'text-[#e9edef]' : 'text-[#111b21]'}`}>
-                          {item.name}
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className={`text-[11px] ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.time || ''}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
-                        {lastMsg?.sender === "me" && <span className="material-symbols-outlined text-[15px] text-[#53bdeb] leading-none">done_all</span>}
-                        <p className={`text-[13px] truncate pr-2 ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{lastMsg?.text || <span className="italic">Belum ada obrolan</span>}</p>
-                      </div>
-                      {item.pinned && (
-                        <div className="shrink-0 flex items-center justify-center pl-2">
-                          <Pin size={15} className={dark ? "text-[#8696a0]" : "text-[#8696a0]"} fill="currentColor" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Select Mode Checkbox */}
-                  {selectMode && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                          selectedIds.has(item.id) 
-                            ? 'bg-[#00a884] border-[#00a884]' 
-                            : (dark ? 'bg-[#111b21] border-[#8696a0]' : 'bg-white border-gray-300')
-                        }`}
-                      >
-                        {selectedIds.has(item.id) && <Check size={11} className="text-white" />}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {filteredItems.map(item => (
+              <TestimoniClientItem
+                key={item.id}
+                item={item}
+                isActive={activeId === item.id}
+                dark={dark}
+                selectMode={selectMode}
+                isSelected={selectedIds.has(item.id)}
+                onClick={() => setActiveId(item.id)}
+                onToggleSelect={toggleSelect}
+              />
+            ))}
             
             {filteredItems.length === 0 && (
               <div className="p-8 text-center text-sm text-[#667781]">
@@ -560,20 +587,10 @@ export default function TestimonialWhatsAppAdmin() {
                   value={activeItem.status}
                   onChange={e => {
                     const newStatus = e.target.value as any;
-                    setConfirmModal({
-                      isOpen: true,
-                      title: "Konfirmasi Perubahan Status",
-                      message: `Apakah Anda yakin ingin mengubah status chat ini menjadi ${newStatus.toUpperCase()}?`,
-                      confirmText: "Ubah Status",
-                      confirmVariant: "primary",
-                      icon: <Check size={20} />,
-                      action: () => {
-                        const newItems = items.map(item => item.id === activeId ? { ...item, status: newStatus } : item);
-                        saveToStorage(newItems);
-                        setToast({ isVisible: true, message: `Status diubah menjadi ${newStatus.toUpperCase()}`, type: "success" });
-                        logActivity({ type: "testimonial_updated", title: "Status Testimoni Diubah", description: `Status testimoni klien diubah menjadi ${newStatus.toUpperCase()}`, user: "Admin" });
-                      }
-                    });
+                    const newItems = items.map(item => item.id === activeId ? { ...item, status: newStatus } : item);
+                    saveToStorage(newItems);
+                    setToast({ isVisible: true, message: `Status diubah menjadi ${newStatus.toUpperCase()}`, type: "success" });
+                    logActivity({ type: "testimonial_updated", title: "Status Testimoni Diubah", description: `Status testimoni klien diubah menjadi ${newStatus.toUpperCase()}`, user: "Admin" });
                   }}
                   className={`text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none appearance-none cursor-pointer border-0
                     ${activeItem.status === 'published' ? (dark ? 'bg-[#005c4b] text-[#d9fdd3]' : 'bg-[#d9fdd3] text-[#059669]') 
@@ -608,7 +625,7 @@ export default function TestimonialWhatsAppAdmin() {
                             onClick={() => {
                               togglePin(activeItem.id);
                               setChatMenuOpen(false);
-                              setToast({ isVisible: true, message: activeItem.pinned ? "Pin dihapus" : "Pesan disematkan", type: "success" });
+                              setToast({ isVisible: true, message: activeItem.pinned ? "Pin berhasil dilepas" : "Pesan berhasil disematkan", type: "success" });
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${dark ? 'text-[#e9edef] hover:bg-[#202c33]' : 'text-[#111b21] hover:bg-gray-50'}`}
                           >
@@ -621,7 +638,7 @@ export default function TestimonialWhatsAppAdmin() {
                               const newItems = items.map(i => i.id === activeId ? { ...i, status: 'archived' as any } : i);
                               saveToStorage(newItems);
                               setChatMenuOpen(false);
-                              setToast({ isVisible: true, message: "Chat diarsipkan", type: "success" });
+                              setToast({ isVisible: true, message: "Chat berhasil diarsipkan", type: "success" });
                               logActivity({ type: "testimonial_updated", title: "Testimoni Diarsipkan", description: `Testimoni klien ${activeItem.name} dipindahkan ke arsip`, user: "Admin" });
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${dark ? 'text-[#e9edef] hover:bg-[#202c33]' : 'text-[#111b21] hover:bg-gray-50'}`}
@@ -644,7 +661,7 @@ export default function TestimonialWhatsAppAdmin() {
                                   saveToStorage(newItems);
                                   if (newItems.length > 0) setActiveId(newItems[0].id);
                                   else setActiveId(null);
-                                  setToast({ isVisible: true, message: "Seluruh chat telah dihapus", type: "success" });
+                                  setToast({ isVisible: true, message: "Seluruh chat berhasil dihapus", type: "success" });
                                   logActivity({ type: "testimonial_deleted", title: "Chat Testimoni Dihapus", description: `Seluruh riwayat chat dengan klien ${activeItem.name} dihapus secara permanen`, user: "Admin" });
                                 }
                               });
@@ -790,13 +807,13 @@ export default function TestimonialWhatsAppAdmin() {
               </div>
 
               {chatInput.trim() ? (
-                <button onClick={handleSendMessage} className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md transition-colors shrink-0 ${editingMessageId ? 'bg-[#53bdeb] hover:bg-[#4295ba]' : 'bg-[#00a884] hover:bg-[#008f6f]'}`}>
+                <AdminButton onClick={handleSendMessage} variant={editingMessageId ? "primary" : "success"} size="icon" className="!rounded-full shrink-0 shadow-md w-10 h-10">
                   {editingMessageId ? <Check size={20} /> : (
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                       <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
                     </svg>
                   )}
-                </button>
+                </AdminButton>
               ) : (
                 <Mic size={24} className="text-[#54656f] shrink-0" />
               )}
@@ -817,84 +834,84 @@ export default function TestimonialWhatsAppAdmin() {
       {/* =========================================================================
           MODAL PENGATURAN KLIEN
           ========================================================================= */}
-      <AnimatePresence>
+      <AdminModal isOpen={!!draftClient} onClose={() => setDraftClient(null)} maxWidth="max-w-md" noPadding={true}>
         {draftClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setDraftClient(null)}
-              className="absolute inset-0 bg-black/50"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className={`relative w-full max-w-md max-h-[90vh] shadow-2xl flex flex-col z-10 rounded-2xl overflow-hidden ${dark ? 'bg-[#111b21]' : 'bg-white'}`}
-            >
-              <div className={`h-16 flex items-center px-4 gap-4 shrink-0 ${dark ? 'bg-[#202c33] text-[#e9edef]' : 'bg-[#008069] text-white'}`}>
-                <button onClick={() => setDraftClient(null)} className={`p-2 rounded-full transition-colors -ml-2 ${dark ? 'hover:bg-[#2a3942]' : 'hover:bg-white/10'}`}><X size={24} /></button>
-                <h2 className="font-medium text-lg">Info Klien</h2>
+          <div className={`w-full h-full max-h-[90vh] flex flex-col ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
+            <div className={`h-16 flex items-center px-4 gap-4 shrink-0 ${dark ? 'bg-[#202c33] text-[#e9edef]' : 'bg-[#008069] text-white'}`}>
+              <button onClick={() => setDraftClient(null)} className={`p-2 rounded-full transition-colors -ml-2 ${dark ? 'hover:bg-[#2a3942]' : 'hover:bg-white/10'}`}><X size={24} /></button>
+              <h2 className="font-medium text-lg">Info Klien</h2>
+              <button 
+                onClick={() => togglePin(draftClient.id)} 
+                className={`ml-auto p-2 rounded-xl transition-colors ${draftClient.pinned ? 'bg-amber-50 text-amber-500' : (dark ? 'text-gray-400 hover:bg-[#2a3942]' : 'text-gray-400 hover:bg-gray-100')}`} 
+                title={draftClient.pinned ? "Lepas Pin" : "Sematkan"}
+              >
+                <Pin className={`w-5 h-5 ${draftClient.pinned ? "rotate-45" : ""}`} />
+              </button>
+            </div>
+            
+            <div className={`flex-1 overflow-y-auto custom-scrollbar ${dark ? 'bg-[#0b141a]' : 'bg-[#f0f2f5]'}`}>
+              {/* Profile Picture Config */}
+              <div className={`p-6 flex flex-col items-center justify-center shadow-sm mb-2 ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
+                <div className={`w-32 h-32 rounded-full flex items-center justify-center font-bold text-5xl mb-6 shadow-sm border-2 transition-colors duration-300 ${dark ? 'border-[#202c33]' : 'border-white'} ${draftClient.avatarBg}`}>
+                  {draftClient.initials || <User size={56} strokeWidth={2.5} />}
+                </div>
+                
+                <div className="w-full">
+                  <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>NAMA KLIEN</label>
+                  <input 
+                    type="text" 
+                    value={draftClient.name} 
+                    onChange={e => handleUpdateDraft({ name: e.target.value })}
+                    placeholder="Masukkan nama klien..."
+                    className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
+                  />
+                </div>
+                
+                <div className="w-full mt-5">
+                  <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>TANGGAL (OPSIONAL)</label>
+                  <input 
+                    type="date" 
+                    value={draftClient.date || ""} 
+                    onChange={e => handleUpdateDraft({ date: e.target.value })}
+                    className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
+                  />
+                </div>
+              </div>
+
+              {/* Additional Info (Simplified - Hidden) */}
+              <div className={`px-6 py-4 shadow-sm mb-2 space-y-5 hidden ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
+                {/* Sembunyikan role, service, lastSeen dari modal sesuai request agar simpel */}
+              </div>
+
+              {/* Avatar Colors (Simplified - Hidden) */}
+              <div className={`px-6 py-4 shadow-sm mb-4 hidden ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
+                <label className={`text-[12px] font-bold mb-3 block ${dark ? 'text-[#8696a0]' : 'text-gray-500'}`}>WARNA AVATAR</label>
+              </div>
+
+              <div className="p-4 flex gap-3">
                 <button 
-                  onClick={() => togglePin(draftClient.id)} 
-                  className={`ml-auto p-2 rounded-xl transition-colors ${draftClient.pinned ? 'bg-amber-50 text-amber-500' : (dark ? 'text-gray-400 hover:bg-[#2a3942]' : 'text-gray-400 hover:bg-gray-100')}`} 
-                  title={draftClient.pinned ? "Lepas Pin" : "Sematkan"}
+                  onClick={handleSaveDraft}
+                  className="flex-1 py-3 rounded-lg font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors bg-[#008069] text-white hover:bg-[#01705c]"
                 >
-                  <Pin className={`w-5 h-5 ${draftClient.pinned ? "rotate-45" : ""}`} />
+                  Simpan
                 </button>
-              </div>
-              
-              <div className={`flex-1 overflow-y-auto custom-scrollbar ${dark ? 'bg-[#0b141a]' : 'bg-[#f0f2f5]'}`}>
-                {/* Profile Picture Config */}
-                <div className={`p-6 flex flex-col items-center justify-center shadow-sm mb-2 ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
-                  <div className={`w-32 h-32 rounded-full flex items-center justify-center font-bold text-5xl mb-6 shadow-sm border-2 transition-colors duration-300 ${dark ? 'border-[#202c33]' : 'border-white'} ${draftClient.avatarBg}`}>
-                    {draftClient.initials || <User size={56} strokeWidth={2.5} />}
-                  </div>
-                  
-                  <div className="w-full">
-                    <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>NAMA KLIEN</label>
-                    <input 
-                      type="text" 
-                      value={draftClient.name} 
-                      onChange={e => handleUpdateDraft({ name: e.target.value })}
-                      placeholder="Masukkan nama klien..."
-                      className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
-                    />
-                  </div>
-                </div>
-
-                {/* Additional Info (Simplified - Hidden) */}
-                <div className={`px-6 py-4 shadow-sm mb-2 space-y-5 hidden ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
-                  {/* Sembunyikan role, service, lastSeen dari modal sesuai request agar simpel */}
-                </div>
-
-                {/* Avatar Colors (Simplified - Hidden) */}
-                <div className={`px-6 py-4 shadow-sm mb-4 hidden ${dark ? 'bg-[#111b21]' : 'bg-white'}`}>
-                  <label className={`text-[12px] font-bold mb-3 block ${dark ? 'text-[#8696a0]' : 'text-gray-500'}`}>WARNA AVATAR</label>
-                </div>
-
-                <div className="p-4 flex gap-3">
+                {items.some(i => i.id === draftClient.id) && (
                   <button 
-                    onClick={handleSaveDraft}
-                    className="flex-1 py-3 rounded-lg font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors bg-[#008069] text-white hover:bg-[#01705c]"
+                    onClick={() => {
+                      handleDeleteClient(draftClient.id);
+                      setDraftClient(null);
+                    }}
+                    className={`py-3 px-4 rounded-lg font-semibold shadow-sm flex items-center justify-center transition-colors ${dark ? 'bg-[#202c33] text-red-400 hover:bg-red-900/20' : 'bg-white text-red-500 hover:bg-red-50'}`}
+                    title="Hapus Klien"
                   >
-                    Simpan
+                    <Trash2 size={18} />
                   </button>
-                  {items.some(i => i.id === draftClient.id) && (
-                    <button 
-                      onClick={() => {
-                        handleDeleteClient(draftClient.id);
-                        setDraftClient(null);
-                      }}
-                      className={`py-3 px-4 rounded-lg font-semibold shadow-sm flex items-center justify-center transition-colors ${dark ? 'bg-[#202c33] text-red-400 hover:bg-red-900/20' : 'bg-white text-red-500 hover:bg-red-50'}`}
-                      title="Hapus Klien"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
+      </AdminModal>
 
       <AdminConfirmModal
         isOpen={confirmModal.isOpen}

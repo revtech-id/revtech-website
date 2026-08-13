@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageHeader, AdminCard, StatusBadge, SaveButton } from "@/components/admin/ui";
+import { PageHeader, AdminCard, StatusBadge, SaveButton, AdminToast, AdminButton } from "@/components/admin/ui";
 
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
@@ -362,19 +362,12 @@ export default function ProfilePage() {
         />
       )}
 
-      <AnimatePresence>
-        {saved && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-[var(--adm-shadow-lg)] text-sm font-semibold z-[999] flex items-center gap-2 bg-[var(--adm-card)] text-[var(--adm-text)]"
-          >
-            <CheckCircle2 size={18} className="text-[var(--adm-success)]" />
-            Perubahan profil berhasil disimpan.
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AdminToast
+        isVisible={saved}
+        message="Perubahan profil berhasil disimpan."
+        type="success"
+        onClose={() => setSaved(false)}
+      />
     </div>
   );
 }

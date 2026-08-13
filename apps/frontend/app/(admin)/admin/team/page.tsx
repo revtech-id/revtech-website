@@ -79,9 +79,9 @@ function AddMemberNode() {
       <div className="w-52 rounded-2xl border-2 border-dashed border-slate-200 p-4 hover:border-blue-300 hover:bg-blue-50/40 transition-all cursor-pointer group">
         <div className="flex flex-col items-center justify-center py-2 gap-2">
           <div className="w-10 h-10 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center group-hover:border-blue-400 transition-colors">
-            <span className="material-symbols-outlined text-slate-300 text-[20px] group-hover:text-blue-400 transition-colors">add</span>
+            <span className="material-symbols-outlined text-slate-300 text-[20px] group-hover:text-[var(--adm-text)] transition-colors">add</span>
           </div>
-          <p className="text-xs font-semibold text-slate-400 group-hover:text-blue-500 text-center transition-colors">Tambah Anggota Tim / Role Baru</p>
+          <p className="text-xs font-semibold text-slate-400 group-hover:text-[var(--adm-text)] text-center transition-colors">Tambah Anggota Tim / Role Baru</p>
           <p className="text-[10px] text-slate-300 text-center">Siap untuk ekspansi</p>
         </div>
       </div>

@@ -25,7 +25,7 @@ export default function AICtaBanner() {
           </p>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-speed-dial"))}
-            className="bg-white text-blue-950 hover:bg-blue-50 font-black text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full hover-btn inline-flex items-center justify-center gap-2 relative z-20"
+            className="bg-white text-blue-950 hover:bg-blue-50 font-bold text-[13px] sm:text-sm px-6 py-3 lg:px-7 lg:py-3.5 rounded-full shadow-md hover-btn inline-flex items-center justify-center gap-2 relative z-20"
           >
             Mulai Konsultasi Sekarang
           </button>

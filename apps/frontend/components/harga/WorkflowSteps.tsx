@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+
 import { motion } from 'framer-motion';
 import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/animations';
 
@@ -24,7 +24,6 @@ const steps = [
 ];
 
 export default function WorkflowSteps() {
-  const [activeStep, setActiveStep] = useState(0);
 
   return (
     <section className="py-16 lg:py-24 bg-white relative overflow-hidden">
@@ -55,26 +54,14 @@ export default function WorkflowSteps() {
           <div className="hidden lg:block absolute top-10 left-24 right-24 h-0.5 bg-gray-100 z-0"></div>
 
           {steps.map((step, index) => {
-            const isActive = activeStep === index;
-            
             return (
               <motion.div 
                 key={index}
                 variants={fadeUpVariant}
-                onClick={() => setActiveStep(index)}
-                className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
+                className="relative z-10 flex flex-col items-center text-center"
               >
                 <div className="relative mb-6 inline-flex justify-center items-center">
-                  {isActive && (
-                    <motion.div
-                      layoutId="stepGlow"
-                      className="absolute inset-0 rounded-full shadow-[0_0_40px_15px_rgba(59,130,246,0.6)] sm:shadow-[0_0_50px_20px_rgba(59,130,246,0.6)]"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                    />
-                  )}
-                  <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-xl bg-blue-600 text-white font-black text-2xl transition-transform duration-300 z-10 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center bg-blue-600 text-white font-black text-2xl z-10">
                     {index + 1}
                   </div>
                 </div>

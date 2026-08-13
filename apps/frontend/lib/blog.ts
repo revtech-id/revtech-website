@@ -11,8 +11,9 @@ export interface BlogPostData {
   title: string;
   date: string;
   description: string;
-  coverImage: string;
+  coverImage?: string;
   category: string;
+  publishedAt?: string | null;
 }
 
 export interface BlogPost extends BlogPostData {

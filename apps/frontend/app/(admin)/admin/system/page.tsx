@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AdminCard, SaveButton } from "@/components/admin/ui";
+import { AdminCard, SaveButton, AdminToast, AdminButton } from "@/components/admin/ui";
 import { CheckCircle2, Globe, Mail, Phone, ShieldCheck, Camera, Server, User } from "lucide-react";
 import ImageCropper from "@/components/ui/ImageCropper";
 import { CountrySelector } from "@/components/ui/CountrySelector";
@@ -276,6 +276,7 @@ export default function SystemPage() {
                                 <CountrySelector selected={countryBisnis} onSelect={setCountryBisnis} theme="admin" />
                                 <input
                                   type="tel"
+                                  onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
                                   value={form.waBisnis ? form.waBisnis.replace(new RegExp(`^${countryBisnis.dial_code.replace('+', '')}`), '') : ''}
                                   onChange={(e) => {
                                     const val = e.target.value.replace(/\D/g, '');
@@ -293,6 +294,7 @@ export default function SystemPage() {
                                 <CountrySelector selected={countryPribadi} onSelect={setCountryPribadi} theme="admin" />
                                 <input
                                   type="tel"
+                                  onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }}
                                   value={form.waPribadi ? form.waPribadi.replace(new RegExp(`^${countryPribadi.dial_code.replace('+', '')}`), '') : ''}
                                   onChange={(e) => {
                                     const val = e.target.value.replace(/\D/g, '');
@@ -310,14 +312,15 @@ export default function SystemPage() {
                     </div>
 
                     <div className="px-6 py-5 border-t border-[var(--adm-border)] flex items-center justify-end gap-3 bg-[var(--adm-bg)]/30">
-                       <button
+                       <AdminButton
+                         variant="ghost"
+                         size="sm"
                          type="button"
                          onClick={handleReset}
                          disabled={isSaving}
-                         className="px-4 py-2.5 text-sm font-semibold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] bg-transparent rounded-xl transition-colors outline-none focus:outline-none"
                        >
                          Batal
-                       </button>
+                       </AdminButton>
                        <SaveButton type="submit" isSaving={isSaving} />
                     </div>
                  </form>
@@ -336,19 +339,12 @@ export default function SystemPage() {
         />
       )}
 
-      <AnimatePresence>
-        {saved && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-[var(--adm-shadow-lg)] text-sm font-semibold z-[999] flex items-center gap-2 bg-[var(--adm-card)] text-[var(--adm-text)]"
-          >
-            <CheckCircle2 size={18} className="text-[var(--adm-success)]" />
-            Informasi bisnis berhasil disimpan.
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AdminToast
+        isVisible={saved}
+        message="Informasi bisnis berhasil disimpan."
+        type="success"
+        onClose={() => setSaved(false)}
+      />
     </div>
   );
 }

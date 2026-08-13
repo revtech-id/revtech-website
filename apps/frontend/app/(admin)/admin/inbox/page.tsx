@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AdminCard, AdminToolbar, AdminTabs } from "@/components/admin/ui";
+import { AdminCard, AdminToolbar, AdminTabs, AdminModal, AdminTable, AdminButton } from "@/components/admin/ui";
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle } from "lucide-react";
 import inboxData from "@/data/admin/inbox.json";
 import { countries as COUNTRIES } from "@/lib/countries";
@@ -44,28 +44,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
   const [deadline, setDeadline] = useState("");
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          className="bg-[var(--adm-card)] rounded-2xl shadow-2xl w-full max-w-md p-6"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="mb-6">
-            <h3 className="font-bold text-lg text-[var(--adm-text)]">Konfirmasi Deal</h3>
-            <p className="text-sm text-[var(--adm-text-3)] mt-0.5">{lead.name} · {lead.company}</p>
-          </div>
-
+    <AdminModal isOpen={true} onClose={onClose} title="Konfirmasi Deal" subtitle={`${lead.name} · ${lead.company}`}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -131,9 +110,7 @@ function DealModal({ lead, onConfirm, onClose }: DealModalProps) {
               Pindahkan ke Project
             </button>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    </AdminModal>
   );
 }
 
@@ -634,6 +611,152 @@ export default function InboxPage() {
     return 0;
   });
 
+  const inboxColumns = [
+    {
+      key: "identitas",
+      label: "Identitas",
+      render: (lead: Lead) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-[var(--adm-text)]">{lead.name}</span>
+          {lead.company && <span className="text-[11px] text-[var(--adm-text-2)]">{lead.company}</span>}
+        </div>
+      ),
+    },
+    {
+      key: "layanan",
+      label: "Layanan & Budget",
+      render: (lead: Lead) => {
+        const [cat, ...rest] = lead.service.split(" - ");
+        const fallbackDetail = rest.length > 0 ? rest.join(" - ") : lead.service;
+        const displayTitle = lead.serviceDetail ? lead.serviceDetail : fallbackDetail;
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-[var(--adm-text)]">{displayTitle}</span>
+            <span className="text-[11px] text-[var(--adm-text-2)]">{cat}</span>
+            {lead.budget && lead.budget !== "-" && (
+              <span className="w-max px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold mt-0.5">
+                {lead.budget}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "pesan",
+      label: "Pesan & Info",
+      render: (lead: Lead) => (
+        <div className="flex flex-col gap-1.5 max-w-[200px]">
+          <p 
+            className="text-[12px] text-[var(--adm-text-2)] line-clamp-2"
+            title={lead.message || "Tidak ada pesan khusus"}
+          >
+            {lead.message ? `"${lead.message}"` : <span className="italic text-[var(--adm-text-3)]">Tidak ada pesan khusus</span>}
+          </p>
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {lead.referenceLink && (
+              <a href={lead.referenceLink.startsWith('http') ? lead.referenceLink : `https://${lead.referenceLink}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline font-semibold max-w-[100px] truncate" onClick={e => e.stopPropagation()} title={lead.referenceLink}>
+                Link Referensi
+              </a>
+            )}
+            {lead.followUpNote && (
+              <div className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 border border-blue-100 max-w-[100px] truncate" title={lead.followUpNote}>
+                <Pencil size={8} /> <span className="truncate">{lead.followUpNote}</span>
+              </div>
+            )}
+            {lead.handover && (
+              <span className="px-1.5 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold truncate max-w-[80px]" title={lead.handover}>
+                {lead.handover}
+              </span>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "tanggal",
+      label: "Tanggal",
+      render: (lead: Lead) => (
+        <span className="text-[11px] font-medium text-[var(--adm-text-3)] whitespace-nowrap">
+          {new Date(lead.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (lead: Lead) => {
+        const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
+        return (
+          <div className="flex items-center gap-2">
+            {lead.status === "waiting_dp" && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDealLead(lead); }}
+                className="inline-flex items-center justify-center text-[var(--adm-success)] hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+                title="Tandai Selesai (Deal)"
+              >
+                <Handshake size={16} strokeWidth={2.5} />
+              </button>
+            )}
+            
+            {lead.status === "deal" ? (
+              <div className="flex items-center gap-1.5 py-1 text-[11px] font-bold" style={cfg.style}>
+                <span>{cfg.label}</span>
+                <CheckCircle2 size={13} strokeWidth={2.5} />
+              </div>
+            ) : (
+              <select
+                value={lead.status}
+                onClick={e => e.stopPropagation()}
+                onChange={e => handleQuickStatus(lead, e.target.value)}
+                className="text-[11px] font-bold py-1 border-0 bg-transparent cursor-pointer focus:outline-none"
+                style={cfg.style}
+              >
+                <option value="new" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Baru Masuk</option>
+                <option value="followup" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Tindak Lanjut</option>
+                <option value="waiting_dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Menunggu DP</option>
+                <option value="deal" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Selesai</option>
+                <option value="ghosting" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Batal</option>
+              </select>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      render: (lead: Lead) => (
+        <div className="flex items-center gap-1.5">
+          <a
+            href={getWaLink(lead)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+            title="Chat via WhatsApp"
+          >
+            <MessageSquare size={14} strokeWidth={2} />
+          </a>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(lead); }}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+            title="Edit"
+          >
+            <Pencil size={14} strokeWidth={2} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); requestDelete(lead.id, false); }}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
+            title="Hapus"
+          >
+            <Trash2 size={14} strokeWidth={2} />
+          </button>
+        </div>
+      ),
+    }
+  ];
+
   if (!isClient) return null;
 
   return (
@@ -702,174 +825,14 @@ export default function InboxPage() {
             </div>
           </div>
 
-          {/* Lead List Unified Table/Card */}
-          <div className="space-y-4">
-
-
-            {/* Empty State */}
-            {filtered.length === 0 && (
-              <div className="py-24 flex flex-col items-center justify-center text-center px-4">
-                <span className="material-symbols-outlined text-[48px] text-[var(--adm-text-3)] mb-4">inbox</span>
-                <p className="text-[14px] text-[var(--adm-text-2)]">Tidak ada prospek ditemukan.</p>
-              </div>
-            )}
-
-            {/* Card List */}
-            {filtered.map((lead, i) => {
-              const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
-              return (
-                <motion.div
-                  key={lead.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.04, type: "spring", stiffness: 300, damping: 28 } }}
-                  className="bg-[var(--adm-card)] rounded-2xl shadow-[var(--adm-shadow)] overflow-hidden hover:shadow-[var(--adm-shadow-md)] transition-shadow"
-                >
-                      <div className="p-4 flex flex-col gap-2">
-                        {/* Top Row: Identity & Status & Actions */}
-                        <div className="flex flex-wrap justify-between items-start gap-4">
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--adm-text-2)] font-medium mt-1">
-                            <span className="text-sm font-semibold text-[var(--adm-text)]">{lead.name}</span>
-                            {lead.company && (
-                              <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold hidden sm:inline-block">
-                                {lead.company}
-                              </span>
-                            )}
-                            {(() => {
-                              const [cat] = lead.service.split(" - ");
-                              return <span>{cat}</span>;
-                            })()}
-                          </div>
-
-                          {/* Status & Deal Action */}
-                          <div className="flex items-center justify-end gap-1.5 w-[130px] shrink-0">
-                            {lead.status === "waiting_dp" && (
-                              <button
-                                onClick={() => setDealLead(lead)}
-                                className="inline-flex items-center justify-center text-[var(--adm-success)] hover:opacity-70 active:scale-95 transition-all focus:outline-none shrink-0"
-                                title="Tandai Selesai (Deal)"
-                              >
-                                <Handshake size={18} strokeWidth={2.5} />
-                              </button>
-                            )}
-                            
-                            {/* Status Dropdown/Badge */}
-                            {lead.status === "deal" ? (
-                              <div className="flex items-center gap-1.5 py-1.5 text-[11px] font-bold shrink-0" style={cfg.style}>
-                                <span className="truncate">{cfg.label}</span>
-                                <CheckCircle2 size={13} strokeWidth={2.5} />
-                              </div>
-                            ) : (
-                              <select
-                                value={lead.status}
-                                onChange={e => handleQuickStatus(lead, e.target.value)}
-                                className="text-[11px] font-bold py-1.5 border-0 bg-transparent cursor-pointer focus:outline-none text-right shrink-0"
-                                style={cfg.style}
-                              >
-                                <option value="new" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Baru Masuk</option>
-                                <option value="followup" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Tindak Lanjut</option>
-                                <option value="waiting_dp" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Menunggu DP</option>
-                                <option value="deal" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Selesai</option>
-                                <option value="ghosting" className="bg-[var(--adm-card)] text-[var(--adm-text)]">Batal</option>
-                              </select>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Middle Row: Title & Message (Combined on one line like Gmail) */}
-                        <div className="flex items-baseline gap-2 mt-1.5 mb-2 pr-4 sm:pr-8 overflow-hidden">
-                          {(() => {
-                            const [, ...rest] = lead.service.split(" - ");
-                            const fallbackDetail = rest.length > 0 ? rest.join(" - ") : lead.service;
-                            const displayTitle = lead.serviceDetail ? lead.serviceDetail : fallbackDetail;
-                            
-                            return (
-                              <h3 className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">{displayTitle}</h3>
-                            );
-                          })()}
-                          <span className="text-[var(--adm-text-3)] hidden sm:inline">—</span>
-                          <p 
-                            className="text-[13px] text-[var(--adm-text-2)] truncate cursor-default flex-1 min-w-0"
-                            title={lead.message || "Tidak ada pesan khusus"}
-                          >
-                            {lead.message ? `"${lead.message}"` : <span className="italic text-[var(--adm-text-3)]">Tidak ada pesan khusus</span>}
-                          </p>
-                        </div>
-
-                        {/* Bottom Row: Tags & Date */}
-                        <div className="flex flex-wrap items-end justify-between gap-4 mt-1">
-                          {/* Left: Tags */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {lead.budget && lead.budget !== "-" && (
-                              <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold">
-                                {lead.budget}
-                              </span>
-                            )}
-                            {lead.referenceLink && (
-                              <a href={lead.referenceLink.startsWith('http') ? lead.referenceLink : `https://${lead.referenceLink}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-500 hover:underline font-semibold inline-flex items-center transition-colors max-w-[150px] truncate" onClick={e => e.stopPropagation()} title={lead.referenceLink}>
-                                <span className="truncate">{lead.referenceLink.replace(/^https?:\/\//, '')}</span>
-                              </a>
-                            )}
-                            {lead.followUpNote && (
-                              <div className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded font-semibold inline-flex items-center gap-1 border border-blue-100">
-                                <Pencil size={10} />
-                                <span className="line-clamp-1">{lead.followUpNote}</span>
-                              </div>
-                            )}
-                            {lead.handover && (
-                              <span className="px-2 py-0.5 rounded bg-[var(--adm-bg)] text-[var(--adm-text-2)] text-[10px] font-semibold">
-                                {lead.handover}
-                              </span>
-                            )}
-                            {lead.status === "deal" && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold" style={{ color: "var(--adm-success)", backgroundColor: "rgba(16,185,129,0.1)" }}>
-                                DP Lunas
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Right: Actions & Date */}
-                          <div className="flex flex-wrap items-center gap-3 shrink-0 ml-auto mt-2 sm:mt-0">
-                            {/* Secondary Actions */}
-                            <div className="flex items-center gap-1.5">
-                                <a
-                                  href={getWaLink(lead)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
-                                  title="Chat via WhatsApp"
-                                >
-                                  <MessageSquare size={13} strokeWidth={2} />
-                                </a>
-  
-                                <button
-                                  onClick={() => handleEdit(lead)}
-                                  className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
-                                  title="Edit"
-                                >
-                                  <Pencil size={13} strokeWidth={2} />
-                                </button>
-  
-                                <button
-                                  onClick={() => requestDelete(lead.id, false)}
-                                  className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
-                                  title="Hapus"
-                                >
-                                  <Trash2 size={13} strokeWidth={2} />
-                                </button>
-                            </div>
-
-                            <div className="w-px h-4 bg-[var(--adm-border)] hidden sm:block"></div>
-
-                            <div className="text-[10px] font-medium text-[var(--adm-text-3)] whitespace-nowrap">
-                              {new Date(lead.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                    </motion.div>
-                  );
-                })}
+          {/* Lead List Unified Table */}
+          <div className="mt-4">
+            <AdminTable
+              columns={inboxColumns}
+              data={filtered}
+              keyField="id"
+              emptyMessage="Tidak ada prospek ditemukan."
+            />
           </div>
         </motion.div>
 
@@ -1043,84 +1006,64 @@ export default function InboxPage() {
       </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deletingId && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-[var(--adm-card)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)]"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--adm-danger)]/10 text-[var(--adm-danger)]`}>
-                  {deleteAction === 'permanent' ? <AlertTriangle size={20} /> : <Trash2 size={20} />}
-                </div>
-                <div>
-                  <h3 className="font-bold text-[var(--adm-text)]">{deleteAction === "permanent" ? "Hapus Permanen?" : "Pindahkan ke Sampah?"}</h3>
-                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
-                    {deleteAction === "permanent" 
-                      ? "Tindakan ini tidak dapat dibatalkan. Prospek akan dihapus dari sistem selamanya."
-                      : "Prospek akan dipindahkan ke Tempat Sampah dan bisa dipulihkan nanti."}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setDeletingId(null)}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className={`flex-1 py-2 text-sm font-bold text-white rounded-xl transition-colors bg-red-500 hover:bg-red-600`}
-                >
-                  Ya, Hapus
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {pendingStatusChange && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[var(--adm-bg)] w-full max-w-sm rounded-2xl shadow-xl overflow-hidden border border-[var(--adm-border)] flex flex-col">
-              <div className="p-5">
-                <div className="w-12 h-12 rounded-full bg-[var(--adm-warning)]/20 flex items-center justify-center mb-4 text-[var(--adm-warning)]">
-                  <AlertTriangle size={24} strokeWidth={2.5} />
-                </div>
-                <h2 className="text-lg font-bold text-[var(--adm-text)] mb-2">Yakin Mengubah Status?</h2>
-                <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">
-                  Prospek ini sebelumnya berstatus <strong>
-                    {pendingStatusChange.from === "list" 
-                      ? (pendingStatusChange.lead?.status === "deal" ? "Selesai" : "Batal") 
-                      : (leads.find(l => l.id === editingId)?.status === "deal" ? "Selesai" : "Batal")}
-                  </strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
-                </p>
-              </div>
-              <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3">
-                <button onClick={() => setPendingStatusChange(null)} className="flex-1 px-4 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent border border-[var(--adm-border)] rounded-xl hover:text-[var(--adm-text)] transition-colors">Batal</button>
-                <button onClick={() => {
-                  if (pendingStatusChange.from === "form") {
-                    handleAddLead(undefined, true);
-                  } else if (pendingStatusChange.from === "list" && pendingStatusChange.lead && pendingStatusChange.newStatus) {
-                    handleQuickStatus(pendingStatusChange.lead, pendingStatusChange.newStatus, true);
-                  }
-                  setPendingStatusChange(null);
-                }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
-                  Ya, Ubah Status
-                </button>
-              </div>
-            </motion.div>
+      <AdminModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} maxWidth="max-w-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-[var(--adm-danger)]/10 text-[var(--adm-danger)]`}>
+            {deleteAction === 'permanent' ? <AlertTriangle size={20} /> : <Trash2 size={20} />}
           </div>
-        )}
-      </AnimatePresence>
+          <div>
+            <h3 className="font-bold text-[var(--adm-text)]">{deleteAction === "permanent" ? "Hapus Permanen?" : "Pindahkan ke Sampah?"}</h3>
+            <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+              {deleteAction === "permanent" 
+                ? "Tindakan ini tidak dapat dibatalkan. Prospek akan dihapus dari sistem selamanya."
+                : "Prospek akan dipindahkan ke Tempat Sampah dan bisa dipulihkan nanti."}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-6">
+          <button
+            onClick={() => setDeletingId(null)}
+            className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] rounded-xl transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            onClick={confirmDelete}
+            className={`flex-1 py-2 text-sm font-bold text-white rounded-xl transition-colors bg-red-500 hover:bg-red-600`}
+          >
+            Ya, Hapus
+          </button>
+        </div>
+      </AdminModal>
+
+      <AdminModal isOpen={!!pendingStatusChange} onClose={() => setPendingStatusChange(null)} maxWidth="max-w-sm">
+        <div className="flex flex-col -mx-6 -mt-6">
+          <div className="p-5">
+            <div className="w-12 h-12 rounded-full bg-[var(--adm-warning)]/20 flex items-center justify-center mb-4 text-[var(--adm-warning)]">
+              <AlertTriangle size={24} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-lg font-bold text-[var(--adm-text)] mb-2">Yakin Mengubah Status?</h2>
+            <p className="text-sm text-[var(--adm-text-2)] leading-relaxed">
+              Prospek ini sebelumnya berstatus <strong>
+                {pendingStatusChange?.from === "list" 
+                  ? (pendingStatusChange?.lead?.status === "deal" ? "Selesai" : "Batal") 
+                  : (leads.find(l => l.id === editingId)?.status === "deal" ? "Selesai" : "Batal")}
+              </strong>. Mengubah statusnya akan mengembalikannya ke pipeline aktif. Apakah Anda yakin?
+            </p>
+          </div>
+          <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3 rounded-b-2xl">
+            <button onClick={() => setPendingStatusChange(null)} className="flex-1 px-4 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent border border-[var(--adm-border)] rounded-xl hover:text-[var(--adm-text)] transition-colors">Batal</button>
+            <button onClick={() => {
+              if (pendingStatusChange?.from === "form") {
+                handleAddLead(undefined, true);
+              } else if (pendingStatusChange?.from === "list" && pendingStatusChange.lead && pendingStatusChange.newStatus) {
+                handleQuickStatus(pendingStatusChange.lead, pendingStatusChange.newStatus, true);
+              }
+            }} className="flex-1 px-4 py-2 text-sm font-bold bg-[var(--adm-warning)] text-white rounded-xl hover:opacity-90 transition-opacity">Ya, Ubah Status</button>
+          </div>
+        </div>
+      </AdminModal>
+
 
     </div>
   );

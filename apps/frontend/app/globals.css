@@ -6,7 +6,7 @@
   
   /* I'll use next/font for font, so standard sans is fine, but I can override it */
   --font-sans: var(--font-main), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-main), ui-sans-serif, system-ui, sans-serif;
   
   --animate-float: float 6s ease-in-out infinite;
   --animate-levitate: levitate 8s ease-in-out infinite;
@@ -101,6 +101,41 @@
   .custom-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, dan Opera */
   }
+
+  /* Scrollbar khusus untuk popup/modal agar natural */
+  .popup-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .popup-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .popup-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--adm-border);
+    border-radius: 10px;
+    border: none;
+  }
+  .popup-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--adm-text-3);
+  }
+
+  /* Admin Scrollbar Universal */
+  .admin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .admin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .admin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--adm-border);
+    border-radius: 10px;
+  }
+  .admin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--adm-text-3);
+  }
+  .popup-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--adm-text-3);
+  }
 }
 
 @layer base {
@@ -116,22 +151,22 @@
   }
   
   ::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--adm-border);
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: var(--adm-scrollbar);
+    background-color: #cbd5e1;
     border-radius: 10px;
-    border: 4px solid var(--adm-border);
+    border: none;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--adm-text-3);
+    background-color: #94a3b8;
   }
 
   /*
@@ -161,8 +196,8 @@
     --adm-text:        #1E293B;
     --adm-text-2:      #64748B;
     --adm-text-3:      #94A3B8;
-    --adm-accent:      #2563EB;
-    --adm-accent-soft: #EFF6FF;
+    --adm-accent:      #0052FF;
+    --adm-accent-soft: #EEF2FF;
     --adm-success:     #10B981;
     --adm-warning:     #F59E0B;
     --adm-danger:      #EF4444;
@@ -185,7 +220,7 @@
     --adm-text:        #FFFFFF;
     --adm-text-2:      #A0A0A0;
     --adm-text-3:      #737373;
-    --adm-accent:      #3B82F6;
+    --adm-accent:      #0052ff;
     --adm-accent-soft: #2A2B36;
     --adm-success:     #10B981;
     --adm-warning:     #F59E0B;

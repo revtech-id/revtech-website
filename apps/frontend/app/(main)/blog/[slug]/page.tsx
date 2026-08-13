@@ -31,7 +31,7 @@ export async function generateMetadata(
       description: postData.description,
       images: [
         {
-          url: postData.coverImage,
+          url: postData.coverImage || "",
         },
       ],
     },
@@ -70,6 +70,11 @@ export default async function BlogPost({ params }: Props) {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {postData.title}
             </h1>
+            {postData.publishedAt && (
+                <div className="text-sm font-semibold text-blue-600 mb-8">
+                    {new Date(postData.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                </div>
+            )}
         </header>
 
         {/* Cover Image */}

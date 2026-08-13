@@ -136,7 +136,7 @@ export default function Footer() {
               <li>
                 <div className="flex items-center gap-3 text-slate-500 text-sm">
                   <span className="material-symbols-outlined text-[18px] shrink-0">location_on</span>
-                  <span>Sukabumi, Jawa Barat</span>
+                  <span>Sukabumi, Jawa Barat, Indonesia</span>
                 </div>
               </li>
             </ul>

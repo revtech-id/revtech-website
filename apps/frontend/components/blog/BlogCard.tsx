@@ -34,16 +34,19 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                     <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-500"></div>
                 </div>
                 <div className="p-6 md:p-8 flex flex-col flex-1">
+                    {post.publishedAt && (
+                        <div className="text-xs font-bold text-blue-600 mb-2">
+                            {new Date(post.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                    )}
                     <h4 className="text-[17px] md:text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">{post.title}</h4>
-                    <p className="text-[13px] sm:text-[14.5px] text-gray-500 line-clamp-2 leading-relaxed font-medium mb-6">{post.description}</p>
+                    <p className="text-xs sm:text-[13px] text-gray-500 line-clamp-2 leading-relaxed font-medium mb-6">{post.description}</p>
                     
-                    <div className="mt-auto flex items-center justify-between pt-5 border-t border-gray-100">
-                        <span className="text-[13px] font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
+                        <span className="text-xs font-semibold text-gray-500 group-hover:text-blue-600 transition-colors">
                             Baca Artikel
                         </span>
-                        <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
-                            <ArrowRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" size={16} />
-                        </div>
+                        <ArrowRight className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" size={16} />
                     </div>
                 </div>
             </Link>

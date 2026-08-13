@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, ExternalLink, Code2, Pin, ArrowRight } from "lucide-react";
-import { fadeUpVariant, staggerContainerVariant } from "@/lib/animations";
+import { PackageOpen, ExternalLink, Code2, Pin, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -55,7 +53,6 @@ const MOCK_DATA: ProdukDigital[] = [
 export default function KatalogClient() {
   const [items, setItems] = useState<ProdukDigital[]>(MOCK_DATA);
   const [activeCategory, setActiveCategory] = useState("Semua");
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     // Nanti akan dihubungkan dengan localStorage atau API di akhir (koneksi)
@@ -68,10 +65,7 @@ export default function KatalogClient() {
   }, []);
 
   const filteredItems = items.filter(item => {
-    const matchCategory = activeCategory === "Semua" || item.category === activeCategory;
-    const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCategory && matchSearch;
+    return activeCategory === "Semua" || item.category === activeCategory;
   }).sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -83,50 +77,22 @@ export default function KatalogClient() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header Section */}
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainerVariant}
-          className="text-center mb-16 lg:mb-20"
-        >
-          <motion.h1 variants={fadeUpVariant} className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
+        <div className="text-center mb-16 lg:mb-20">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
             Produk <span className="block md:inline text-blue-600">Digital Kami</span>
-          </motion.h1>
-          <motion.p variants={fadeUpVariant} className="text-sm sm:text-base md:text-xl text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">
+          </h1>
+          <p className="text-sm sm:text-base md:text-xl text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed">
             Jelajahi berbagai solusi digital terbaik yang telah kami siapkan untuk membantu dan mempercepat pengembangan bisnis Anda.
-          </motion.p>
-        </motion.div>
-
-        {/* Search */}
-        <div className="flex justify-start mb-12">
-          <div className="relative w-full md:w-96 shrink-0">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="cari produk..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-14 pl-11 pr-4 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm text-slate-900 placeholder:text-slate-400 shadow-sm"
-            />
-          </div>
+          </p>
         </div>
+
 
         {/* Grid Katalog */}
         {filteredItems.length > 0 ? (
-          <motion.div 
-            layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            <AnimatePresence mode="popLayout">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredItems.map(item => (
-                <motion.div
+                <div
                   key={item.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
                   className="group relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-sm hover-card flex flex-col h-full"
                 >
                   {/* Thumbnail */}
@@ -157,18 +123,17 @@ export default function KatalogClient() {
                       </Link>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
-          </motion.div>
+          </div>
         ) : (
           <div className="py-24 text-center bg-white rounded-[2rem] border border-slate-200 mt-8">
             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400">
-              <Search size={24} />
+              <PackageOpen size={24} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Tidak ada produk</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Belum ada produk</h3>
             <p className="text-slate-500 max-w-md mx-auto">
-              Maaf, kami tidak dapat menemukan produk yang sesuai dengan pencarian atau filter Anda.
+              Saat ini belum ada produk digital yang dipublikasikan. Nantikan rilis produk inovatif kami selanjutnya!
             </p>
           </div>
         )}

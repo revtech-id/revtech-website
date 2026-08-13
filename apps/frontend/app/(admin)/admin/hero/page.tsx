@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FileUp, Save, Monitor, Tablet, Smartphone } from "lucide-react";
-import { AdminToast } from "@/components/admin/ui";
-import { Button } from "@/components/ui/Button";
+import { AdminToast, AdminButton } from "@/components/admin/ui";
 
 type DeviceKey = "desktop" | "tablet" | "mobile";
 type MediaSlot = { bgMedia: string; bgType: "image" | "video" };
@@ -171,12 +170,12 @@ export default function HeroBannerPage() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <button onClick={handleReset} className="text-sm text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
+          <AdminButton onClick={handleReset} variant="ghost" size="sm">
             Reset
-          </button>
-          <Button onClick={handleSave} className="gap-2 rounded-xl">
-            <Save size={14} /> Simpan
-          </Button>
+          </AdminButton>
+          <AdminButton onClick={handleSave} icon={<Save size={14} />}>
+            Simpan
+          </AdminButton>
         </div>
       </div>
 

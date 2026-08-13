@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
-import { AdminCard } from "@/components/admin/ui";
+import { AdminCard, AdminModal, AdminToast, AdminButton } from "@/components/admin/ui";
 import { getEngineContent, buildAgentsContent, saveEngineContent, getAgentsTemplate, saveAgentsTemplate, AGENTS_TEMPLATE_DEFAULT } from "@/lib/sopStore";
 import { REVTECH_ENGINE_DEFAULT } from "@/lib/revtechEngineDefault";
 import { logActivity } from "@/lib/activityLog";
@@ -211,17 +211,18 @@ full: 9999px (rounded-full)
 
 ## Komponen Standar
 
-### Button
+### AdminButton
 \`\`\`tsx
-// Primary
-<button className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-colors">
-  Label
-</button>
+import { AdminButton } from "@/components/admin/ui";
 
-// Secondary  
-<button className="px-6 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors">
-  Label
-</button>
+// Primary
+<AdminButton variant="primary">Label</AdminButton>
+
+// Secondary
+<AdminButton variant="secondary">Label</AdminButton>
+
+// Danger
+<AdminButton variant="danger" icon={<Trash2 size={16} />}>Hapus</AdminButton>
 \`\`\`
 
 ### Input Field
@@ -661,13 +662,14 @@ export default function StudioPage() {
         </div>
 
         {/* Settings Button */}
-        <button
+        <AdminButton
+          variant="ghost"
+          size="icon"
           onClick={() => setIsSopModalOpen(true)}
           title="Pengaturan Rules"
-          className="flex items-center justify-center hover:text-[var(--adm-text)] hover:scale-110 transition-all text-[var(--adm-text-3)] shrink-0 p-2"
         >
           <Settings size={20} />
-        </button>
+        </AdminButton>
       </div>
 
       <AnimatePresence mode="wait">
@@ -732,7 +734,7 @@ export default function StudioPage() {
                             <input type="file" ref={fileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
                             <div 
                               onClick={() => fileInputRef.current?.click()}
-                              className="w-full h-full min-w-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-accent)] cursor-pointer transition-all overflow-hidden relative group p-2"
+                              className="w-full h-full min-w-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2"
                             >
                               {projectData.logo ? (
                                 <img src={projectData.logo} alt="Logo" className="w-full h-full object-contain" />
@@ -755,19 +757,20 @@ export default function StudioPage() {
                               AI akan secara otomatis mengekstrak warna utama dan radius lekukan dari logo bisnis Anda untuk diterapkan secara dinamis ke seluruh desain sistem (UI/UX).
                             </p>
                             {projectData.logo ? (
-                              <button 
-                                onClick={() => setProjectData({...projectData, logo: null, stylePreference: ""})} 
-                                className="w-fit text-[12px] font-bold text-red-500 hover:underline flex items-center gap-1.5"
+                              <AdminButton 
+                                variant="danger" size="sm"
+                                onClick={() => setProjectData({...projectData, logo: null, stylePreference: ""})}
                               >
                                 Hapus Logo
-                              </button>
+                              </AdminButton>
                             ) : (
-                              <button 
-                                onClick={() => setProjectData({...projectData, hasLogo: false, logo: null, stylePreference: ""})} 
-                                className="w-fit text-[12px] font-bold text-[var(--adm-accent)] hover:underline flex items-center gap-1.5"
+                              <AdminButton 
+                                variant="outline" size="sm"
+                                onClick={() => setProjectData({...projectData, hasLogo: false, logo: null, stylePreference: ""})}
+                                icon={<ArrowRight size={14} />}
                               >
-                                Tidak punya logo? Isi gaya visual manual <ArrowRight size={14} />
-                              </button>
+                                Isi manual gaya visual
+                              </AdminButton>
                             )}
                           </div>
                         </div>
@@ -788,12 +791,12 @@ export default function StudioPage() {
                             <option className="bg-[var(--adm-bg)] text-[var(--adm-text)]">Modern & Gelap (Dark Mode)</option>
                             <option className="bg-[var(--adm-bg)] text-[var(--adm-text)]">Mewah & Eksklusif (Luxury)</option>
                           </select>
-                          <button 
-                            onClick={() => setProjectData({...projectData, hasLogo: true, stylePreference: "Auto-adapt dari Logo"})} 
-                            className="mt-3 text-[11px] font-bold text-[var(--adm-accent)] hover:underline"
+                          <AdminButton 
+                            variant="ghost" size="sm" className="mt-3"
+                            onClick={() => setProjectData({...projectData, hasLogo: true, stylePreference: "Auto-adapt dari Logo"})}
                           >
                             Batal, saya ingin upload logo
-                          </button>
+                          </AdminButton>
                         </div>
                       </div>
                     )}
@@ -806,7 +809,7 @@ export default function StudioPage() {
                         <input type="file" ref={refFileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleRefFileChange} />
                         <div 
                           onClick={() => refFileInputRef.current?.click()}
-                          className="w-full h-full min-h-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-accent)] cursor-pointer transition-all overflow-hidden relative group p-2"
+                          className="w-full h-full min-h-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2"
                         >
                           {projectData.referenceImage ? (
                             <img src={projectData.referenceImage} alt="Referensi" className="w-full h-auto max-h-[160px] object-contain" />
@@ -842,12 +845,12 @@ export default function StudioPage() {
                           </div>
                         )}
                         {projectData.referenceImage && (
-                          <button 
-                            onClick={() => setProjectData({...projectData, referenceImage: null, referenceNotes: ""})} 
-                            className="w-fit text-[12px] font-bold text-red-500 hover:underline flex items-center gap-1.5"
+                          <AdminButton 
+                            variant="danger" size="sm"
+                            onClick={() => setProjectData({...projectData, referenceImage: null, referenceNotes: ""})}
                           >
                             Hapus Referensi
-                          </button>
+                          </AdminButton>
                         )}
                       </div>
                     </div>
@@ -855,7 +858,7 @@ export default function StudioPage() {
                 </div>
 
                 <div className="flex justify-end pt-4 border-t border-[var(--adm-border)] mt-6">
-                  <button
+                  <AdminButton
                     onClick={() => { setStep(2); getAIStack(); }}
                     disabled={
                       projectData.projectName.trim().length < 3 || 
@@ -863,10 +866,9 @@ export default function StudioPage() {
                       (projectData.hasLogo && !projectData.logo && !projectData.referenceImage) ||
                       (!projectData.hasLogo && projectData.stylePreference === "")
                     }
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--adm-accent)] text-white font-bold text-sm hover:opacity-90 transition-all disabled:opacity-40 shadow-lg shadow-[var(--adm-accent)]/20"
                   >
                     Lanjutkan <ArrowRight size={18} />
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             </AdminCard>
@@ -937,13 +939,13 @@ export default function StudioPage() {
                             className="flex-1 bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-xl px-4 py-2.5 text-[13px] font-medium focus:outline-none focus:border-[var(--adm-accent)] text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] transition-colors"
                             disabled={isChatting}
                           />
-                          <button 
+                          <AdminButton 
+                            size="icon"
                             onClick={sendChatMessage}
                             disabled={!chatInput.trim() || isChatting}
-                            className="shrink-0 w-10 h-10 rounded-xl bg-[var(--adm-accent)] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition-opacity"
                           >
                             <Send size={16} />
-                          </button>
+                          </AdminButton>
                         </div>
                       </div>
                     </div>
@@ -1091,113 +1093,90 @@ export default function StudioPage() {
       </AnimatePresence>
 
       {/* Copy Toast */}
-      <AnimatePresence>
-        {copied && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-[var(--adm-card)] text-[var(--adm-text)] border border-[var(--adm-border)] shadow-lg font-semibold text-sm"
-          >
-            <CheckCircle2 size={16} className="text-[var(--adm-success)]" /> Tersalin!
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AdminToast
+        isVisible={copied}
+        message="Tersalin!"
+        type="success"
+        onClose={() => setCopied(false)}
+      />
 
       {/* ── SOP MANAGER MODAL ─────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isSopModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-          >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsSopModalOpen(false)} />
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
-            >
-              <div className="p-6 border-b border-[var(--adm-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--adm-bg)]/50">
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--adm-text)]">Pengaturan Rules</h3>
-                  <p className="text-xs font-medium text-[var(--adm-text-3)] mt-0.5">Aturan dan instruksi default untuk AI Agent</p>
-                </div>
-                <div className="flex items-center gap-1 bg-[var(--adm-bg)] border border-[var(--adm-border)] p-1 rounded-xl">
-                  {(["engine", "agents"] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setSopTab(t)}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        sopTab === t
-                          ? "bg-[var(--adm-accent)] text-white shadow"
-                          : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"
-                      }`}
-                    >
-                      {t === "engine" ? "revtech-engine.md" : "AGENTS.md"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <AdminModal isOpen={isSopModalOpen} onClose={() => setIsSopModalOpen(false)} maxWidth="max-w-4xl" noPadding={true}>
+        <div className="p-6 border-b border-[var(--adm-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--adm-bg)]/50">
+          <div>
+            <h3 className="text-lg font-bold text-[var(--adm-text)]">Pengaturan Rules</h3>
+            <p className="text-xs font-medium text-[var(--adm-text-3)] mt-0.5">Aturan dan instruksi default untuk AI Agent</p>
+          </div>
+          <div className="flex items-center gap-1 bg-[var(--adm-bg)] border border-[var(--adm-border)] p-1 rounded-xl">
+            {(["engine", "agents"] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setSopTab(t)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  sopTab === t
+                    ? "bg-[var(--adm-accent)] text-white shadow"
+                    : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"
+                }`}
+              >
+                {t === "engine" ? "revtech-engine.md" : "AGENTS.md"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              <div className="p-6 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                <AnimatePresence mode="wait">
-                  <motion.div key={sopTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
-                    <textarea
-                      value={sopTab === "engine" ? engineContent : agentsTemplate}
-                      onChange={e => sopTab === "engine" ? setEngineContent(e.target.value) : setAgentsTemplate(e.target.value)}
-                      spellCheck={false}
-                      className="w-full h-full min-h-[400px] px-4 py-4 font-mono text-xs leading-relaxed rounded-xl border border-[var(--adm-border)] bg-[#0d1117] text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                    />
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              <div className="p-4 border-t border-[var(--adm-border)] bg-[var(--adm-bg)]/50 flex items-center justify-between">
-                <button
-                  onClick={resetSOP}
-                  className="text-xs font-bold text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors"
-                >
-                  Reset Default
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsSopModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-sm font-bold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors"
-                  >
-                    Tutup
-                  </button>
-                  <button
-                    onClick={saveSOP}
-                    disabled={isSopSaving}
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--adm-accent)]/20"
-                  >
-                    {isSopSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-                    {isSopSaving ? "Menyimpan..." : "Simpan Perubahan"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Toast saved inside modal */}
-              <AnimatePresence>
-                {sopSaved && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl shadow-lg text-sm font-semibold flex items-center gap-2 bg-[var(--adm-success)] text-white"
-                  >
-                    <CheckCircle2 size={16} />
-                    Template berhasil disimpan
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        <div className="p-6 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <AnimatePresence mode="wait">
+            <motion.div key={sopTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
+              <textarea
+                value={sopTab === "engine" ? engineContent : agentsTemplate}
+                onChange={e => sopTab === "engine" ? setEngineContent(e.target.value) : setAgentsTemplate(e.target.value)}
+                spellCheck={false}
+                className="w-full h-full min-h-[400px] px-4 py-4 font-mono text-xs leading-relaxed rounded-xl border border-[var(--adm-border)] bg-[#0d1117] text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              />
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>
+        </div>
+
+        <div className="p-4 border-t border-[var(--adm-border)] bg-[var(--adm-bg)]/50 flex items-center justify-between">
+          <button
+            onClick={resetSOP}
+            className="text-xs font-bold text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors"
+          >
+            Reset Default
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsSopModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={saveSOP}
+              disabled={isSopSaving}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--adm-accent)]/20"
+            >
+              {isSopSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+              {isSopSaving ? "Menyimpan..." : "Simpan Perubahan"}
+            </button>
+          </div>
+        </div>
+
+        {/* Toast saved inside modal */}
+        <AnimatePresence>
+          {sopSaved && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl shadow-lg text-sm font-semibold flex items-center gap-2 bg-[var(--adm-success)] text-white"
+            >
+              <CheckCircle2 size={16} />
+              Template berhasil disimpan
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </AdminModal>
     </div>
   );
 }

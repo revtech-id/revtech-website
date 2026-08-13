@@ -40,9 +40,11 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
 
         {/* Header Studi Kasus */}
         <header className="mb-12">
-            <div className="mb-6">
-                <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{portfolioData.date}</span>
-            </div>
+            {portfolioData.date && (
+                <div className="mb-6">
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{portfolioData.date}</span>
+                </div>
+            )}
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {portfolioData.title}
@@ -102,12 +104,12 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
 
         {/* CTA Bawah */}
         <div className="mt-24 py-16 px-8 bg-slate-900 rounded-[2.5rem] text-center shadow-2xl">
-            <h3 className="text-3xl font-black text-white mb-4 tracking-tight">Siap Membangun Sesuatu yang Hebat?</h3>
+            <h3 className="text-3xl font-black text-white mb-4 tracking-tight">Tertarik Membuat Proyek Seperti Ini?</h3>
             <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-                Mari wujudkan sistem impian Anda. Konsultasikan kebutuhan digital Anda dengan tim kami hari ini juga.
+                Percayakan kebutuhan website atau sistem digital Anda kepada tim kami. Pesan sekarang dan mulai langkah pertama menuju solusi digital impian Anda.
             </p>
-            <Link href="/kontak" className="bg-white text-blue-950 hover:bg-blue-50 font-black text-[13px] sm:text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full shadow-lg active:scale-95 inline-flex items-center justify-center gap-2 transition-colors">
-                Mulai Konsultasi Gratis
+            <Link href="/kontak" className="bg-white text-blue-950 hover:bg-blue-50 font-bold text-[13px] sm:text-sm px-6 py-3 lg:px-7 lg:py-3.5 rounded-full shadow-md active:scale-95 inline-flex items-center justify-center gap-2 transition-colors">
+                Pesan Sekarang
             </Link>
         </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageHeader, StatusBadge, AdminToolbar } from "@/components/admin/ui";
+import { PageHeader, StatusBadge, AdminToolbar, AdminModal, AdminTable, AdminButton } from "@/components/admin/ui";
 import { CheckCircle2, MessageSquare, Trash2, X, MoreHorizontal, ChevronDown, AlertTriangle, CircleDollarSign } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 import rawInvoices from "@/data/admin/invoices.json";
@@ -192,21 +192,148 @@ export default function InvoicePage() {
     }
   }, []);
 
+  const handleMarkPaid = (inv: Invoice, date: string) => {
+    const updated: Invoice[] = invoiceList.map((item) =>
+      item.id === inv.id ? { ...item, status: "paid" as const, paidAt: date } : item
+    );
+    setInvoiceList(updated);
+    localStorage.setItem("revtech_invoices", JSON.stringify(updated));
+    logActivity({ type: "system", title: "Invoice Dilunasi", description: `Invoice ${inv.id} untuk klien ${inv.client} telah dilunasi.`, user: "Admin" });
+  };
+
   const confirmLunas = () => {
     if (!lunasInvoice || !lunasDate) return;
     
     // Gabungkan tanggal pilihan user dengan jam saat ini agar format ISO lengkap
     const now = new Date();
     const timeString = now.toISOString().substring(11); // ambil bagian T00:00:00.000Z
-    const fullIsoDate = `${lunasDate}T${timeString}`;
+    const fullIsoString = `${lunasDate}T${timeString}`;
 
-    const updated: Invoice[] = invoiceList.map((inv) =>
-      inv.id === lunasInvoice.id ? { ...inv, status: "paid" as const, paidAt: fullIsoDate } : inv
-    );
-    setInvoiceList(updated);
-    localStorage.setItem("revtech_invoices", JSON.stringify(updated));
-    logActivity({ type: "system", title: "Invoice Dilunasi", description: `Invoice ${lunasInvoice.id} untuk klien ${lunasInvoice.client} telah dilunasi.`, user: "Admin" });
-  }
+    handleMarkPaid(lunasInvoice, fullIsoString);
+    setLunasInvoice(null);
+  };
+
+  const invoiceColumns = [
+    {
+      key: "identitas",
+      label: "Klien & Layanan",
+      render: (inv: Invoice) => (
+        <div className="flex flex-col gap-1">
+          <span className="font-semibold text-[var(--adm-text)]">{inv.company || inv.client}</span>
+          {inv.service && <span className="text-[11px] text-[var(--adm-text-2)]">{inv.service.split(" - ")[0]}</span>}
+        </div>
+      ),
+    },
+    {
+      key: "deskripsi",
+      label: "Deskripsi",
+      render: (inv: Invoice) => {
+        let title = "Pembayaran Maintenance";
+        if (inv.description.startsWith("Pembayaran Penuh")) title = "Pembayaran Penuh";
+        else if (inv.type === "dp") title = inv.description.includes("DP") ? `Pembayaran ${inv.description.split(" — ")[0]}` : "Pembayaran DP";
+        else if (inv.type === "pelunasan") title = "Pembayaran Pelunasan";
+        
+        return (
+          <div className="flex flex-col gap-1 max-w-[200px]">
+            <span className="text-[13px] font-medium text-[var(--adm-text-2)]">{title}</span>
+            <span className="text-[11px] text-[var(--adm-text-3)] truncate" title={inv.description}>{inv.description}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "jumlah",
+      label: "Jumlah",
+      render: (inv: Invoice) => (
+        <span className="text-[14px] font-bold text-[var(--adm-text)] whitespace-nowrap">
+          {formatRp(inv.amount)}
+        </span>
+      ),
+    },
+    {
+      key: "tanggal",
+      label: "Tanggal & Tempo",
+      render: (inv: Invoice) => (
+        <div className="flex flex-col gap-1">
+          {inv.status === "paid" ? (
+            <span className="text-[11px] text-[var(--adm-text-3)] whitespace-nowrap">
+              Lunas: {formatDateTime(inv.paidAt || inv.issuedAt)}
+            </span>
+          ) : inv.type === "maintenance" ? (
+            <span className={`text-[11px] whitespace-nowrap ${isOverdue(inv.dueDate, inv.status) ? "text-[var(--adm-danger)] font-bold" : "text-[var(--adm-text-3)]"}`}>
+              Tempo: {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase() : "BELUM DIATUR"}
+            </span>
+          ) : (
+             <span className="text-[11px] text-[var(--adm-text-3)]">-</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (inv: Invoice) => (
+        <div className="flex items-center gap-2">
+          {inv.status === "pending" && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleQuickLunas(inv); }}
+              className="inline-flex items-center justify-center text-[var(--adm-success)] hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+              title="Tandai Lunas"
+            >
+              <CheckCircle2 size={16} strokeWidth={2.5} />
+            </button>
+          )}
+          
+          {inv.status === "paid" ? (
+            <div className="flex items-center gap-1.5 py-1 text-[11px] font-bold text-[var(--adm-success)]">
+              <span>Lunas</span>
+              <CheckCircle2 size={13} strokeWidth={2.5} />
+            </div>
+          ) : isOverdue(inv.dueDate, inv.status) ? (
+            <div className="flex items-center gap-1.5 py-1 text-[11px] font-bold text-[var(--adm-danger)]">
+              <span>Terlambat</span>
+              <AlertTriangle size={13} strokeWidth={2.5} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 py-1 text-[11px] font-bold text-[var(--adm-warning)]">
+              <span>Pending</span>
+              <CircleDollarSign size={13} strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      render: (inv: Invoice) => (
+        <div className="flex items-center gap-1.5">
+          {inv.phone && (
+            <button
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                const text = inv.status === "pending"
+                  ? `Halo Kak ${inv.client}, dari RevTech. Mengingatkan kembali terkait tagihan ${inv.description} sebesar ${formatRp(inv.amount)}. Jika sudah ditransfer, mohon konfirmasinya ya Kak 🙏`
+                  : `Halo Kak ${inv.client}, dari RevTech. Terima kasih, pembayaran untuk ${inv.description} sudah kami terima.`;
+                window.open(`https://wa.me/${inv.phone}?text=${encodeURIComponent(text)}`, "_blank");
+              }}
+              className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+              title="Chat Klien"
+            >
+              <MessageSquare size={14} strokeWidth={2} />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(inv.id); }}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
+            title="Hapus"
+          >
+            <Trash2 size={14} strokeWidth={2} />
+          </button>
+        </div>
+      ),
+    }
+  ];
 
   function save(updated: Invoice[]) {
     setInvoiceList(updated);
@@ -398,97 +525,75 @@ export default function InvoicePage() {
             </div>
           </div>
 
-          <motion.div {...fadeUp(3)} className="flex flex-col gap-4">
-            <AnimatePresence mode="popLayout">
-              {sortedData.length > 0 ? (
-                sortedData.map(inv => (
-                  <InvoiceCard 
-                    key={inv.id} 
-                    inv={inv} 
-                    onMarkPaid={handleQuickLunas} 
-                    onDelete={handleDelete} 
-                  />
-                ))
-              ) : (
-                <div className="w-full py-20 flex flex-col items-center justify-center text-center opacity-60">
-                  <span className="material-symbols-outlined text-6xl mb-4 text-[var(--adm-text-3)]">receipt_long</span>
-                  <p className="text-lg font-medium text-[var(--adm-text-2)]">Tidak ada invoice ditemukan</p>
-                </div>
-              )}
-              </AnimatePresence>
-          </motion.div>
+          {/* Invoice List Unified Table */}
+          <div className="mt-4">
+            <AdminTable
+              columns={invoiceColumns}
+              data={sortedData}
+              keyField="id"
+              emptyMessage="Tidak ada invoice ditemukan."
+            />
+          </div>
         </>
 
       {/* Modal Konfirmasi Lunas */}
-      <AnimatePresence>
+      <AdminModal isOpen={!!lunasInvoice} onClose={() => setLunasInvoice(null)} maxWidth="max-w-md" noPadding={true}>
         {lunasInvoice && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setLunasInvoice(null)}
-            />
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md bg-[var(--adm-card)] rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
-            >
-              <div className="p-5 border-b border-[var(--adm-border)] flex justify-between items-center bg-[var(--adm-bg)]">
-                <h3 className="font-bold text-lg text-[var(--adm-text)] flex items-center gap-2">
-                  <CircleDollarSign className="text-[var(--adm-success)]" size={20} strokeWidth={2.5} />
-                  Konfirmasi Pelunasan
-                </h3>
-                <button onClick={() => setLunasInvoice(null)} className="text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
-                  <X size={20} strokeWidth={2.5} />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div className="bg-[var(--adm-bg)] p-3 rounded-xl border border-[var(--adm-border)] flex justify-between items-center mb-2">
-                  <div>
-                    <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Total Tagihan</p>
-                    <p className="font-bold text-[var(--adm-text)] text-sm">{formatRp(lunasInvoice.amount)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Klien</p>
-                    <p className="font-bold text-[var(--adm-text)] text-sm">{lunasInvoice.client}</p>
-                  </div>
-                </div>
-
+          <>
+            <div className="p-5 border-b border-[var(--adm-border)] flex justify-between items-center bg-[var(--adm-bg)]">
+              <h3 className="font-bold text-lg text-[var(--adm-text)] flex items-center gap-2">
+                <CircleDollarSign className="text-[var(--adm-success)]" size={20} strokeWidth={2.5} />
+                Konfirmasi Pelunasan
+              </h3>
+              <button onClick={() => setLunasInvoice(null)} className="text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-[var(--adm-bg)] p-3 rounded-xl border border-[var(--adm-border)] flex justify-between items-center mb-2">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide block mb-1.5">Tanggal Pelunasan</label>
-                  <input
-                    type="date"
-                    value={lunasDate}
-                    onChange={(e) => setLunasDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
-                  />
+                  <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Total Tagihan</p>
+                  <p className="font-bold text-[var(--adm-text)] text-sm">{formatRp(lunasInvoice.amount)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Klien</p>
+                  <p className="font-bold text-[var(--adm-text)] text-sm">{lunasInvoice.client}</p>
                 </div>
               </div>
 
-              <div className="p-5 border-t border-[var(--adm-border)] flex gap-3 bg-[var(--adm-bg)]">
-                <button 
-                  onClick={() => setLunasInvoice(null)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  onClick={() => {
-                    save(invoiceList.map(inv => inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: new Date(lunasDate).toISOString().split("T")[0] } : inv));
-                    setLunasInvoice(null);
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-[var(--adm-success)] text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
-                >
-                  <CheckCircle2 size={18} strokeWidth={2.5} />
-                  Tandai Lunas
-                </button>
+              <div>
+                <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide block mb-1.5">Tanggal Pelunasan</label>
+                <input
+                  type="date"
+                  value={lunasDate}
+                  onChange={(e) => setLunasDate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
+                />
               </div>
-            </motion.div>
-          </div>
+            </div>
+
+            <div className="p-5 border-t border-[var(--adm-border)] flex gap-3 bg-[var(--adm-bg)]">
+              <button 
+                onClick={() => setLunasInvoice(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={() => {
+                  save(invoiceList.map(inv => inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: new Date(lunasDate).toISOString().split("T")[0] } : inv));
+                  setLunasInvoice(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[var(--adm-success)] text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
+              >
+                <CheckCircle2 size={18} strokeWidth={2.5} />
+                Tandai Lunas
+              </button>
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </AdminModal>
     </div>
   );
 }

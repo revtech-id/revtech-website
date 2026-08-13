@@ -37,7 +37,14 @@ export interface ActivityEntry {
   description: string;
   timestamp: string;
   user?: string;
+  notify?: boolean;
 }
+
+const IMPORTANT_NOTIFICATION_TYPES: ActivityType[] = [
+  "lead_created", "lead_added", "lead_deal", "lead_paid_full",
+  "order_created", "order_status_changed", "order_lunas", "order_handover",
+  "invoice_paid"
+];
 
 const KEY = "revtech_activity_log";
 const MAX_ENTRIES = 50;
@@ -51,6 +58,7 @@ export function logActivity(entry: Omit<ActivityEntry, "id" | "timestamp">) {
     ...entry,
     id: `ACT-${Date.now()}`,
     timestamp: new Date().toISOString(),
+    notify: entry.notify !== undefined ? entry.notify : IMPORTANT_NOTIFICATION_TYPES.includes(entry.type),
   };
 
   // Prepend and keep max 50 entries

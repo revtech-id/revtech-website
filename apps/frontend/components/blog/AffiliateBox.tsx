@@ -51,7 +51,7 @@ export default function AffiliateBox({ productId }: AffiliateBoxProps) {
                         ))}
                     </ul>
                     
-                    <Button asChild size="lg" className="w-full sm:w-auto font-bold shadow-lg shadow-primary/20 group-hover:scale-[1.02] transition-transform duration-300">
+                    <Button asChild size="lg" className="w-full sm:w-auto font-bold  group-hover:scale-[1.02] transition-transform duration-300">
                         <a href={product.link} target="_blank" rel="sponsored nofollow">
                             {product.ctaText} <span className="material-symbols-outlined text-sm ml-2">open_in_new</span>
                         </a>

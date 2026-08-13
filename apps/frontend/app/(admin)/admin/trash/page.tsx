@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal, X, CheckSquare, SlidersHorizontal, Search, ArrowDownUp, Filter } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminModal, AdminTable, AdminButton } from "@/components/admin/ui";
 
 // Tipe data berdasarkan model Inbox (sementara hanya inbox yang didukung)
 interface Lead {
@@ -275,6 +276,96 @@ export default function TrashPage() {
     }
   });
 
+  const trashColumns = [
+    {
+      key: "data",
+      label: (
+        <div className="flex items-center gap-3">
+          {isSelectionMode && (
+            <input
+              type="checkbox"
+              checked={selectedIds.length === filteredLeads.length && filteredLeads.length > 0}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-[var(--adm-border)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)]/30 cursor-pointer shrink-0"
+              title="Pilih Semua"
+            />
+          )}
+          <span>Data Dihapus</span>
+        </div>
+      ),
+      render: (lead: Lead) => (
+        <div className="flex items-center gap-3 min-w-0 pr-4">
+          {isSelectionMode && (
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(lead.id)}
+              onChange={() => toggleSelect(lead.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded border-[var(--adm-border)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)]/30 cursor-pointer shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-[var(--adm-text)] truncate">{lead.name}</h3>
+              <span className="text-[11px] px-1.5 py-0.5 bg-[var(--adm-bg)] rounded text-[var(--adm-text-2)] font-semibold shrink-0">
+                {lead._module === "Pesanan" ? "Project" : lead._module === "Inbox" ? "Leads" : (lead._module || "Sistem")}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--adm-text-3)] line-clamp-1">{lead.company} — {lead.service}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: "info",
+      label: "Info Penghapusan",
+      className: "hidden sm:table-cell text-right",
+      render: (lead: Lead) => (
+        <div className="text-right">
+          {lead.deletedAt ? (
+            <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
+              Dihapus {new Date(lead.deletedAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}<br />
+              oleh <span className="font-semibold text-[var(--adm-text-2)]">{lead.deletedBy || "Sistem"}</span>
+            </p>
+          ) : (
+            <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
+              Waktu penghapusan<br />tidak terekam
+            </p>
+          )}
+        </div>
+      )
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      className: "text-right w-24 sm:w-32",
+      render: (lead: Lead) => (
+        <div className="flex items-center justify-end gap-2 shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRestoreLead(lead.id);
+            }}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-success)] transition-colors focus:outline-none"
+            title="Pulihkan"
+          >
+            <Undo2 size={16} strokeWidth={2.5} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeletingId(lead.id);
+            }}
+            className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
+            title="Hapus Permanen"
+          >
+            <Trash2 size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div>
       <div className="pt-2 mb-2">
@@ -440,12 +531,12 @@ export default function TrashPage() {
             <div className="flex items-center gap-2">
               {selectedIds.length > 0 && (
                 <>
-                  <button onClick={handleRestoreSelected} className="text-sm font-semibold px-2 py-2 text-[var(--adm-success)] hover:opacity-75 transition-opacity flex items-center gap-2">
+                  <AdminButton variant="ghost" size="sm" onClick={handleRestoreSelected} className="text-[var(--adm-success)] hover:bg-[var(--adm-success)]/10 hover:text-[var(--adm-success)]">
                     <Undo2 size={16} strokeWidth={2.5} /> Pulihkan
-                  </button>
-                  <button onClick={() => setDeletingBulk(true)} className="text-sm font-semibold px-2 py-2 text-[var(--adm-danger)] hover:opacity-75 transition-opacity flex items-center gap-2">
+                  </AdminButton>
+                  <AdminButton variant="ghost" size="sm" onClick={() => setDeletingBulk(true)} className="text-[var(--adm-danger)] hover:bg-[var(--adm-danger)]/10 hover:text-[var(--adm-danger)]">
                     <Trash2 size={16} strokeWidth={2.5} /> Hapus
-                  </button>
+                  </AdminButton>
                 </>
               )}
             </div>
@@ -467,97 +558,14 @@ export default function TrashPage() {
             <p className="text-sm text-[var(--adm-text-3)]">Tidak ada item yang terhapus pada kategori ini.</p>
           </motion.div>
         ) : (
-          <div className="space-y-3">
-            {filteredLeads.map((lead) => (
-              <motion.div
-                layout
-                key={lead.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div 
-                  className={`p-4 rounded-2xl bg-[var(--adm-card)] shadow-sm transition-colors cursor-pointer border ${
-                    selectedIds.includes(lead.id) 
-                      ? 'border-[var(--adm-text-2)] bg-[var(--adm-bg)]' 
-                      : 'border-transparent hover:border-[var(--adm-border)]'
-                  }`}
-                  onClick={() => {
-                    if (isSelectionMode) {
-                      toggleSelect(lead.id);
-                    } else {
-                      setViewingLead(lead);
-                    }
-                  }}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    {/* Left: Info */}
-                    <div className="flex items-center gap-3">
-                      {isSelectionMode && (
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(lead.id)}
-                          onChange={() => toggleSelect(lead.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded border-[var(--adm-border)] text-[var(--adm-accent)] focus:ring-[var(--adm-accent)]/30 mt-1 sm:mt-0 cursor-pointer shrink-0"
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-[var(--adm-text)]">{lead.name}</h3>
-                        <span className="text-[11px] px-1.5 py-0.5 bg-[var(--adm-bg)] rounded text-[var(--adm-text-2)] font-semibold">
-                          {lead._module === "Pesanan" ? "Project" : lead._module === "Inbox" ? "Leads" : (lead._module || "Sistem")}
-                        </span>
-                        </div>
-                        <p className="text-xs text-[var(--adm-text-3)] line-clamp-1">{lead.company} — {lead.service}</p>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 sm:gap-6 shrink-0 mt-3 sm:mt-0">
-                      
-                      <div className="text-right">
-                        {lead.deletedAt ? (
-                          <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
-                            Dihapus {new Date(lead.deletedAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}<br className="hidden sm:block" />
-                            <span className="sm:hidden"> </span>oleh <span className="font-semibold text-[var(--adm-text-2)]">{lead.deletedBy || "Sistem"}</span>
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-[var(--adm-text-3)] leading-snug">
-                            Waktu penghapusan<br className="hidden sm:block" />
-                            <span className="sm:hidden"> </span>tidak terekam
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRestoreLead(lead.id);
-                        }}
-                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-success)] transition-colors focus:outline-none"
-                        title="Pulihkan"
-                      >
-                        <Undo2 size={16} strokeWidth={2.5} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingId(lead.id);
-                        }}
-                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
-                        title="Hapus Permanen"
-                      >
-                        <Trash2 size={16} strokeWidth={2} />
-                      </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          <div className="mt-4">
+            <AdminTable
+              columns={trashColumns}
+              data={filteredLeads}
+              keyField="id"
+              onRowClick={isSelectionMode ? undefined : (lead) => setViewingLead(lead)}
+              emptyMessage="Tidak ada item yang terhapus."
+            />
           </div>
         )}
       </AnimatePresence>
@@ -582,200 +590,166 @@ export default function TrashPage() {
       </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {(deletingId || deletingBulk) && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)]"
+      <AdminModal isOpen={!!(deletingId || deletingBulk)} onClose={() => { setDeletingId(null); setDeletingBulk(false); }} maxWidth="max-w-sm" noPadding={true}>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-500/10 text-red-500">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-[var(--adm-text)]">Hapus Permanen?</h3>
+              <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+                Tindakan ini tidak dapat dibatalkan. {deletingBulk ? `${selectedIds.length} data` : 'Data'} akan dihapus dari sistem selamanya.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-6">
+            <button
+              onClick={() => {
+                setDeletingId(null);
+                setDeletingBulk(false);
+              }}
+              className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-500/10 text-red-500">
-                  <AlertTriangle size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-[var(--adm-text)]">Hapus Permanen?</h3>
-                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
-                    Tindakan ini tidak dapat dibatalkan. {deletingBulk ? `${selectedIds.length} data` : 'Data'} akan dihapus dari sistem selamanya.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => {
-                    setDeletingId(null);
-                    setDeletingBulk(false);
-                  }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
-                >
-                  Ya, Hapus Permanen
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              Batal
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+            >
+              Ya, Hapus Permanen
+            </button>
+          </div>
+        </div>
+      </AdminModal>
 
       {/* Restore Confirmation Modal */}
-      <AnimatePresence>
-        {restoringAction !== null && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-2xl p-6 w-full max-w-sm shadow-[var(--adm-shadow-lg)]"
+      <AdminModal isOpen={restoringAction !== null} onClose={() => { setRestoringAction(null); setRestoringId(null); }} maxWidth="max-w-sm" noPadding={true}>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500">
+              <Undo2 size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-[var(--adm-text)]">Pulihkan Data?</h3>
+              <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
+                {restoringAction === 'single' ? 'Data ini' : restoringAction === 'bulk' ? `${selectedIds.length} data` : 'Semua data'} akan dikembalikan ke tempat asalnya.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-6">
+            <button
+              onClick={() => {
+                setRestoringAction(null);
+                setRestoringId(null);
+              }}
+              className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500">
-                  <Undo2 size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-[var(--adm-text)]">Pulihkan Data?</h3>
-                  <p className="text-[12px] text-[var(--adm-text-2)] leading-tight mt-0.5">
-                    {restoringAction === 'single' ? 'Data ini' : restoringAction === 'bulk' ? `${selectedIds.length} data` : 'Semua data'} akan dikembalikan ke tempat asalnya.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => {
-                    setRestoringAction(null);
-                    setRestoringId(null);
-                  }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] border border-[var(--adm-border)] rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmRestore}
-                  className="flex-1 py-2 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors"
-                >
-                  Ya, Pulihkan
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              Batal
+            </button>
+            <button
+              onClick={confirmRestore}
+              className="flex-1 py-2 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-colors"
+            >
+              Ya, Pulihkan
+            </button>
+          </div>
+        </div>
+      </AdminModal>
 
       {/* Detail Modal */}
-      <AnimatePresence>
+      <AdminModal isOpen={!!viewingLead} onClose={() => setViewingLead(null)} maxWidth="max-w-lg" noPadding={true}>
         {viewingLead && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-[var(--adm-card)] border border-[var(--adm-border)] rounded-2xl p-6 w-full max-w-lg shadow-[var(--adm-shadow-lg)] max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-[var(--adm-text)] text-lg">Detail Data Terhapus</h3>
-                <button onClick={() => setViewingLead(null)} className="p-1 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Nama / Klien</span>
-                    <span className="block text-sm font-bold text-[var(--adm-text)]">{viewingLead.name}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Modul Asal</span>
-                    <span className="inline-block px-2 py-0.5 rounded bg-[var(--adm-bg)] text-xs font-semibold text-[var(--adm-text-2)]">
-                      {viewingLead._module || "Sistem"}
-                    </span>
-                  </div>
+          <div className="p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-[var(--adm-text)] text-lg">Detail Data Terhapus</h3>
+              <button onClick={() => setViewingLead(null)} className="p-1 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Nama / Klien</span>
+                  <span className="block text-sm font-bold text-[var(--adm-text)]">{viewingLead.name}</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Perusahaan / Bisnis</span>
-                    <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.company || "-"}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Nomor Telepon</span>
-                    <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.phone || "-"}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Layanan</span>
-                    <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.service || "-"}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Budget / Total</span>
-                    <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.budget || "-"}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-[var(--adm-border)]">
-                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Pesan / Catatan</span>
-                  <p className="text-sm text-[var(--adm-text-2)] bg-[var(--adm-bg)] p-3 rounded-xl whitespace-pre-wrap">
-                    {viewingLead.message || "-"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[var(--adm-border)]">
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Waktu Dibuat</span>
-                    <span className="block text-xs font-medium text-[var(--adm-text-2)]">
-                      {new Date(viewingLead.createdAt).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Waktu Dihapus</span>
-                    <span className="block text-xs font-medium text-[var(--adm-text-2)]">
-                      {viewingLead.deletedAt ? new Date(viewingLead.deletedAt).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" }) : "Tidak terekam"}
-                    </span>
-                  </div>
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Modul Asal</span>
+                  <span className="inline-block px-2 py-0.5 rounded bg-[var(--adm-bg)] text-xs font-semibold text-[var(--adm-text-2)]">
+                    {viewingLead._module || "Sistem"}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-8 pt-4 border-t border-[var(--adm-border)]">
-                <button
-                  onClick={() => {
-                    handleRestoreLead(viewingLead.id);
-                    setViewingLead(null);
-                  }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-success)] bg-[var(--adm-success)]/10 hover:bg-[var(--adm-success)]/20 rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Undo2 size={16} /> Pulihkan
-                </button>
-                <button
-                  onClick={() => {
-                    setDeletingId(viewingLead.id);
-                    setViewingLead(null);
-                  }}
-                  className="flex-1 py-2 text-sm font-semibold text-[var(--adm-danger)] bg-[var(--adm-danger)]/10 hover:bg-[var(--adm-danger)]/20 rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Trash2 size={16} /> Hapus Permanen
-                </button>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Perusahaan / Bisnis</span>
+                  <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.company || "-"}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Nomor Telepon</span>
+                  <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.phone || "-"}</span>
+                </div>
               </div>
-            </motion.div>
-          </motion.div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Layanan</span>
+                  <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.service || "-"}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Budget / Total</span>
+                  <span className="block text-sm font-semibold text-[var(--adm-text)]">{viewingLead.budget || "-"}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[var(--adm-border)]">
+                <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Pesan / Catatan</span>
+                <p className="text-sm text-[var(--adm-text-2)] bg-[var(--adm-bg)] p-3 rounded-xl whitespace-pre-wrap">
+                  {viewingLead.message || "-"}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[var(--adm-border)]">
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Waktu Dibuat</span>
+                  <span className="block text-xs font-medium text-[var(--adm-text-2)]">
+                    {new Date(viewingLead.createdAt).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" })}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-[var(--adm-text-3)] mb-1">Waktu Dihapus</span>
+                  <span className="block text-xs font-medium text-[var(--adm-text-2)]">
+                    {viewingLead.deletedAt ? new Date(viewingLead.deletedAt).toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" }) : "Tidak terekam"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-8 pt-4 border-t border-[var(--adm-border)]">
+              <button
+                onClick={() => {
+                  handleRestoreLead(viewingLead.id);
+                  setViewingLead(null);
+                }}
+                className="flex-1 py-2 text-sm font-semibold text-[var(--adm-success)] bg-[var(--adm-success)]/10 hover:bg-[var(--adm-success)]/20 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Undo2 size={16} /> Pulihkan
+              </button>
+              <button
+                onClick={() => {
+                  setDeletingId(viewingLead.id);
+                  setViewingLead(null);
+                }}
+                className="flex-1 py-2 text-sm font-semibold text-[var(--adm-danger)] bg-[var(--adm-danger)]/10 hover:bg-[var(--adm-danger)]/20 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} /> Hapus Permanen
+              </button>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </AdminModal>
 
     </div>
   );

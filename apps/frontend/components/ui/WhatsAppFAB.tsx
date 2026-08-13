@@ -37,7 +37,7 @@ export default function WhatsAppFAB() {
           </span>
           <button 
             onClick={openChatbot}
-            className="flex items-center justify-center w-[48px] h-[48px] sm:w-[50px] sm:h-[50px] bg-blue-600 rounded-full shadow-md hover:shadow-xl hover:scale-110 transition-all duration-300 relative z-10 border border-blue-400/50"
+            className="flex items-center justify-center w-[48px] h-[48px] sm:w-[50px] sm:h-[50px] bg-blue-600 rounded-full shadow-md hover:scale-110 transition-all duration-300 relative z-10 border border-blue-400/50"
             aria-label="Tanya AI"
           >
             <Image
@@ -59,7 +59,7 @@ export default function WhatsAppFAB() {
             href="https://wa.me/6281290018819?text=Halo%20RevTech,%20saya%20tertarik%20untuk%20konsultasi%20layanan%20digital."
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center w-[48px] h-[48px] sm:w-[50px] sm:h-[50px] bg-[#25D366] text-white rounded-full shadow-md hover:shadow-xl hover:scale-110 transition-all duration-300 relative z-10"
+            className="flex items-center justify-center w-[48px] h-[48px] sm:w-[50px] sm:h-[50px] bg-[#25D366] text-white rounded-full shadow-md hover:scale-110 transition-all duration-300 relative z-10"
             aria-label="Konsultasi WhatsApp"
             onClick={() => setIsMenuOpen(false)}
           >

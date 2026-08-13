@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
+import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 
@@ -194,7 +194,7 @@ export default function BlogPage() {
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
-  const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "", pinned: false });
+  const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "", pinned: false, publishedAt: "" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -267,40 +267,20 @@ export default function BlogPage() {
 
   function confirmArchive(id: string, currentStatus: string) {
     const isArchived = currentStatus === "archived";
-    setConfirmModal({
-      isOpen: true,
-      title: isArchived ? "Kembalikan Artikel" : "Arsip Artikel",
-      message: isArchived ? "Artikel ini akan dikembalikan ke status Draft." : "Artikel ini akan dipindahkan ke Arsip dan tidak terlihat oleh publik.",
-      confirmText: isArchived ? "Kembalikan" : "Arsipkan",
-      confirmVariant: "warning",
-      action: () => {
-        savePosts(posts.map(p => p.id === id ? { ...p, status: isArchived ? "draft" : "archived" } : p));
-        setToast({ isVisible: true, message: isArchived ? "Artikel dikembalikan ke Draft" : "Artikel berhasil diarsipkan", type: "success" });
-        logActivity({ type: "blog_updated", title: isArchived ? "Artikel Dipulihkan" : "Artikel Diarsipkan", description: `Artikel blog ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    savePosts(posts.map(p => p.id === id ? { ...p, status: isArchived ? "draft" : "archived" } : p));
+    setToast({ isVisible: true, message: isArchived ? "Artikel dikembalikan ke Draft" : "Artikel berhasil diarsipkan", type: "success" });
+    logActivity({ type: "blog_updated", title: isArchived ? "Artikel Dipulihkan" : "Artikel Diarsipkan", description: `Artikel blog ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
   }
 
   function confirmPublish(id: string) {
-    setConfirmModal({
-      isOpen: true,
-      title: "Publish Artikel",
-      message: "Artikel ini akan diterbitkan dan dapat dilihat oleh publik.",
-      confirmText: "Publish",
-      confirmVariant: "primary",
-      action: () => {
-        savePosts(posts.map(p => p.id === id ? { ...p, status: "published" } : p));
-        setToast({ isVisible: true, message: "Artikel berhasil diterbitkan", type: "success" });
-        logActivity({ type: "blog_updated", title: "Artikel Diterbitkan", description: `Artikel blog ID ${id} dipublish.`, user: "Admin" });
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    savePosts(posts.map(p => p.id === id ? { ...p, status: "published", publishedAt: p.publishedAt || new Date().toISOString() } : p));
+    setToast({ isVisible: true, message: "Artikel berhasil diterbitkan", type: "success" });
+    logActivity({ type: "blog_updated", title: "Artikel Diterbitkan", description: `Artikel blog ID ${id} dipublish.`, user: "Admin" });
   }
 
   function openNew() {
     setEditPost(null);
-    setContentForm({ title: "", coverImage: "", content: "", pinned: false });
+    setContentForm({ title: "", coverImage: "", content: "", pinned: false, publishedAt: "" });
     setSeoForm({ metaTitle: "", metaDescription: "", keywords: "" });
     setView("editor");
   }
@@ -308,7 +288,13 @@ export default function BlogPage() {
   function handleEdit(post: BlogPost) {
     const postContent = localStorage.getItem(`revtech_blog_content_${post.id}`) || "";
     setSeoForm({ metaTitle: post.metaTitle, metaDescription: post.metaDescription, keywords: post.keywords });
-    setContentForm({ title: post.title, coverImage: post.coverImage, content: postContent, pinned: post.pinned || false });
+    setContentForm({ 
+      title: post.title, 
+      coverImage: post.coverImage || "", 
+      content: postContent, 
+      pinned: post.pinned || false,
+      publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : ""
+    });
     setEditPost(post);
     setView("editor");
   }
@@ -346,6 +332,7 @@ export default function BlogPage() {
         metaDescription: seoForm.metaDescription,
         keywords: seoForm.keywords,
         pinned: contentForm.pinned,
+        publishedAt: asDraft ? (editPost.publishedAt || null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
       };
       savePosts(posts.map(p => p.id === editPost.id ? updated : p));
       localStorage.setItem(`revtech_blog_content_${editPost.id}`, contentForm.content);
@@ -358,7 +345,7 @@ export default function BlogPage() {
         slug,
         status: asDraft ? "draft" : "published",
         coverImage: contentForm.coverImage,
-        publishedAt: asDraft ? null : new Date().toISOString(),
+        publishedAt: asDraft ? (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
         metaTitle: seoForm.metaTitle,
         metaDescription: seoForm.metaDescription,
         keywords: seoForm.keywords,
@@ -380,7 +367,7 @@ export default function BlogPage() {
           coverImage: contentForm.coverImage,
           description: seoForm.metaDescription,
           category: "",
-          publishedAt: editPost?.publishedAt || new Date().toISOString(),
+          publishedAt: contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString(),
         }),
       }).catch(console.error);
     }
@@ -419,6 +406,69 @@ export default function BlogPage() {
     const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
     return sortBy === "newest" ? dateB - dateA : dateA - dateB;
   });
+
+  const blogColumns = [
+    {
+      key: "artikel",
+      label: "Artikel",
+      render: (post: BlogPost) => (
+        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
+          <button onClick={() => togglePin(post.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${post.pinned ? "text-[var(--adm-text)]" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={post.pinned ? "Lepaskan Pin" : "Sematkan Artikel"}>
+            <Pin size={14} strokeWidth={2} className={post.pinned ? "fill-current rotate-45" : ""} />
+          </button>
+          <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
+            {post.coverImage ? (
+              <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">article</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className={`font-bold text-sm truncate ${post.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{post.title}</p>
+              {post.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
+            </div>
+            <p className="text-xs text-[var(--adm-text-3)] truncate">
+              {post.slug}
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      className: "text-right",
+      render: (post: BlogPost) => (
+        <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
+          {post.status !== "draft" && post.publishedAt && (
+            <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
+              {new Date(post.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1.5 w-auto sm:w-auto shrink-0">
+            <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Artikel">
+              <ExternalLink size={14} strokeWidth={2} />
+            </a>
+            {post.status !== "published" && (
+              <button onClick={() => confirmPublish(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
+                <Send size={14} strokeWidth={2} />
+              </button>
+            )}
+            <button onClick={() => handleEdit(post)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
+              <Pencil size={14} strokeWidth={2} />
+            </button>
+            <button onClick={() => confirmArchive(post.id, post.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={post.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
+              <Archive size={14} strokeWidth={2} className={post.status === "archived" ? "text-amber-500" : ""} />
+            </button>
+            <button onClick={() => confirmDelete(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      )
+    }
+  ];
 
   return (
     <div>
@@ -461,62 +511,13 @@ export default function BlogPage() {
           {sortedPosts.length === 0 ? (
             <EmptyState icon="article" title="Belum ada artikel" description="Buat artikel pertama Anda atau coba kata kunci lain." action={<button onClick={openNew} className="px-4 py-2 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:brightness-110 transition-all">Buat Artikel</button>} />
           ) : (
-            <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--adm-border)] bg-[var(--adm-bg)]">
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide">Artikel</div>
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide text-right w-36 sm:w-40 shrink-0">Aksi</div>
-              </div>
-              <div className="divide-y divide-[var(--adm-border)]">
-                {sortedPosts.map((post) => (
-                  <div key={post.id} className="flex items-center justify-between px-6 py-4">
-                    {/* Left: Thumbnail & Text */}
-                    <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
-                      <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 relative overflow-hidden">
-                        <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">article</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className={`font-bold text-sm truncate ${post.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{post.title}</p>
-                          {post.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
-                        </div>
-                        <p className="text-xs text-[var(--adm-text-3)] truncate">
-                          {post.slug}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Right: Date & Actions */}
-                    <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
-                      {post.status !== "draft" && post.publishedAt && (
-                        <div className="hidden md:block text-xs font-medium text-[var(--adm-text-3)]">
-                          {new Date(post.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-end gap-1.5 w-auto sm:w-auto shrink-0">
-                      <button onClick={() => togglePin(post.id)} className={`inline-flex items-center justify-center p-1.5 transition-colors focus:outline-none ${post.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={post.pinned ? "Lepaskan Pin" : "Sematkan Artikel"}>
-                        <Pin size={14} strokeWidth={2} className={post.pinned ? "fill-amber-500 rotate-45" : ""} />
-                      </button>
-                      <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Artikel">
-                        <ExternalLink size={14} strokeWidth={2} />
-                      </a>
-                      {post.status !== "published" && (
-                        <button onClick={() => confirmPublish(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
-                          <Send size={14} strokeWidth={2} />
-                        </button>
-                      )}
-                      <button onClick={() => handleEdit(post)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
-                        <Pencil size={14} strokeWidth={2} />
-                      </button>
-                      <button onClick={() => confirmArchive(post.id, post.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={post.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
-                        <Archive size={14} strokeWidth={2} className={post.status === "archived" ? "text-amber-500" : ""} />
-                      </button>
-                      <button onClick={() => confirmDelete(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
-                        <Trash2 size={14} strokeWidth={2} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                ))}
-              </div>
+            <div className="mt-4">
+              <AdminTable
+                columns={blogColumns}
+                data={sortedPosts}
+                keyField="id"
+                emptyMessage="Belum ada artikel ditambahkan."
+              />
             </div>
           )}
         </motion.div>
@@ -565,6 +566,15 @@ export default function BlogPage() {
                     <input type="checkbox" checked={contentForm.pinned} onChange={e => setContentForm({ ...contentForm, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
                     <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Artikel (Tampil Lebih Awal)</span>
                   </label>
+                  <div className="mt-4">
+                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Publish (Opsional)</label>
+                    <input 
+                      type="date" 
+                      value={contentForm.publishedAt} 
+                      onChange={(e) => setContentForm({ ...contentForm, publishedAt: e.target.value })} 
+                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" 
+                    />
+                  </div>
                 </div>
 
               {/* WYSIWYG Editor */}

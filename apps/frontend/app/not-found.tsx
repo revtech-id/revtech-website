@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="text-gray-500 max-w-md mx-auto leading-relaxed mb-8">
         Maaf, halaman yang Anda cari mungkin telah dipindahkan, dihapus, atau tidak pernah ada.
       </p>
-      <Button asChild size="lg" className="bg-primary text-white hover:bg-blue-700 shadow-lg shadow-primary/20">
+      <Button asChild size="lg" className="bg-primary text-white hover:bg-blue-700 ">
         <Link href="/">
           Kembali ke Beranda
         </Link>

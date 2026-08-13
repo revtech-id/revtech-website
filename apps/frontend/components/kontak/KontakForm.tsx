@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { useForm } from 'react-hook-form';
@@ -13,13 +12,13 @@ import { Textarea } from '@/components/ui/Textarea';
 import { countries } from '@/lib/countries';
 import { CountrySelector } from '@/components/ui/CountrySelector';
 
-type ServiceCategory = 'jasa_web' | 'produk_digital' | 'custom';
+type ServiceCategory = '' | 'jasa_web' | 'produk_digital' | 'custom';
 type JasaWebPackage = 'Usaha' | 'Profesional' | 'Eksklusif';
 
 export default function KontakForm() {
     const searchParams = useSearchParams();
     
-    const [service, setService] = useState<ServiceCategory>('jasa_web');
+    const [service, setService] = useState<ServiceCategory>('');
     const [jasaWebPackage, setJasaWebPackage] = useState<JasaWebPackage>('Usaha');
 
     const [submittedData, setSubmittedData] = useState<JasaWebFormValues | null>(null);
@@ -29,12 +28,12 @@ export default function KontakForm() {
 
     const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
         resolver: zodResolver(jasaWebFormSchema),
-        defaultValues: { name: '', whatsapp: '', business: '', message: '' }
+        defaultValues: { name: '', whatsapp: '', business: '', message: '', productName: '' }
     });
 
     const handleReset = () => {
         reset();
-        setService('jasa_web');
+        setService('');
         setJasaWebPackage('Usaha');
         setSelectedCountry(countries[0]);
     };
@@ -62,7 +61,8 @@ export default function KontakForm() {
             cleanWhatsApp = cleanWhatsApp.replace(/^0+/, '');
         }
 
-        let messageText = `Halo Admin RevTech, saya ingin memesan layanan dari website.\n\n`;
+        let messageText = `Halo Admin RevTech, saya baru saja membuat pesanan melalui website dan ingin melakukan konfirmasi.\n\n`;
+        messageText += `Berikut adalah detail pesanan saya:\n\n`;
         messageText += `*Detail Pemesan*\n`;
         messageText += `Nama: ${data.name}\n`;
         messageText += `No. WA: ${selectedCountry.dial_code}${cleanWhatsApp}\n`;
@@ -73,7 +73,8 @@ export default function KontakForm() {
         
         if (service === 'jasa_web') {
             messageText += `Paket: ${jasaWebPackage}\n`;
-
+        } else if (service === 'produk_digital' && data.productName) {
+            messageText += `Nama Produk: ${data.productName}\n`;
         }
         if (service === 'custom' && data.reference) {
             messageText += `Referensi: ${data.reference}\n`;
@@ -103,7 +104,7 @@ export default function KontakForm() {
                 phone: `${selectedCountry.dial_code.replace('+', '')}${cleanWhatsApp}`,
                 company: data.business || "-",
                 service: service === 'jasa_web' ? 'Jasa Website' : service === 'produk_digital' ? 'Produk Digital' : 'Custom Project',
-                serviceDetail: service === 'jasa_web' ? `Paket ${jasaWebPackage}` : service === 'custom' ? (data.reference || "") : "",
+                serviceDetail: service === 'jasa_web' ? `Paket ${jasaWebPackage}` : service === 'produk_digital' ? (data.productName || "") : service === 'custom' ? (data.reference || "") : "",
                 budget: basePrice > 0 ? `Rp ${basePrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-",
                 message: data.message,
                 status: "new",
@@ -133,48 +134,43 @@ export default function KontakForm() {
             console.error("Failed to save to inbox:", e);
         }
 
-        // Membuka tab WA langsung
-        window.open(waUrl, '_blank');
+        // Tidak ada auto-redirect ke WA berdasarkan permintaan klien
     };
 
     if (submittedData) {
         return (
-            <motion.div 
-                
-                animate={{ opacity: 1, scale: 1 }}
-                className="max-w-2xl mx-auto bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl shadow-gray-200/40 border border-gray-100 text-center flex flex-col items-center justify-center"
-            >
-                <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6 border border-green-100">
-                    <span className="material-symbols-outlined text-[40px]">check_circle</span>
+            <div className="max-w-2xl mx-auto bg-white rounded-3xl p-8 md:p-12 border border-gray-200 text-center flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6 border border-green-100">
+                    <span className="material-symbols-outlined text-4xl">check_circle</span>
                 </div>
-                <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Pesanan Berhasil Diterima!</h2>
-                <p className="text-gray-500 text-sm sm:text-base md:text-lg font-medium leading-relaxed max-w-md mb-8">
-                    Terima kasih telah memilih RevTech. Tim kami sedang meninjau detail kebutuhan Anda dan akan segera menghubungi via WhatsApp.
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Pesanan Berhasil Diterima!</h2>
+                <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-md mb-8">
+                    Tim kami sedang meninjau pesanan Anda. Butuh respons lebih cepat? Silakan konfirmasi manual via tombol WhatsApp di bawah.
                 </p>
 
                 {/* Kartu Resi / Bukti Pesanan */}
-                <div className="w-full bg-gray-50/50 rounded-2xl p-6 mb-10 text-left border border-gray-100">
-                    <div className="flex justify-between items-center mb-5 pb-5 border-b border-gray-200/80">
-                        <span className="text-gray-500 font-bold text-sm">Status Pesanan</span>
-                        <span className="bg-amber-50 text-amber-600 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                <div className="w-full bg-gray-50/50 rounded-xl p-5 mb-8 text-left border border-gray-100">
+                    <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200/80">
+                        <span className="text-gray-500 font-medium text-sm">Status Pesanan</span>
+                        <span className="bg-amber-50 text-amber-600 font-medium px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
                             Menunggu Tinjauan
                         </span>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-500 text-sm font-medium">Layanan</span>
-                            <span className="text-gray-900 font-bold text-sm text-right">
+                            <span className="text-gray-500 text-sm">Layanan</span>
+                            <span className="text-gray-900 font-medium text-sm text-right">
                                 {service === 'jasa_web' ? 'Jasa Website' : service === 'produk_digital' ? 'Produk Digital' : 'Ide Custom'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-500 text-sm font-medium">Nama Lengkap</span>
-                            <span className="text-gray-900 font-bold text-sm text-right truncate">{submittedData.name}</span>
+                            <span className="text-gray-500 text-sm">Nama Lengkap</span>
+                            <span className="text-gray-900 font-medium text-sm text-right truncate">{submittedData.name}</span>
                         </div>
                         <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-500 text-sm font-medium">No. WhatsApp</span>
-                            <span className="text-gray-900 font-bold text-sm text-right">
+                            <span className="text-gray-500 text-sm">No. WhatsApp</span>
+                            <span className="text-gray-900 font-medium text-sm text-right">
                                 {selectedCountry.code === 'ID' 
                                     ? `0${submittedData.whatsapp.replace(/^0+/, '')}`
                                     : `${selectedCountry.dial_code} ${submittedData.whatsapp}`
@@ -189,231 +185,165 @@ export default function KontakForm() {
                         href={waLink} 
                         target="_blank" 
                         rel="noreferrer"
-                        className="bg-gray-900 hover:bg-black text-white px-6 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors flex-1 w-full"
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors flex-1 w-full"
                     >
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                        </svg>
-                        Tanya via WhatsApp
+                        Konfirmasi via WA
                     </a>
                     <button 
                         onClick={() => {
                             setSubmittedData(null);
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-6 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors flex-1 w-full"
+                        className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-6 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors flex-1 w-full"
                     >
                         Buat Pesanan Baru
                     </button>
                 </div>
-            </motion.div>
+            </div>
         );
     }
 
     return (
-        <motion.div 
-            
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto bg-white rounded-[2rem] p-6 sm:p-8 md:p-12 shadow-xl shadow-gray-200/50 border border-gray-100"
-        >
-            <div className="mb-10 pb-8 border-b border-gray-100 text-center md:text-left">
-                <h2 className="text-3xl font-black text-gray-900 mb-2">Formulir Pemesanan</h2>
-                <p className="text-gray-500 text-sm sm:text-base font-medium">Pilih kategori layanan dan lengkapi detail pesanan Anda. Kami akan merespons cepat via WhatsApp.</p>
+        <div className="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-10 border border-gray-200 shadow-sm">
+            <div className="mb-8 border-b border-gray-100 pb-6 text-center md:text-left">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Formulir Pemesanan</h2>
+                <p className="text-gray-500 text-sm font-medium">Lengkapi detail pesanan Anda. Kami akan merespons cepat via WhatsApp.</p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 relative z-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 
-                {/* 1. Kategori Layanan */}
-                <div className="mb-8">
-                    <label className="block text-sm font-bold text-gray-700 mb-3">1. Pilih Kategori Layanan</label>
-                    
-                    {/* Desktop: Chips */}
-                    <div className="hidden md:flex flex-wrap gap-2.5">
-                        <button
-                            type="button"
-                            onClick={() => setService('jasa_web')}
-                            className={`py-2 px-4 rounded-lg border text-sm font-bold transition-all duration-200 ${
-                                service === 'jasa_web' 
-                                    ? 'border-gray-900 bg-gray-900 text-white shadow-md shadow-gray-900/10' 
-                                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                        >
-                            Jasa Website
-                        </button>
-                        <button
-                            type="button"
-                            disabled
-                            className="py-2 px-4 rounded-lg border border-gray-100 bg-gray-50 text-gray-400 text-sm font-bold flex items-center justify-center gap-1.5 cursor-not-allowed"
-                        >
-                            <span className="material-symbols-outlined text-[14px]">lock</span>
-                            Produk Digital
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setService('custom')}
-                            className={`py-2 px-4 rounded-lg border text-sm font-bold transition-all duration-200 ${
-                                service === 'custom' 
-                                    ? 'border-gray-900 bg-gray-900 text-white shadow-md shadow-gray-900/10' 
-                                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                        >
-                            Ide Custom
-                        </button>
+                {/* Row 1: Nama Lengkap & WhatsApp */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-[13px] font-medium text-gray-600 mb-2">Nama Lengkap *</label>
+                        <Input 
+                            type="text" 
+                            {...register("name")}
+                            className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg py-2.5 px-3 h-auto shadow-sm" 
+                            placeholder="Masukkan nama lengkap" 
+                        />
+                        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
                     </div>
 
-                    {/* Mobile: Dropdown */}
-                    <div className="md:hidden relative">
+                    <div>
+                        <label className="block text-[13px] font-medium text-gray-600 mb-2">Nomor WhatsApp *</label>
+                        <div className="flex bg-white border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 transition-all shadow-sm">
+                            <CountrySelector 
+                                selected={selectedCountry} 
+                                onSelect={setSelectedCountry} 
+                                theme="public" 
+                            />
+                            <Input 
+                                type="tel" 
+                                {...register("whatsapp")}
+                                onInput={(e) => {
+                                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                }}
+                                className="flex-1 bg-transparent text-gray-900 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-3 rounded-l-none shadow-none h-auto" 
+                                placeholder={selectedCountry.code === 'ID' ? "8123456..." : "123456789..."}  
+                            />
+                        </div>
+                        {errors.whatsapp && <p className="text-red-500 text-xs mt-1">{errors.whatsapp.message}</p>}
+                    </div>
+                </div>
+
+                {/* Row 2: Kategori Layanan & Paket Website (conditional) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-[13px] font-medium text-gray-600 mb-2">Kategori Layanan</label>
                         <select 
                             value={service}
                             onChange={(e) => setService(e.target.value as ServiceCategory)}
-                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-[16px] font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer shadow-sm"
+                            className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg py-3 px-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
                         >
+                            <option value="" disabled>- Pilih Layanan -</option>
                             <option value="jasa_web">Jasa Website</option>
-                            <option value="produk_digital" disabled>🔒 Produk Digital (Segera Hadir)</option>
+                            <option value="produk_digital">Produk Digital</option>
                             <option value="custom">Ide Custom</option>
                         </select>
-                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                     </div>
-                </div>
 
-                {/* Optional: Paket Website (Only if Jasa Web is selected) */}
-                <AnimatePresence>
                     {service === 'jasa_web' && (
-                        <motion.div 
-                            animate={{ opacity: 1, height: 'auto' }} 
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden mb-10"
-                        >
-                            <div className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-2">
-                                <div className="flex-1 w-full">
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Paket Website</label>
-                                    <div className="relative">
-                                        <select 
-                                            value={jasaWebPackage}
-                                            onChange={(e) => setJasaWebPackage(e.target.value as JasaWebPackage)}
-                                            className="w-full appearance-none bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl py-3.5 px-4 focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all cursor-pointer shadow-sm"
-                                        >
-                                            <option value="Usaha">Paket Usaha</option>
-                                            <option value="Profesional">Paket Profesional</option>
-                                            <option value="Eksklusif">Paket Eksklusif</option>
-                                        </select>
-                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
+                        <div>
+                            <label className="block text-[13px] font-medium text-gray-600 mb-2">Paket Website</label>
+                            <select 
+                                value={jasaWebPackage}
+                                onChange={(e) => setJasaWebPackage(e.target.value as JasaWebPackage)}
+                                className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg py-3 px-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+                            >
+                                <option value="Usaha">Paket Usaha</option>
+                                <option value="Profesional">Paket Profesional</option>
+                                <option value="Eksklusif">Paket Eksklusif</option>
+                            </select>
+                        </div>
                     )}
-                </AnimatePresence>
-
-                {/* 2. Data Diri */}
-                <div className="mb-10">
-                    <label className="block text-sm font-bold text-gray-700 mb-4">2. Data Diri & Profil</label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    {service === 'produk_digital' && (
                         <div>
+                            <label className="block text-[13px] font-medium text-gray-600 mb-2">Nama Produk <span className="text-gray-400 font-normal">(Opsional)</span></label>
                             <Input 
                                 type="text" 
-                                {...register("name")}
-                                className="bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-5" 
-                                placeholder="Nama Lengkap Anda *" 
+                                {...register("productName")}
+                                className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg py-2.5 px-3 h-auto shadow-sm" 
+                                placeholder="Masukkan nama produk" 
                             />
-                            {errors.name && <p className="text-red-500 text-sm mt-1 font-medium">{errors.name.message}</p>}
+                            {errors.productName && <p className="text-red-500 text-xs mt-1">{errors.productName.message}</p>}
                         </div>
-
-                        <div>
-                            <div className="flex bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-gray-900 transition-all hover:border-gray-300 shadow-sm group">
-                                <CountrySelector 
-                                    selected={selectedCountry} 
-                                    onSelect={setSelectedCountry} 
-                                    theme="public" 
-                                />
-                                <Input 
-                                    type="tel" 
-                                    {...register("whatsapp")}
-                                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-6 px-5 rounded-l-none text-gray-900 placeholder:text-gray-400 shadow-none" 
-                                    placeholder={selectedCountry.code === 'ID' ? "8123456... *" : "123456789... *"}  
-                                />
-                            </div>
-                            {errors.whatsapp && <p className="text-red-500 text-sm mt-1 font-medium">{errors.whatsapp.message}</p>}
-                        </div>
-                        
-                        <div className="md:col-span-2">
-                            <Input 
-                                type="text" 
-                                {...register("business")}
-                                className="bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-5" 
-                                placeholder="Nama Bisnis / Instansi (Opsional)" 
-                            />
-                            {errors.business && <p className="text-red-500 text-sm mt-1 font-medium">{errors.business.message}</p>}
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* 3. Detail Kebutuhan */}
-                <div className="mb-10">
-                    <label className="block text-sm font-bold text-gray-700 mb-4">3. Detail Pemesanan / Kebutuhan Tambahan</label>
-                    
-                    <AnimatePresence>
-                        {service === 'custom' && (
-                            <motion.div
-                                
-                                animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
-                                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                className="overflow-hidden"
-                            >
-                                <Input 
-                                    type="text" 
-                                    {...register("reference")}
-                                    className="bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 py-6 px-5" 
-                                    placeholder="Link Referensi / Contoh Produk (Opsional, cth: www.contoh.com)" 
-                                />
-                                {errors.reference && <p className="text-red-500 text-sm mt-1 font-medium">{errors.reference.message}</p>}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                {/* Row 3: Bisnis / Instansi */}
+                <div>
+                    <label className="block text-[13px] font-medium text-gray-600 mb-2">Bisnis / Instansi <span className="text-gray-400 font-normal">(Opsional)</span></label>
+                    <Input 
+                        type="text" 
+                        {...register("business")}
+                        className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg py-2.5 px-3 h-auto shadow-sm" 
+                        placeholder="Masukkan nama bisnis atau instansi (jika ada)" 
+                    />
+                    {errors.business && <p className="text-red-500 text-xs mt-1">{errors.business.message}</p>}
+                </div>
 
+                {/* Optional: Link Referensi (only if Custom Project) */}
+                {service === 'custom' && (
+                    <div>
+                        <label className="block text-[13px] font-medium text-gray-600 mb-2">Link Referensi <span className="text-gray-400 font-normal">(Opsional)</span></label>
+                        <Input 
+                            type="text" 
+                            {...register("reference")}
+                            className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg py-2.5 px-3 h-auto shadow-sm" 
+                            placeholder="Contoh: www.referensi.com" 
+                        />
+                        {errors.reference && <p className="text-red-500 text-xs mt-1">{errors.reference.message}</p>}
+                    </div>
+                )}
+
+                {/* Row 4: Pesan / Detail Kebutuhan */}
+                <div>
+                    <label className="block text-[13px] font-medium text-gray-600 mb-2">Pesan / Detail Kebutuhan</label>
                     <Textarea 
                         {...register("message")}
-                        rows={5} 
-                        className="bg-gray-50 text-gray-900 border-gray-200 focus-visible:ring-gray-900 resize-none p-5" 
-                        placeholder={
-                            service === 'jasa_web' 
-                                ? "Deskripsikan referensi desain, fitur khusus, atau pertanyaan seputar pemesanan website Anda..." 
-                                : service === 'produk_digital'
-                                ? "Sebutkan nama produk digital atau spesifikasi aset yang ingin Anda pesan..."
-                                : "Ceritakan ide sistem, web app, atau solusi custom yang Anda butuhkan secara singkat..."
-                        } 
+                        rows={4} 
+                        className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg resize-none py-2.5 px-3 shadow-sm" 
+                        placeholder="Ceritakan detail pesanan, kebutuhan fitur, atau pertanyaan Anda di sini..." 
                     />
-                    {errors.message && <p className="text-red-500 text-sm mt-1 font-medium">{errors.message.message}</p>}
+                    {errors.message && <p className="text-red-500 text-xs mt-1">{errors.message.message}</p>}
                 </div>
 
-                <div className="pt-6 mt-8 border-t border-gray-100 flex flex-col gap-4">
-                    {/* Mobile: small link at top, Desktop: side by side */}
-                    <div className="flex sm:hidden justify-end">
-                        <button
-                            type="button"
-                            onClick={handleReset}
-                            className="text-xs text-gray-400 hover:text-gray-700 font-semibold flex items-center gap-1 transition-colors py-1"
-                        >
-                            <span className="material-symbols-outlined text-[14px]">restart_alt</span>
-                            Reset Form
-                        </button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <button
-                            type="button"
-                            onClick={handleReset}
-                            className="hidden sm:flex w-auto px-5 py-3 text-sm text-gray-500 hover:text-gray-900 font-bold items-center gap-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
-                        >
-                            <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                            Reset Form
-                        </button>
-                        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-6 text-base bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-3 group shadow-xl shadow-gray-900/20 hover:scale-[1.02] transition-transform">
-                            <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">send</span> 
-                            {isSubmitting ? "Memproses..." : "Kirim Pesanan"}
-                        </Button>
-                    </div>
+                {/* Footer Buttons */}
+                <div className="pt-6 mt-8 border-t border-gray-100 flex justify-end items-center gap-4">
+                    <button
+                        type="button"
+                        onClick={handleReset}
+                        className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 transition-colors"
+                    >
+                        Batal
+                    </button>
+                    <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2.5 text-sm font-medium h-auto shadow-none">
+                        {isSubmitting ? "Memproses..." : "Kirim Pesanan"}
+                    </Button>
                 </div>
             </form>
-        </motion.div>
+        </div>
     );
 }

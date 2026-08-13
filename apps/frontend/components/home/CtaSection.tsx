@@ -1,19 +1,11 @@
 "use client";
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { fadeUpVariant, defaultViewport } from '@/lib/animations';
 
 export default function CtaSection() {
   return (
     <section className="py-20 lg:py-32 bg-white px-4 sm:px-6 lg:px-8 border-t border-gray-100/80">
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={defaultViewport}
-        variants={fadeUpVariant}
-        className="max-w-5xl mx-auto relative flex flex-col md:flex-row items-stretch mt-8"
-      >
+      <div className="max-w-5xl mx-auto relative flex flex-col md:flex-row items-stretch mt-8">
         {/* Background card — blur orbs DIHAPUS di mobile, hanya tampil di md+ */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#1e293b] to-blue-950 rounded-[2rem] shadow-xl overflow-hidden border border-slate-800">
           {/* Blur orbs hanya di desktop — di mobile terlalu berat untuk GPU */}
@@ -32,7 +24,7 @@ export default function CtaSection() {
           </p>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-speed-dial"))}
-            className="bg-white text-blue-950 hover:bg-blue-50 font-black text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full hover-btn inline-flex items-center justify-center gap-2"
+            className="bg-white text-blue-950 hover:bg-blue-50 font-bold text-[13px] sm:text-sm px-6 py-3 lg:px-7 lg:py-3.5 rounded-full shadow-md hover-btn inline-flex items-center justify-center gap-2"
           >
             Mulai Konsultasi Sekarang
           </button>
@@ -63,7 +55,7 @@ export default function CtaSection() {
             style={{ height: '100%' }}
           />
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }

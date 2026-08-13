@@ -147,7 +147,7 @@ export default function KatalogDetailClient({ id }: { id: string }) {
             <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
                 Segera dapatkan {product.title} dan tingkatkan efisiensi serta kualitas proyek Anda bersama kami.
             </p>
-            <Link href={`/kontak?produk=${product.id}`} className="bg-white text-blue-950 hover:bg-blue-50 font-black text-[13px] sm:text-sm lg:text-base px-6 py-4 lg:px-8 lg:py-5 rounded-full shadow-lg active:scale-95 inline-flex items-center justify-center gap-2 transition-colors">
+            <Link href={`/kontak?produk=${product.id}`} className="bg-white text-blue-950 hover:bg-blue-50 font-bold text-[13px] sm:text-sm px-6 py-3 lg:px-7 lg:py-3.5 rounded-full shadow-md active:scale-95 inline-flex items-center justify-center gap-2 transition-colors">
                 Pesan Sekarang
             </Link>
         </div>

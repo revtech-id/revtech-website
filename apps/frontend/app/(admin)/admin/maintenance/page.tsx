@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageHeader, StatusBadge, AdminTable, AdminToolbar } from "@/components/admin/ui";
-import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Globe, Calendar, MessageSquare, Pencil, Trash2, RefreshCw, AlertCircle, Server, Wand2, MoreHorizontal, X } from "lucide-react";
+import { PageHeader, StatusBadge, AdminTable, AdminToolbar, AdminModal } from "@/components/admin/ui";
+import { SlidersHorizontal, ChevronDown, AlertTriangle, Filter, CheckCircle2, Globe, Calendar, MessageSquare, Pencil, Trash2, RefreshCw, AlertCircle, Server, Wand2, MoreHorizontal, X, CircleDollarSign } from "lucide-react";
 import rawClients from "@/data/admin/clients.json";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
@@ -781,7 +781,7 @@ export default function MaintenancePage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Jatah Revisi</label>
-                    <input type="number" min="0" value={form.modificationsQuota !== undefined ? form.modificationsQuota : ""} onChange={e => setForm({ ...form, modificationsQuota: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="0" />
+                    <input type="number" min="0" onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); }} value={form.modificationsQuota !== undefined ? form.modificationsQuota : ""} onChange={e => setForm({ ...form, modificationsQuota: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="0" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -815,300 +815,232 @@ export default function MaintenancePage() {
       )}
 
       {/* Client detail popup */}
-      <AnimatePresence>
+      <AdminModal isOpen={!!selectedClient} onClose={() => setSelectedClient(null)} maxWidth="max-w-md" noPadding={true}>
         {selectedClient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-            onClick={() => setSelectedClient(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[var(--adm-card)] max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
-            >
-              <div className="flex items-center justify-between p-5 border-b border-[var(--adm-border)]">
-                <h2 className="text-base font-bold text-[var(--adm-text)]">{selectedClient.name}</h2>
-                <div className="flex items-center gap-2">
-                  <button id="close-client-drawer" onClick={() => setSelectedClient(null)} className="p-1.5 rounded-lg hover:bg-[var(--adm-bg)] text-[var(--adm-text-3)] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">close</span>
-                  </button>
-                </div>
+          <>
+            <div className="flex items-center justify-between p-5 border-b border-[var(--adm-border)]">
+              <h2 className="text-base font-bold text-[var(--adm-text)]">{selectedClient.name}</h2>
+              <div className="flex items-center gap-2">
+                <button id="close-client-drawer" onClick={() => setSelectedClient(null)} className="p-1.5 rounded-lg hover:bg-[var(--adm-bg)] text-[var(--adm-text-3)] transition-colors">
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
               </div>
-              <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nama Bisnis</label>
-                    <input type="text" value={selectedClient.name} onChange={e => updateSelectedClient('name', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Domain</label>
-                    <input type="text" value={selectedClient.domain || ""} onChange={e => updateSelectedClient('domain', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="contoh.com" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Tanggal Tagihan</label>
-                      <input type="date" value={selectedClient.domainExpiry || ""} onChange={e => updateSelectedClient('domainExpiry', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Biaya Perpanjangan</label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">Rp</span>
-                        <input 
-                          type="text" 
-                          value={selectedClient.recurringFee ? selectedClient.recurringFee.toLocaleString('id-ID') : ""} 
-                          onChange={e => {
-                            const val = parseInt(e.target.value.replace(/\D/g, ''));
-                            updateSelectedClient('recurringFee', isNaN(val) ? 0 : val);
-                          }} 
-                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" 
-                          placeholder="900.000"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nomor WhatsApp Tujuan</label>
-                    <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition-all border border-[var(--adm-border)]">
-                      <CountrySelector selected={selectedMsgCountry} onSelect={setSelectedMsgCountry} theme="admin" />
-                      <input 
-                        type="text" 
-                        value={selectedClient.phone ? selectedClient.phone.replace(new RegExp(`^${selectedMsgCountry.dial_code.replace('+', '')}`), '') : ''} 
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          const cleanVal = val.startsWith('0') ? val.substring(1) : val;
-                          const code = selectedMsgCountry.dial_code.replace('+', '');
-                          updateSelectedClient('phone', cleanVal ? `${code}${cleanVal}` : '');
-                        }} 
-                        className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder-[var(--adm-text-3)]" 
-                        placeholder={selectedMsgCountry.code === 'ID' ? "8123456..." : "123456789..."} 
-                      />
-                    </div>
-                  </div>
+            </div>
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nama Bisnis</label>
+                  <input type="text" value={selectedClient.name} onChange={e => updateSelectedClient('name', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" />
                 </div>
-
-                <a
-                  href={`https://wa.me/${selectedClient.phone}?text=${encodeURIComponent(getAutoDraft(selectedClient))}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                  Kirim Pesan via WhatsApp
-                </a>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Renew Confirmation Modal */}
-      <AnimatePresence>
-        {renewingClient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setRenewingClient(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[var(--adm-card)] max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
-            >
-              <div className="p-6">
-                <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-4">
-                  <RefreshCw size={24} strokeWidth={2.5} />
+                <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Domain</label>
+                  <input type="text" value={selectedClient.domain || ""} onChange={e => updateSelectedClient('domain', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="contoh.com" />
                 </div>
-                <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2">Perpanjang Layanan</h3>
-                <p className="text-[var(--adm-text-2)] text-sm mb-4 leading-relaxed">
-                  Silakan sesuaikan nominal pembayaran dan tanggal masa aktif baru untuk klien <strong className="text-[var(--adm-text)]">{renewingClient.name}</strong>.
-                </p>
-                <div className="space-y-4 mb-6 text-left">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-semibold text-[var(--adm-text-2)] block">Nominal Dibayar</label>
-                      <span className="text-[11px] font-medium text-[var(--adm-text-3)]">Biaya Perpanjangan: {formatRp(renewingClient.recurringFee || 0)}</span>
-                    </div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Tanggal Tagihan</label>
+                    <input type="date" value={selectedClient.domainExpiry || ""} onChange={e => updateSelectedClient('domainExpiry', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Biaya Perpanjangan</label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">Rp</span>
                       <input 
                         type="text" 
-                        value={renewForm.amountPaid ? renewForm.amountPaid.toLocaleString('id-ID') : ""} 
+                        value={selectedClient.recurringFee ? selectedClient.recurringFee.toLocaleString('id-ID') : ""} 
                         onChange={e => {
                           const val = parseInt(e.target.value.replace(/\D/g, ''));
-                          setRenewForm({ ...renewForm, amountPaid: isNaN(val) ? 0 : val });
+                          updateSelectedClient('recurringFee', isNaN(val) ? 0 : val);
                         }} 
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
-                        placeholder="0" 
+                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:border-emerald-500 transition-colors" 
+                        placeholder="900.000"
                       />
                     </div>
-                    {((renewingClient.recurringFee || 0) - renewForm.amountPaid) > 0 && (
-                      <div className="mt-2 text-[11px] font-semibold text-red-500 flex items-center gap-1 w-fit">
-                        <AlertCircle size={12} strokeWidth={2.5} />
-                        Sisa tagihan: {formatRp((renewingClient.recurringFee || 0) - renewForm.amountPaid)}
-                      </div>
-                    )}
-                    {((renewingClient.recurringFee || 0) - renewForm.amountPaid) < 0 && (
-                      <div className="mt-2 text-[11px] font-semibold text-emerald-500 flex items-center gap-1 w-fit">
-                        <CheckCircle2 size={12} strokeWidth={2.5} />
-                        Kelebihan bayar: {formatRp(Math.abs((renewingClient.recurringFee || 0) - renewForm.amountPaid))}
-                      </div>
-                    )}
                   </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Kadaluarsa Baru</label>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1 block">Nomor WhatsApp Tujuan</label>
+                  <div className="flex rounded-lg bg-[var(--adm-bg)] focus-within:ring-2 focus-within:ring-emerald-500/50 focus-within:border-emerald-500 transition-all border border-[var(--adm-border)]">
+                    <CountrySelector selected={selectedMsgCountry} onSelect={setSelectedMsgCountry} theme="admin" />
                     <input 
-                      type="date" 
-                      value={renewForm.newExpiryDate} 
-                      onChange={e => setRenewForm({ ...renewForm, newExpiryDate: e.target.value })} 
-                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
+                      type="text" 
+                      value={selectedClient.phone ? selectedClient.phone.replace(new RegExp(`^${selectedMsgCountry.dial_code.replace('+', '')}`), '') : ''} 
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const cleanVal = val.startsWith('0') ? val.substring(1) : val;
+                        const code = selectedMsgCountry.dial_code.replace('+', '');
+                        updateSelectedClient('phone', cleanVal ? `${code}${cleanVal}` : '');
+                      }} 
+                      className="w-full px-3 py-2.5 text-sm bg-transparent border-0 text-[var(--adm-text)] focus:outline-none focus:ring-0 placeholder-[var(--adm-text-3)]" 
+                      placeholder={selectedMsgCountry.code === 'ID' ? "8123456..." : "123456789..."} 
                     />
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setRenewingClient(null)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={confirmRenew}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
-                  >
-                    Ya, Perpanjang
-                  </button>
-                </div>
               </div>
-            </motion.div>
-          </motion.div>
+
+              <a
+                href={`https://wa.me/${selectedClient.phone}?text=${encodeURIComponent(getAutoDraft(selectedClient))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                Kirim Pesan via WhatsApp
+              </a>
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </AdminModal>
+
+      {/* Renew Confirmation Modal */}
+      <AdminModal isOpen={!!renewingClient} onClose={() => setRenewingClient(null)} maxWidth="max-w-md" noPadding={true}>
+        {renewingClient && (
+          <div className="p-6">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-4">
+              <RefreshCw size={24} strokeWidth={2.5} />
+            </div>
+            <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2">Perpanjang Layanan</h3>
+            <p className="text-[var(--adm-text-2)] text-sm mb-4 leading-relaxed">
+              Silakan sesuaikan nominal pembayaran dan tanggal masa aktif baru untuk klien <strong className="text-[var(--adm-text)]">{renewingClient.name}</strong>.
+            </p>
+            <div className="space-y-4 mb-6 text-left">
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-semibold text-[var(--adm-text-2)] block">Nominal Dibayar</label>
+                  <span className="text-[11px] font-medium text-[var(--adm-text-3)]">Biaya Perpanjangan: {formatRp(renewingClient.recurringFee || 0)}</span>
+                </div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-[var(--adm-text-3)] text-sm font-medium">Rp</span>
+                  <input 
+                    type="text" 
+                    value={renewForm.amountPaid ? renewForm.amountPaid.toLocaleString('id-ID') : ""} 
+                    onChange={e => {
+                      const val = parseInt(e.target.value.replace(/\D/g, ''));
+                      setRenewForm({ ...renewForm, amountPaid: isNaN(val) ? 0 : val });
+                    }} 
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
+                    placeholder="0" 
+                  />
+                </div>
+                {((renewingClient.recurringFee || 0) - renewForm.amountPaid) > 0 && (
+                  <div className="mt-2 text-[11px] font-semibold text-red-500 flex items-center gap-1 w-fit">
+                    <AlertCircle size={12} strokeWidth={2.5} />
+                    Sisa tagihan: {formatRp((renewingClient.recurringFee || 0) - renewForm.amountPaid)}
+                  </div>
+                )}
+                {((renewingClient.recurringFee || 0) - renewForm.amountPaid) < 0 && (
+                  <div className="mt-2 text-[11px] font-semibold text-emerald-500 flex items-center gap-1 w-fit">
+                    <CheckCircle2 size={12} strokeWidth={2.5} />
+                    Kelebihan bayar: {formatRp(Math.abs((renewingClient.recurringFee || 0) - renewForm.amountPaid))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Kadaluarsa Baru</label>
+                <input 
+                  type="date" 
+                  value={renewForm.newExpiryDate} 
+                  onChange={e => setRenewForm({ ...renewForm, newExpiryDate: e.target.value })} 
+                  className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" 
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRenewingClient(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmRenew}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/20"
+              >
+                Ya, Perpanjang
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
       {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deletingId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setDeletingId(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[var(--adm-card)] max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
+      <AdminModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} maxWidth="max-w-md" noPadding={true}>
+        <div className="p-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
+            <Trash2 size={32} strokeWidth={2} />
+          </div>
+          <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2">Pindahkan ke Tempat Sampah?</h3>
+          <p className="text-[var(--adm-text-2)] text-sm mb-6">
+            Klien <strong className="text-[var(--adm-text)]">{clients.find(c => c.id === deletingId)?.name}</strong> akan dihapus dan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeletingId(null)}
+              className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm"
             >
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
-                  <Trash2 size={32} strokeWidth={2} />
-                </div>
-                <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2">Pindahkan ke Tempat Sampah?</h3>
-                <p className="text-[var(--adm-text-2)] text-sm mb-6">
-                  Klien <strong className="text-[var(--adm-text)]">{clients.find(c => c.id === deletingId)?.name}</strong> akan dihapus dan dipindahkan ke tempat sampah. Anda dapat memulihkannya nanti.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setDeletingId(null)}
-                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={() => handleDelete(deletingId)}
-                    className="flex-1 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 text-sm"
-                  >
-                    Ya, Hapus
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              Batal
+            </button>
+            <button
+              onClick={() => {
+                if (deletingId) handleDelete(deletingId);
+              }}
+              className="flex-1 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 text-sm"
+            >
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </AdminModal>
 
       {/* Use Modification Confirmation Modal */}
-      <AnimatePresence>
-        {usingModId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setUsingModId(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-[var(--adm-card)] max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border border-[var(--adm-border)]"
-            >
-              <div className="p-6 text-left">
-                <div className="w-16 h-16 rounded-full bg-[var(--adm-success)]/10 text-[var(--adm-success)] flex items-center justify-center mx-auto mb-4">
-                  <Wand2 size={32} strokeWidth={2} />
-                </div>
-                <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2 text-center">Gunakan Kuota Revisi?</h3>
-                <p className="text-[var(--adm-text-2)] text-sm mb-4 text-center">
-                  Satu (1) jatah revisi/modifikasi akan dipotong dari klien <strong className="text-[var(--adm-text)]">{clients.find(c => c.id === usingModId)?.name}</strong>.
-                </p>
-                
-                <div className="space-y-4 mb-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Detail Revisi (Opsional)</label>
-                    <textarea
-                      value={modNotes}
-                      onChange={(e) => setModNotes(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)]"
-                      placeholder="Contoh: Ubah gambar banner di halaman depan..."
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Deadline (Opsional)</label>
-                    <input
-                      type="date"
-                      value={modDeadline}
-                      onChange={(e) => setModDeadline(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)] [color-scheme:dark]"
-                    />
-                  </div>
-                </div>
+      <AdminModal isOpen={!!usingModId} onClose={() => setUsingModId(null)} maxWidth="max-w-md" noPadding={true}>
+        <div className="p-6 text-left">
+          <div className="w-16 h-16 rounded-full bg-[var(--adm-success)]/10 text-[var(--adm-success)] flex items-center justify-center mx-auto mb-4">
+            <Wand2 size={32} strokeWidth={2} />
+          </div>
+          <h3 className="text-xl font-bold text-[var(--adm-text)] mb-2 text-center">Gunakan Kuota Revisi?</h3>
+          <p className="text-[var(--adm-text-2)] text-sm mb-4 text-center">
+            Satu (1) jatah revisi/modifikasi akan dipotong dari klien <strong className="text-[var(--adm-text)]">{clients.find(c => c.id === usingModId)?.name}</strong>.
+          </p>
+          
+          <div className="space-y-4 mb-6">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Detail Revisi (Opsional)</label>
+              <textarea
+                value={modNotes}
+                onChange={(e) => setModNotes(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] placeholder-[var(--adm-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)]"
+                placeholder="Contoh: Ubah gambar banner di halaman depan..."
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide">Deadline (Opsional)</label>
+              <input
+                type="date"
+                value={modDeadline}
+                onChange={(e) => setModDeadline(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-1 focus:ring-[var(--adm-accent)]/30 transition-all border border-[var(--adm-border)] [color-scheme:dark]"
+              />
+            </div>
+          </div>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setUsingModId(null); setModNotes(""); setModDeadline(""); }}
-                    className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm border border-[var(--adm-border)]"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={confirmUseMod}
-                    className="flex-1 py-2.5 rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm"
-                  >
-                    Buat Pesanan
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setUsingModId(null); setModNotes(""); setModDeadline(""); }}
+              className="flex-1 py-2.5 rounded-xl font-bold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors text-sm border border-[var(--adm-border)]"
+            >
+              Batal
+            </button>
+            <button
+              onClick={confirmUseMod}
+              className="flex-1 py-2.5 rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm"
+            >
+              Buat Pesanan
+            </button>
+          </div>
+        </div>
+      </AdminModal>
       
       {/* Toast Notification */}
       <AnimatePresence>

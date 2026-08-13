@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast } from "@/components/admin/ui";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 
 import "react-quill-new/dist/quill.snow.css";
@@ -201,27 +201,13 @@ export default function ProdukDigitalPage() {
 
   function confirmArchive(id: string, currentStatus: string) {
     const isArchived = currentStatus === "archived";
-    setConfirmModal({
-      isOpen: true, title: isArchived ? "Kembalikan Produk" : "Arsipkan Produk",
-      message: isArchived ? "Produk akan dikembalikan ke status Draft." : "Produk akan dipindahkan ke Arsip.",
-      confirmText: isArchived ? "Kembalikan" : "Arsipkan", confirmVariant: "warning",
-      action: () => {
-        save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
-        setToast({ isVisible: true, message: isArchived ? "Produk dikembalikan ke Draft" : "Produk berhasil diarsipkan", type: "success" });
-      }
-    });
+    save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
+    setToast({ isVisible: true, message: isArchived ? "Produk dikembalikan ke Draft" : "Produk berhasil diarsipkan", type: "success" });
   }
 
   function confirmPublish(id: string) {
-    setConfirmModal({
-      isOpen: true, title: "Publish Produk",
-      message: "Produk ini akan diterbitkan ke katalog publik.",
-      confirmText: "Publish", confirmVariant: "primary",
-      action: () => {
-        save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
-        setToast({ isVisible: true, message: "Produk berhasil diterbitkan", type: "success" });
-      }
-    });
+    save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
+    setToast({ isVisible: true, message: "Produk berhasil diterbitkan", type: "success" });
   }
 
   function togglePinned(id: string) {
@@ -240,14 +226,13 @@ export default function ProdukDigitalPage() {
     { id: "published", label: "Published", count: published.length },
   ];
 
-  const filtered = items.filter(item => {
-    const s = item.status || "published";
+  const filtered = items.filter((item) => {
     const matchTab =
       tabFilter === "all" ? true :
       tabFilter === "pinned" ? item.pinned :
-      tabFilter === "published" ? s === "published" :
-      tabFilter === "draft" ? s === "draft" :
-      tabFilter === "archived" ? s === "archived" : true;
+      tabFilter === "draft" ? item.status === "draft" :
+      tabFilter === "published" ? item.status === "published" :
+      tabFilter === "archived" ? item.status === "archived" : true;
 
     const matchCategory = filter === "Semua" || item.category === filter;
     const searchString = `${item.title} ${item.vendor}`.toLowerCase();
@@ -255,6 +240,66 @@ export default function ProdukDigitalPage() {
 
     return matchTab && matchCategory && matchSearch;
   });
+
+  const produkColumns = [
+    {
+      key: "produk",
+      label: "Produk Digital",
+      render: (item: ProdukDigital) => (
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-[var(--adm-text)]" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
+            <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-current rotate-45" : ""} />
+          </button>
+          <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 overflow-hidden">
+            {item.thumbnail ? (
+              <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">inventory_2</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
+              {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
+            </div>
+            <p className="text-xs text-[var(--adm-text-3)] truncate">{item.category} · {item.vendor}{item.price ? ` · ${item.price}` : ''}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: "aksi",
+      label: "Aksi",
+      className: "text-right",
+      render: (item: ProdukDigital) => (
+        <div className="flex items-center justify-end gap-3 sm:gap-5">
+          <div className="flex items-center justify-end gap-1.5 shrink-0">
+            {item.url ? (
+              <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Buka Tautan">
+                <ExternalLink size={14} strokeWidth={2} />
+              </a>
+            ) : (
+              <div className="w-[26px] h-[26px]" />
+            )}
+            {item.status !== "published" && (
+              <button onClick={() => confirmPublish(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Publish">
+                <Send size={14} strokeWidth={2} />
+              </button>
+            )}
+            <button onClick={() => handleEdit(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
+              <Pencil size={14} strokeWidth={2} />
+            </button>
+            <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
+              <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
+            </button>
+            <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      )
+    }
+  ];
 
   if (!isClient) return null;
 
@@ -315,61 +360,13 @@ export default function ProdukDigitalPage() {
           {filtered.length === 0 ? (
             <EmptyState icon="inventory_2" title="Belum ada produk digital" description="Tambahkan produk digital pertama Anda ke katalog." />
           ) : (
-            <div className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--adm-border)] bg-[var(--adm-bg)]">
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide">Produk Digital</div>
-                <div className="text-xs font-bold text-[var(--adm-text-3)] uppercase tracking-wide text-right w-36 sm:w-40 shrink-0">Aksi</div>
-              </div>
-              <div className="divide-y divide-[var(--adm-border)]">
-                {filtered.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between px-6 py-4">
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-4">
-                      <button onClick={() => togglePinned(item.id)} className={`shrink-0 p-1.5 transition-colors focus:outline-none ${item.pinned ? "text-amber-500" : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"}`} title={item.pinned ? "Lepaskan Pin" : "Sematkan"}>
-                        <Pin size={14} strokeWidth={2} className={item.pinned ? "fill-amber-500 rotate-45" : ""} />
-                      </button>
-                      <div className="w-16 h-12 rounded-lg bg-[var(--adm-border)] flex items-center justify-center shrink-0 overflow-hidden">
-                        {item.thumbnail ? (
-                          <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="material-symbols-outlined text-[var(--adm-text-3)] text-[24px]">inventory_2</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className={`font-bold text-sm truncate ${item.status === "draft" ? "text-[var(--adm-text-3)]" : "text-[var(--adm-text)]"}`}>{item.title}</p>
-                          {item.status === "archived" && <StatusBadge label="Archived" variant="slate" />}
-                        </div>
-                        <p className="text-xs text-[var(--adm-text-3)] truncate">{item.category} · {item.vendor}{item.price ? ` · ${item.price}` : ''}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-3 sm:gap-5 shrink-0">
-                      <div className="flex items-center justify-end gap-1.5 shrink-0">
-                        {item.url ? (
-                          <a href={item.url.startsWith('http') ? item.url : `https://${item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors" title="Buka Tautan">
-                            <ExternalLink size={14} strokeWidth={2} />
-                          </a>
-                        ) : (
-                          <div className="w-[26px] h-[26px]" />
-                        )}
-                        {item.status !== "published" && (
-                          <button onClick={() => confirmPublish(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors" title="Publish">
-                            <Send size={14} strokeWidth={2} />
-                          </button>
-                        )}
-                        <button onClick={() => handleEdit(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors" title="Edit">
-                          <Pencil size={14} strokeWidth={2} />
-                        </button>
-                        <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
-                          <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
-                        </button>
-                        <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors" title="Hapus">
-                          <Trash2 size={14} strokeWidth={2} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="mt-4">
+              <AdminTable
+                columns={produkColumns}
+                data={filtered}
+                keyField="id"
+                emptyMessage="Belum ada produk digital ditambahkan."
+              />
             </div>
           )}
         </>

@@ -62,7 +62,7 @@ export default function WebDevPillar() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button asChild size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 shadow-md text-[13px] sm:text-sm md:text-base">
+          <Button asChild size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-[13px] sm:text-sm md:text-base">
             <Link href="/jasa-web">
               Pelajari Selengkapnya <ArrowRight className="ml-2 text-sm" size={16} />
             </Link>

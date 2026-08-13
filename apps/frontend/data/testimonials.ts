@@ -16,6 +16,7 @@ export interface Testimonial {
   messages: TestimonialMessage[];
   status?: "published" | "draft" | "archived";
   starred?: boolean;
+  date?: string;
 }
 
 export const testimonialsData: Testimonial[] = [

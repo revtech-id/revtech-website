@@ -85,7 +85,7 @@ export default function AfterSalesSupport() {
               </div>
 
               {/* Isi Modal */}
-              <div className="overflow-y-auto p-5 sm:p-6 bg-gray-50/50">
+              <div className="overflow-y-auto popup-scrollbar p-5 sm:p-6 bg-gray-50/50">
                 {modMenu.map((menu, idx) => (
                   <div key={idx} className="mb-8 last:mb-0">
                     <div className="mb-4 pb-2 border-b border-gray-200/60">

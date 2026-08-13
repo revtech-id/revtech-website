@@ -43,7 +43,9 @@ export function AdminNotificationPopover() {
       // Track which IDs have been marked as read (persisted)
       const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
 
-      const dynamicNotifs: NotificationItem[] = localLog.slice(0, 15).map((entry) => ({
+      const filteredLog = localLog.filter(entry => entry.notify === true);
+
+      const dynamicNotifs: NotificationItem[] = filteredLog.slice(0, 15).map((entry) => ({
         id: entry.id,
         title: entry.type === "lead_created" ? "Prospek Baru Masuk!"
           : entry.type === "lead_added" ? "Prospek Ditambahkan"

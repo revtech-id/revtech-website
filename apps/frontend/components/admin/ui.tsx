@@ -1,5 +1,54 @@
 import { cn } from "@/lib/utils";
 
+
+// ── AdminButton ────────────────────────────────────────────────────────────────
+
+export interface AdminButtonProps extends HTMLMotionProps<"button"> {
+  variant?: "primary" | "secondary" | "danger" | "ghost" | "outline" | "success";
+  size?: "sm" | "md" | "lg" | "icon";
+  icon?: React.ReactNode;
+}
+
+export function AdminButton({ 
+  variant = "primary", 
+  size = "md", 
+  icon, 
+  className, 
+  children, 
+  ...props 
+}: AdminButtonProps) {
+  const baseClass = "inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold transition-colors focus:outline-none select-none gap-2";
+  
+  const variantClass = {
+    primary: "bg-primary text-white hover:bg-blue-700 shadow-sm", 
+    secondary: "bg-[var(--adm-card)] border border-[var(--adm-border)] hover:bg-[var(--adm-bg)] text-[var(--adm-text)]",
+    danger: "bg-[var(--adm-danger)] text-white hover:opacity-90 shadow-sm",
+    success: "bg-[#00a884] text-white hover:bg-[#008f6f] shadow-sm",
+    ghost: "text-[var(--adm-text-3)] hover:text-[var(--adm-text)] bg-transparent",
+    outline: "border border-[var(--adm-border)] text-[var(--adm-text)] hover:bg-[var(--adm-bg)]",
+  }[variant];
+
+  const sizeClass = {
+    sm: "h-9 px-4 text-xs",
+    md: "h-11 px-6 text-sm",
+    lg: "h-12 px-8 text-base",
+    icon: "h-9 w-9 p-0",
+  }[size];
+
+  return (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      className={cn(baseClass, variantClass, sizeClass, className)}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {...(props as any)}
+    >
+      {icon}
+      {children}
+    </motion.button>
+  );
+}
+
 // ── StatCard ──────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
@@ -374,7 +423,7 @@ export function PageHeader({ title, description, action, icon }: PageHeaderProps
 
 interface Column<T> {
   key: keyof T | string;
-  label: string;
+  label: React.ReactNode;
   render?: (row: T) => React.ReactNode;
   className?: string;
 }
@@ -650,7 +699,8 @@ export function AdminTabs({ tabs, activeTab, onTabChange }: AdminTabsProps) {
 
 // ── AdminConfirmModal ──────────────────────────────────────────────────────────
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, HTMLMotionProps, AnimatePresence } from "framer-motion";
+export { AdminModal } from "./AdminModal";
 import { Trash2, Archive, Send, AlertTriangle, CheckCircle2, AlertCircle, Edit3, Star, CheckCircle , ArrowRight, ArrowLeft} from "lucide-react";
 import { useEffect } from "react";
 

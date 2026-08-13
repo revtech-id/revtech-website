@@ -7,6 +7,7 @@ export const jasaWebFormSchema = z.object({
   message: z.string().min(10, "Pesan minimal harus 10 karakter"),
   handoverOption: z.string().optional(),
   reference: z.string().optional(),
+  productName: z.string().optional(),
 });
 
 
