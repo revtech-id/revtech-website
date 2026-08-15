@@ -8,7 +8,7 @@ import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { updateProfile } from "./actions";
 import ImageCropper from "@/components/ui/ImageCropper";
-import { CheckCircle2, Mail, Phone, MapPin, Globe, ShieldCheck, Camera } from "lucide-react";
+import { CheckCircle2, Mail, Phone, MapPin, Globe, ShieldCheck, Camera, AlertTriangle } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
 
