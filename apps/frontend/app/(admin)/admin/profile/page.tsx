@@ -81,16 +81,16 @@ export default function ProfilePage() {
 
   const handleReset = () => {
     setProfile({
-      name: user.name,
-      role: user.role,
-      email: user.email,
-      phone: user.phone,
-      bio: user.bio,
-      location: user.location,
-      website: user.website,
+      name: user?.name || "",
+      role: user?.role || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      bio: user?.bio || "",
+      location: user?.location || "",
+      website: user?.website || "",
     });
 
-    setAvatarPreview(user.avatar);
+    setAvatarPreview(user?.avatar || null);
   };
   
   async function handleSaveAll(e: React.FormEvent) {
