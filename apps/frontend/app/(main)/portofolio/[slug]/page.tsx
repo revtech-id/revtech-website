@@ -5,7 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export async function generateStaticParams() {
-  return getAllPortfolioSlugs();
+  const slugs = await getAllPortfolioSlugs();
+  return slugs.map(({ slug }) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -40,12 +41,6 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
 
         {/* Header Studi Kasus */}
         <header className="mb-12">
-            {portfolioData.date && (
-                <div className="mb-6">
-                    <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{portfolioData.date}</span>
-                </div>
-            )}
-            
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {portfolioData.title}
             </h1>

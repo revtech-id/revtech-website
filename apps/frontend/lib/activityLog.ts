@@ -40,36 +40,31 @@ export interface ActivityEntry {
   notify?: boolean;
 }
 
+import { db } from "@/lib/firebase";
+import { collection, addDoc, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+
 const IMPORTANT_NOTIFICATION_TYPES: ActivityType[] = [
   "lead_created", "lead_added", "lead_deal", "lead_paid_full",
   "order_created", "order_status_changed", "order_lunas", "order_handover",
   "invoice_paid"
 ];
 
-const KEY = "revtech_activity_log";
-const MAX_ENTRIES = 50;
-
-export function logActivity(entry: Omit<ActivityEntry, "id" | "timestamp">) {
+export async function logActivity(entry: Omit<ActivityEntry, "id" | "timestamp">) {
   if (typeof window === "undefined") return;
 
-  const existing: ActivityEntry[] = JSON.parse(localStorage.getItem(KEY) || "[]");
-
-  const newEntry: ActivityEntry = {
-    ...entry,
-    id: `ACT-${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    notify: entry.notify !== undefined ? entry.notify : IMPORTANT_NOTIFICATION_TYPES.includes(entry.type),
-  };
-
-  // Prepend and keep max 50 entries
-  const updated = [newEntry, ...existing].slice(0, MAX_ENTRIES);
-  localStorage.setItem(KEY, JSON.stringify(updated));
-
-  // Notify the notification popover to refresh
-  window.dispatchEvent(new Event("activityLogUpdated"));
+  try {
+    const notify = entry.notify !== undefined ? entry.notify : IMPORTANT_NOTIFICATION_TYPES.includes(entry.type);
+    await addDoc(collection(db, "activity_logs"), {
+      ...entry,
+      notify,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Failed to log activity to Firestore", err);
+  }
 }
 
+// Keep a helper for backward compatibility / sync UI if needed, but components should use onSnapshot directly.
 export function getActivityLog(): ActivityEntry[] {
-  if (typeof window === "undefined") return [];
-  return JSON.parse(localStorage.getItem(KEY) || "[]");
+  return [];
 }

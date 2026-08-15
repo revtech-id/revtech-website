@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
+import { DEFAULT_MODEL } from "@/lib/ai";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as { title: string; category: string; content: string };
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google(DEFAULT_MODEL),
       prompt: `Kamu adalah pakar SEO konten digital Indonesia.
 
 Berdasarkan informasi artikel berikut, generate metadata SEO yang optimal:

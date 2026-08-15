@@ -9,11 +9,11 @@ export const metadata: Metadata = {
     description: "RevTech adalah Wadah Solusi Digital Anda. Kami melayani arsitektur website premium, katalog produk digital instan, hingga sistem kustom (ERP/POS) untuk menunjang skala bisnis.",
 };
 
-export default function Home() {
-    const recentPosts = getSortedPostsData().slice(0, 3);
-    const recentPortfolios = getSortedPortfoliosData().slice(0, 3);
+export default async function Home() {
+    const latestPosts = (await getSortedPostsData()).slice(0, 3);
+    const latestPortfolios = (await getSortedPortfoliosData()).slice(0, 4);
     
     return (
-        <HomeClient recentPosts={recentPosts} portfolios={recentPortfolios} testimonials={testimonialsData} />
+        <HomeClient recentPosts={latestPosts} portfolios={latestPortfolios} testimonials={testimonialsData} />
     );
 }

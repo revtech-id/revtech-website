@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton, SEOPanel } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 import { useUser } from "@/contexts/UserContext";
@@ -113,19 +113,21 @@ interface Portfolio {
   pinned: boolean;
   status: "published" | "draft" | "archived";
   publishedAt: string | null;
+  metaTitle: string;
+  metaDescription: string;
+  keywords: string;
 }
 
 const MOCK_INITIAL: Portfolio[] = [
-  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], pinned: true, status: "published", publishedAt: "2026-04-15" },
-  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], pinned: false, status: "published", publishedAt: "2026-06-01" },
-  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], pinned: true, status: "published", publishedAt: "2026-06-30" },
+  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], pinned: true, status: "published", publishedAt: "2026-04-15", metaTitle: "", metaDescription: "", keywords: "" },
+  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], pinned: false, status: "published", publishedAt: "2026-06-01", metaTitle: "", metaDescription: "", keywords: "" },
+  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], pinned: true, status: "published", publishedAt: "2026-06-30", metaTitle: "", metaDescription: "", keywords: "" },
 ];
 
-const EMPTY_FORM: {
-  title: string; client: string; category: string; url: string; projectDate: string; description: string; techStack: string; pinned: boolean; status: Portfolio["status"]; content: string; thumbnail: string; publishedAt: string;
-} = {
+const EMPTY_FORM = {
   title: "", client: "", category: "Jasa Web",
-  url: "", projectDate: "", description: "", techStack: "", pinned: false, status: "published", content: "", thumbnail: "", publishedAt: ""
+  url: "", projectDate: "", description: "", techStack: "", pinned: false, status: "published" as "published" | "draft" | "archived", content: "", thumbnail: "", publishedAt: "",
+  metaTitle: "", metaDescription: "", keywords: ""
 };
 
 export default function PortofolioPage() {
@@ -145,6 +147,8 @@ export default function PortofolioPage() {
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: "success" | "error" }>({ isVisible: false, message: "", type: "success" });
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [seoLoading, setSeoLoading] = useState(false);
+  const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -168,25 +172,11 @@ export default function PortofolioPage() {
     
     // Subscribe to Firestore
     const unsub = onSnapshot(collection(db, "portfolio"), async (snapshot) => {
-      if (snapshot.empty) {
-        // Migration: If empty, write MOCK_INITIAL
-        try {
-          const batch = writeBatch(db);
-          MOCK_INITIAL.forEach(p => {
-            const docRef = doc(db, "portfolio", p.id);
-            batch.set(docRef, p);
-          });
-          await batch.commit();
-        } catch (err) {
-          console.error("Failed to migrate initial portfolio", err);
-        }
-      } else {
         const loaded = snapshot.docs.map(doc => ({
           ...doc.data(),
           id: doc.id
         })) as Portfolio[];
         setItems(loaded);
-      }
     });
 
     // Register Divider Blot dynamically for ReactQuill
@@ -210,13 +200,19 @@ export default function PortofolioPage() {
       title: item.title, client: item.client, category: item.category,
       url: item.url || "", projectDate: item.projectDate || "", description: item.description || "", techStack: item.techStack.join(", "),
       pinned: item.pinned, status: item.status, content: item.content || "",
-      thumbnail: item.thumbnail || "", publishedAt: item.publishedAt || ""
+      thumbnail: item.thumbnail || "", publishedAt: item.publishedAt || "",
+      metaTitle: item.metaTitle || "", metaDescription: item.metaDescription || "", keywords: item.keywords || ""
+    });
+    setSeoForm({
+      metaTitle: item.metaTitle || "",
+      metaDescription: item.metaDescription || "",
+      keywords: item.keywords || ""
     });
     setEditingId(item.id);
     setView("form");
   }
 
-  function confirmDelete(id: string) {
+  function confirmDelete(item: Portfolio) {
     setConfirmModal({
       isOpen: true,
       title: "Hapus Proyek",
@@ -225,9 +221,10 @@ export default function PortofolioPage() {
       confirmVariant: "danger",
       action: async () => {
         try {
-          await deleteDoc(doc(db, "portfolio", id));
+          await deleteDoc(doc(db, "portfolio", item.id));
+
           setToast({ isVisible: true, message: "Proyek berhasil dihapus", type: "success" });
-          logActivity({ type: "portofolio_deleted", title: "Proyek Dihapus", description: `Proyek portofolio dengan ID ${id} dihapus.`, user: "Admin" });
+          logActivity({ type: "portofolio_deleted", title: "Proyek Dihapus", description: `Proyek portofolio dengan ID ${item.id} dihapus.`, user: "Admin" });
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         } catch (err) {
           console.error(err);
@@ -242,61 +239,32 @@ export default function PortofolioPage() {
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
     
     try {
-      if (editingId) {
-        const updated: Partial<Portfolio> = {
-          title: form.title, client: form.client, category: form.category,
-          url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned, status: form.status, content: form.content,
-          thumbnail: form.thumbnail, publishedAt: form.publishedAt || null
-        };
-        await updateDoc(doc(db, "portfolio", editingId), updated);
-      } else {
-        const newId = `PF-${Date.now().toString().slice(-5)}`;
-        const newItem: Portfolio = {
-          id: newId,
-          title: form.title, client: form.client, category: form.category,
-          url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
-          thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: form.publishedAt || null
-        };
-        await setDoc(doc(db, "portfolio", newId), newItem);
-      }
+      const isDraft = form.status === "draft";
+      const docRef = editingId ? doc(db, "portfolio", editingId) : doc(db, "portfolio", `PF-${Date.now().toString().slice(-5)}`);
+      
+      const dataToSave: Portfolio = {
+        id: docRef.id,
+        title: form.title, client: form.client, category: form.category,
+        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
+        thumbnail: form.thumbnail, content: form.content, status: form.status,
+        publishedAt: isDraft ? (editingId ? (items.find(i => i.id === editingId)?.publishedAt || null) : null) : (form.publishedAt || new Date().toISOString()),
+        metaTitle: seoForm.metaTitle,
+        metaDescription: seoForm.metaDescription,
+        keywords: seoForm.keywords
+      };
 
-          // Sync to public page via API when publishing
-          if (form.status === "published") {
-            const slug = form.title
-              .toLowerCase()
-              .replace(/[^a-z0-9\s-]/g, '')
-              .trim()
-              .replace(/\s+/g, '-')
-              .replace(/-+/g, '-');
-            fetch("/api/admin/portfolio", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                slug,
-                title: form.title,
-                client: form.client,
-                category: form.category,
-                url: form.url || null,
-                projectDate: form.projectDate,
-                publishedAt: form.publishedAt || null,
-                description: form.description,
-                content: form.content,
-                thumbnail: form.thumbnail,
-                pinned: form.pinned,
-              }),
-            }).catch(console.error);
-          }
-    
-          setView("list");
-          setEditingId(null);
-          setForm(EMPTY_FORM);
-          setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
-          logActivity({ 
-            type: "portofolio_updated", 
-            title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
-            description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
-            user: "Admin" 
-          });
+      await setDoc(docRef, dataToSave, { merge: true });
+
+      setView("list");
+      setEditingId(null);
+      setForm(EMPTY_FORM);
+      setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
+      logActivity({ 
+        type: "portofolio_updated", 
+        title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
+        description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
+        user: "Admin" 
+      });
         } catch (err) {
           console.error(err);
           setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
@@ -338,6 +306,26 @@ export default function PortofolioPage() {
           }
         }
       }
+
+  async function generateSEO() {
+    if (!form.title.trim()) return;
+    setSeoLoading(true);
+    try {
+      const res = await fetch("/api/admin/seo-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, category: form.category, content: form.content || form.description }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { metaTitle: string; metaDescription: string; keywords: string };
+      setSeoForm(data);
+      setToast({ isVisible: true, message: "SEO berhasil di-generate", type: "success" });
+    } catch {
+      setToast({ isVisible: true, message: "Gagal men-generate SEO", type: "error" });
+    } finally {
+      setSeoLoading(false);
+    }
+  }
 
   const published = items.filter(i => (i.status || "published") === "published");
   const drafts = items.filter(i => i.status === "draft");
@@ -426,7 +414,7 @@ export default function PortofolioPage() {
               <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
             </button>
             {canDelete && (
-              <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+              <button onClick={() => confirmDelete(item)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
                 <Trash2 size={14} strokeWidth={2} />
               </button>
             )}
@@ -674,7 +662,7 @@ export default function PortofolioPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Bulan & Tahun</label>
+                      <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Bulan & Tahun Proyek</label>
                       <input type="month" value={form.projectDate} onChange={e => setForm({ ...form, projectDate: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] text-[var(--adm-text)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" />
                     </div>
                     <div>
@@ -688,6 +676,11 @@ export default function PortofolioPage() {
                       <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Proyek (Tampil Lebih Awal)</span>
                     </label>
                   </div>
+                </div>
+                
+                {/* SEO Panel */}
+                <div className="p-5 flex-1 border-t border-[var(--adm-border)]">
+                  <SEOPanel form={seoForm} setForm={setSeoForm} loading={seoLoading} onGenerate={generateSEO} />
                 </div>
               </form>
             </div>

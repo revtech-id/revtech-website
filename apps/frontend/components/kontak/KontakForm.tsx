@@ -29,7 +29,7 @@ export default function KontakForm() {
     const [selectedCountry, setSelectedCountry] = useState(countries[0]);
 
     const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<JasaWebFormValues>({
-        resolver: zodResolver(jasaWebFormSchema),
+        resolver: zodResolver(jasaWebFormSchema as any),
         defaultValues: { name: '', whatsapp: '', business: '', message: '', productName: '' }
     });
 
@@ -295,7 +295,7 @@ export default function KontakForm() {
                         type="text" 
                         {...register("business")}
                         className="bg-white text-gray-900 border-gray-200 focus-visible:ring-blue-500 rounded-lg py-2.5 px-3 h-auto shadow-sm" 
-                        placeholder="Masukkan nama bisnis atau instansi (jika ada)" 
+                        placeholder="Masukkan nama bisnis atau instansi" 
                     />
                     {errors.business && <p className="text-red-500 text-xs mt-1">{errors.business.message}</p>}
                 </div>
@@ -333,7 +333,7 @@ export default function KontakForm() {
                         onClick={handleReset}
                         className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 transition-colors"
                     >
-                        Batal
+                        Reset
                     </button>
                     <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2.5 text-sm font-medium h-auto shadow-none">
                         {isSubmitting ? "Memproses..." : "Kirim Pesanan"}

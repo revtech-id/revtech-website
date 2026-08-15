@@ -1,10 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
-import { remark } from 'remark';
-import html from 'remark-html';
-
-const postsDirectory = path.join(process.cwd(), 'content/blog');
+import { getAdminDb } from '@/lib/firebaseAdmin';
 
 export interface BlogPostData {
   slug: string;
@@ -20,63 +14,65 @@ export interface BlogPost extends BlogPostData {
   contentHtml: string;
 }
 
-export function getSortedPostsData(): BlogPostData[] {
-  // Check if directory exists
-  if (!fs.existsSync(postsDirectory)) {
+export async function getSortedPostsData(): Promise<BlogPostData[]> {
+  try {
+    const db = getAdminDb();
+    const snapshot = await db
+      .collection('blog_posts')
+      .where('status', '==', 'published')
+      .get();
+
+    return snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          slug: data.slug,
+          title: data.title,
+          date: data.publishedAt ? data.publishedAt.split('T')[0] : '',
+          description: data.metaDescription || '',
+          coverImage: data.coverImage || '',
+          category: data.category || '',
+          publishedAt: data.publishedAt || null,
+        };
+      })
+      .sort((a, b) => {
+        if (!a.publishedAt) return 1;
+        if (!b.publishedAt) return -1;
+        return b.publishedAt.localeCompare(a.publishedAt);
+      });
+  } catch (err) {
+    console.error('[blog] getSortedPostsData failed:', err);
     return [];
   }
-
-  const fileNames = fs.readdirSync(postsDirectory);
-  const allPostsData = fileNames.map((fileName) => {
-    // Remove ".md" from file name to get id
-    const slug = fileName.replace(/\.md$/, '');
-
-    // Read markdown file as string
-    const fullPath = path.join(postsDirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, 'utf8');
-
-    // Use gray-matter to parse the post metadata section
-    const matterResult = matter(fileContents);
-
-    // Combine the data with the id
-    return {
-      slug,
-      ...(matterResult.data as { title: string; date: string; description: string; coverImage: string; category: string }),
-    };
-  });
-
-  // Sort posts by date
-  return allPostsData.sort((a, b) => {
-    if (a.date < b.date) {
-      return 1;
-    } else {
-      return -1;
-    }
-  });
 }
 
 export async function getPostData(slug: string): Promise<BlogPost | null> {
-  const fullPath = path.join(postsDirectory, `${slug}.md`);
-  
-  if (!fs.existsSync(fullPath)) {
+  try {
+    const db = getAdminDb();
+    const snapshot = await db
+      .collection('blog_posts')
+      .where('slug', '==', slug)
+      .where('status', '==', 'published')
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    const data = snapshot.docs[0].data();
+
+    return {
+      slug: data.slug,
+      title: data.title,
+      date: data.publishedAt ? data.publishedAt.split('T')[0] : '',
+      description: data.metaDescription || '',
+      coverImage: data.coverImage || '',
+      category: data.category || '',
+      publishedAt: data.publishedAt || null,
+      // Content is stored as HTML (from ReactQuill)
+      contentHtml: data.content || '',
+    };
+  } catch (err) {
+    console.error('[blog] getPostData failed:', err);
     return null;
   }
-
-  const fileContents = fs.readFileSync(fullPath, 'utf8');
-
-  // Use gray-matter to parse the post metadata section
-  const matterResult = matter(fileContents);
-
-  // Use remark to convert markdown into HTML string
-  const processedContent = await remark()
-    .use(html)
-    .process(matterResult.content);
-  const contentHtml = processedContent.toString();
-
-  // Combine the data with the id and contentHtml
-  return {
-    slug,
-    contentHtml,
-    ...(matterResult.data as { title: string; date: string; description: string; coverImage: string; category: string }),
-  };
 }

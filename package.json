@@ -11,6 +11,9 @@
     "lint": "turbo run lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "0.0.52",
+    "@ai-sdk/react": "^4.0.69",
+    "ai": "3.4.33",
     "glob": "^13.0.6",
     "sharp": "^0.35.3"
   },

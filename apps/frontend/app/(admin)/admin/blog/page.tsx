@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
+import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton, SEOPanel, Field } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 import { useUser } from "@/contexts/UserContext";
@@ -143,51 +143,7 @@ const MOCK_POSTS: BlogPost[] = [
   },
 ];
 
-const inputCls = "w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] text-sm text-[var(--adm-text)] bg-transparent placeholder:text-[var(--adm-text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors";
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={className}>
-      <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function SEOPanel({ form, setForm, loading, onGenerate }: {
-  form: { metaTitle: string; metaDescription: string; keywords: string };
-  setForm: (f: { metaTitle: string; metaDescription: string; keywords: string }) => void;
-  loading: boolean;
-  onGenerate: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-[var(--adm-text-2)] uppercase tracking-wide">SEO Settings</h4>
-        <button
-          id="generate-seo"
-          onClick={onGenerate}
-          disabled={loading}
-          className="flex items-center gap-1 text-[var(--adm-accent)] text-[10px] font-bold hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wide"
-        >
-          {loading ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
-          Generate SEO
-        </button>
-      </div>
-      <Field label="Meta Title" className="flex-1 flex flex-col">
-        <textarea id="seo-meta-title" value={form.metaTitle} onChange={(e) => setForm({ ...form, metaTitle: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan meta title (opsional)..." />
-        <p className="text-[10px] text-[var(--adm-text-3)] mt-1">{form.metaTitle.length}/60 karakter</p>
-      </Field>
-      <Field label="Meta Description" className="flex-[1.5] flex flex-col">
-        <textarea id="seo-meta-desc" value={form.metaDescription} onChange={(e) => setForm({ ...form, metaDescription: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan deskripsi singkat (opsional)..." />
-        <p className="text-[10px] text-[var(--adm-text-3)] mt-1">{form.metaDescription.length}/160 karakter</p>
-      </Field>
-      <Field label="Keywords" className="flex-1 flex flex-col">
-        <textarea id="seo-keywords" value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan kata kunci (opsional)..." />
-      </Field>
-    </div>
-  );
-}
 
 export default function BlogPage() {
   const { user } = useUser();
@@ -229,25 +185,11 @@ export default function BlogPage() {
     
     // Subscribe to Firestore
     const unsub = onSnapshot(collection(db, "blog_posts"), async (snapshot) => {
-      if (snapshot.empty) {
-        // Migration: If empty, write MOCK_POSTS
-        try {
-          const batch = writeBatch(db);
-          MOCK_POSTS.forEach(p => {
-            const docRef = doc(db, "blog_posts", p.id);
-            batch.set(docRef, p);
-          });
-          await batch.commit();
-        } catch (err) {
-          console.error("Failed to migrate initial blog posts", err);
-        }
-      } else {
         const loadedPosts = snapshot.docs.map(doc => ({
           ...doc.data(),
           id: doc.id
         })) as BlogPost[];
         setPosts(loadedPosts);
-      }
     });
 
     // Register Divider Blot dynamically for ReactQuill
@@ -279,7 +221,7 @@ export default function BlogPage() {
     }
   }
 
-  function confirmDelete(id: string) {
+  function confirmDelete(post: BlogPost) {
     setConfirmModal({
       isOpen: true,
       title: "Hapus Artikel",
@@ -288,9 +230,9 @@ export default function BlogPage() {
       confirmVariant: "danger",
       action: async () => {
         try {
-          await deleteDoc(doc(db, "blog_posts", id));
-          setToast({ isVisible: true, message: "Perubahan berhasil disimpan", type: "success" });
-          logActivity({ type: "blog_deleted", title: "Artikel Dihapus", description: `Artikel blog dengan ID ${id} dihapus.`, user: "Admin" });
+          await deleteDoc(doc(db, "blog_posts", post.id));
+          setToast({ isVisible: true, message: "Artikel berhasil dihapus", type: "success" });
+          logActivity({ type: "blog_deleted", title: "Artikel Dihapus", description: `Artikel blog dengan ID ${post.id} dihapus.`, user: "Admin" });
           setView("list");
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         } catch (err) {
@@ -379,7 +321,7 @@ export default function BlogPage() {
           metaDescription: seoForm.metaDescription,
           keywords: seoForm.keywords,
           pinned: contentForm.pinned,
-          publishedAt: asDraft ? (editPost.publishedAt || null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
+          publishedAt: asDraft ? (editPost.publishedAt || null) : (editPost.publishedAt || new Date().toISOString()),
         };
         await setDoc(doc(db, "blog_posts", editPost.id), updated, { merge: true });
       } else {
@@ -392,30 +334,13 @@ export default function BlogPage() {
           status: asDraft ? "draft" : "published",
           coverImage: contentForm.coverImage,
           content: contentForm.content,
-          publishedAt: asDraft ? (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
+          publishedAt: asDraft ? null : new Date().toISOString(),
           metaTitle: seoForm.metaTitle,
           metaDescription: seoForm.metaDescription,
           keywords: seoForm.keywords,
           pinned: contentForm.pinned,
         };
         await setDoc(doc(db, "blog_posts", newId), newPost);
-      }
-
-      // Sync to public page via API when publishing
-      if (!asDraft) {
-        fetch("/api/admin/blog", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            slug: slug || contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-            title: contentForm.title,
-            content: contentForm.content,
-            coverImage: contentForm.coverImage,
-            description: seoForm.metaDescription,
-            category: "",
-            publishedAt: contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString(),
-          }),
-        }).catch(console.error);
       }
 
       setView("list");
@@ -512,7 +437,7 @@ export default function BlogPage() {
               <Archive size={14} strokeWidth={2} className={post.status === "archived" ? "text-amber-500" : ""} />
             </button>
             {canDelete && (
-              <button onClick={() => confirmDelete(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+              <button onClick={() => confirmDelete(post)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
                 <Trash2 size={14} strokeWidth={2} />
               </button>
             )}
@@ -561,7 +486,7 @@ export default function BlogPage() {
           </div>
 
           {sortedPosts.length === 0 ? (
-            <EmptyState icon="article" title="Belum ada artikel" description="Buat artikel pertama Anda atau coba kata kunci lain." action={<button onClick={openNew} className="px-4 py-2 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:brightness-110 transition-all">Buat Artikel</button>} />
+            <EmptyState icon="article" title="Belum ada artikel" description="Buat artikel pertama Anda atau coba kata kunci lain." />
           ) : (
             <div className="mt-4">
               <AdminTable
@@ -618,15 +543,6 @@ export default function BlogPage() {
                     <input type="checkbox" checked={contentForm.pinned} onChange={e => setContentForm({ ...contentForm, pinned: e.target.checked })} className="w-4 h-4 rounded accent-[var(--adm-accent)]" />
                     <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Artikel (Tampil Lebih Awal)</span>
                   </label>
-                  <div className="mt-4">
-                    <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Tanggal Publish (Opsional)</label>
-                    <input 
-                      type="date" 
-                      value={contentForm.publishedAt} 
-                      onChange={(e) => setContentForm({ ...contentForm, publishedAt: e.target.value })} 
-                      className="w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]" 
-                    />
-                  </div>
                 </div>
 
               {/* WYSIWYG Editor */}

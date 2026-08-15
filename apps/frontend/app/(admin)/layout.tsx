@@ -138,12 +138,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && user) {
       if (user.requirePasswordChange && pathname !== "/admin/change-password") {
-        router.push("/admin/change-password");
+        setTimeout(() => router.push("/admin/change-password"), 0);
         return;
       }
       
       if (!user.requirePasswordChange && pathname === "/admin/change-password") {
-        router.push("/admin/dashboard");
+        setTimeout(() => router.push("/admin/dashboard"), 0);
         return;
       }
 
@@ -163,7 +163,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       }
       
       if (matchedRoute && !allowed && pathname !== "/admin/change-password") {
-         router.push("/admin/dashboard");
+         setTimeout(() => router.push("/admin/dashboard"), 0);
       }
     }
   }, [pathname, user, loading, router]);

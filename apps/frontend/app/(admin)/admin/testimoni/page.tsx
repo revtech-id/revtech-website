@@ -601,10 +601,10 @@ export default function TestimonialWhatsAppAdmin() {
                 <span className="text-xs font-semibold text-gray-500 mr-2 uppercase tracking-wide">Status:</span>
                 <select
                   value={activeItem.status}
-                  onChange={e => {
+                  onChange={async e => {
                     const newStatus = e.target.value as any;
-                    const newItems = items.map(item => item.id === activeId ? { ...item, status: newStatus } : item);
-                    saveToStorage(newItems);
+                    if (!activeId) return;
+                    await updateDoc(doc(db, "testimonials", activeId), { status: newStatus });
                     setToast({ isVisible: true, message: `Status diubah menjadi ${newStatus.toUpperCase()}`, type: "success" });
                     logActivity({ type: "testimonial_updated", title: "Status Testimoni Diubah", description: `Status testimoni klien diubah menjadi ${newStatus.toUpperCase()}`, user: "Admin" });
                   }}
@@ -650,9 +650,9 @@ export default function TestimonialWhatsAppAdmin() {
                           </button>
                           
                           <button 
-                            onClick={() => {
-                              const newItems = items.map(i => i.id === activeId ? { ...i, status: 'archived' as any } : i);
-                              saveToStorage(newItems);
+                            onClick={async () => {
+                              if (!activeId) return;
+                              await updateDoc(doc(db, "testimonials", activeId), { status: 'archived' });
                               setChatMenuOpen(false);
                               setToast({ isVisible: true, message: "Chat berhasil diarsipkan", type: "success" });
                               logActivity({ type: "testimonial_updated", title: "Testimoni Diarsipkan", description: `Testimoni klien ${activeItem.name} dipindahkan ke arsip`, user: "Admin" });
@@ -672,11 +672,10 @@ export default function TestimonialWhatsAppAdmin() {
                                 message: "Apakah Anda yakin ingin menghapus seluruh chat dengan klien ini? Tindakan ini tidak dapat dibatalkan.",
                                 confirmText: "Hapus",
                                 confirmVariant: "danger",
-                                action: () => {
-                                  const newItems = items.filter(i => i.id !== activeId);
-                                  saveToStorage(newItems);
-                                  if (newItems.length > 0) setActiveId(newItems[0].id);
-                                  else setActiveId(null);
+                                action: async () => {
+                                  if (!activeId) return;
+                                  await deleteDoc(doc(db, "testimonials", activeId));
+                                  setActiveId(null);
                                   setToast({ isVisible: true, message: "Seluruh chat berhasil dihapus", type: "success" });
                                   logActivity({ type: "testimonial_deleted", title: "Chat Testimoni Dihapus", description: `Seluruh riwayat chat dengan klien ${activeItem.name} dihapus secara permanen`, user: "Admin" });
                                 }

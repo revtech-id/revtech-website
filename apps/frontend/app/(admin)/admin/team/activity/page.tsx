@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { PageHeader, AdminCard, AdminToolbar } from "@/components/admin/ui";
 import { ChevronDown } from "lucide-react";
-import rawActivity from "@/data/admin/activity-log.json";
 import { type ActivityEntry } from "@/lib/activityLog";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 
 function getTimeAgo(dateString: string) {
   const date = new Date(dateString);
@@ -44,56 +45,30 @@ const TYPE_CONFIG: Record<string, { icon: string; label: string }> = {
 
 const FALLBACK_CONFIG = { icon: "info", label: "Aktivitas" };
 
-type CombinedEntry = ActivityEntry & { source: "dynamic" | "static" };
+type CombinedEntry = ActivityEntry & { source: "dynamic" };
 
 export default function ActivityLogPage() {
   const [entries, setEntries] = useState<CombinedEntry[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  const loadEntries = () => {
-    const dynamicRaw: ActivityEntry[] = JSON.parse(localStorage.getItem("revtech_activity_log") || "[]");
-
-    const dynamic: CombinedEntry[] = dynamicRaw.map((e) => ({ ...e, source: "dynamic" as const }));
-
-    // Static entries from JSON — only add ones whose ID doesn't exist in dynamic log
-    const dynamicIds = new Set(dynamic.map((e) => e.id));
-    const staticEntries: CombinedEntry[] = (rawActivity as any[])
-      .filter((e) => !dynamicIds.has(e.id))
-      .map((e) => ({
-        id: e.id,
-        type: e.type,
-        title: e.type === "invoice_paid" ? "Pembayaran Dikonfirmasi"
-          : e.type === "order_created" ? "Pesanan Baru"
-          : e.type === "login" ? "Login"
-          : "Aktivitas Sistem",
-        description: e.description,
-        timestamp: e.timestamp,
-        user: e.user,
-        source: "static" as const,
-      }));
-
-    const combined = [...dynamic, ...staticEntries].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    setEntries(combined);
-  };
-
   useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "revtech_activity_log") {
-        loadEntries();
-      }
-    };
+    const q = query(collection(db, "activity_logs"), orderBy("timestamp", "desc"), limit(200));
 
-    loadEntries();
-    window.addEventListener("activityLogUpdated", loadEntries);
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("activityLogUpdated", loadEntries);
-      window.removeEventListener("storage", handleStorage);
-    };
+    const unsub = onSnapshot(q, (snapshot) => {
+      const dynamicRaw: ActivityEntry[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ActivityEntry[];
+
+      const combined: CombinedEntry[] = dynamicRaw
+        .map((e) => ({ ...e, source: "dynamic" as const }))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setEntries(combined);
+    });
+
+    return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

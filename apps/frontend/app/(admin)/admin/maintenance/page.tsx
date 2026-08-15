@@ -388,38 +388,35 @@ export default function MaintenancePage() {
     const newQuota = Math.max(0, (clientData.modificationsQuota || 0) - 1);
     
     try {
-      // 1. Update Firestore for Maintenance Quota
-      await updateDoc(doc(db, "maintenance", usingModId), {
-        modificationsQuota: newQuota
-      });
-      
-      // 2. Update Local State
-      setClients(prev => prev.map(c => 
-        c.id === usingModId ? { ...c, modificationsQuota: newQuota } : c
-      ));
-
-      // 3. Auto Create Order for tracking in Firestore
-      const newOrder = {
-        id: `ORD-${Date.now().toString().slice(-5)}`,
-        client: clientName,
-        company: clientData.name || "",
-        service: "Jasa Modifikasi",
-        status: "antrean",
-        dp: 0,
-        total: 0,
-        phone: clientData.phone || "",
-        createdAt: new Date().toISOString(),
-        deadline: modDeadline || null,
-        handover: clientData.website || clientData.domain || "",
-        notes: modNotes || "Menggunakan kuota revisi maintenance."
-      };
-      
-      await setDoc(doc(db, "orders", newOrder.id), newOrder);
-      
+      await updateDoc(doc(db, "maintenance", usingModId), { modificationsQuota: newQuota });
+      setClients(prev => prev.map(c => c.id === usingModId ? { ...c, modificationsQuota: newQuota } : c));
     } catch (err) {
-      console.error("Failed to process mod use", err);
-      showToast("Gagal memproses klaim revisi", "error");
+      console.error("Failed to update quota", err);
+      showToast("Gagal memperbarui kuota", "error");
       return;
+    }
+    
+    // Auto Create Order for tracking in Firestore
+    
+    const newOrder = {
+      id: `ORD-${Date.now().toString().slice(-5)}`,
+      client: clientName,
+      company: clientData?.name || "",
+      service: "Jasa Modifikasi",
+      status: "antrean",
+      dp: 0,
+      total: 0,
+      phone: clientData?.phone || "",
+      createdAt: new Date().toISOString(),
+      deadline: modDeadline || null,
+      handover: clientData?.website || clientData?.domain || "",
+      notes: modNotes || "Menggunakan kuota revisi maintenance."
+    };
+    
+    try {
+      await setDoc(doc(db, "orders", newOrder.id), newOrder);
+    } catch (err) {
+      console.error("Failed to create order in Firestore", err);
     }
     
     setUsingModId(null);

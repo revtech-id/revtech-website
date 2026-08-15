@@ -5,7 +5,8 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@/contexts/UserContext";
 
-import activityLog from "@/data/admin/activity-log.json";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 
 interface NotificationItem {
   id: string;
@@ -40,26 +41,23 @@ export function AdminNotificationPopover() {
   const isManager = user?.role === "Superadmin" || user?.role === "Project Manager";
 
   useEffect(() => {
-    const loadNotifs = () => {
-      // Read from the unified activity log (all sources)
-      const localLog: any[] = JSON.parse(localStorage.getItem("revtech_activity_log") || "[]");
-      
-      // Track which IDs have been marked as read (persisted)
-      const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
+    const q = query(collection(db, "activity_logs"), orderBy("timestamp", "desc"), limit(50));
+    
+    const unsub = onSnapshot(q, (snapshot) => {
+      const dbLogs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
 
-      let filteredLog = localLog.filter(entry => entry.notify === true);
+      const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
+      let filteredLog = dbLogs.filter(entry => entry.notify === true);
       
       if (user?.role === "Content Writer") {
-        // Content Writer should not see any leads, orders, or payments
         const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
         filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
       } else if (user?.role === "Developer") {
-        // Developer shouldn't see leads and payments, but CAN see order status
         const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full"];
         filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
-      } else if (user?.role === "Project Manager") {
-        // PM sees almost everything, but maybe we hide system things? 
-        // For now, PM sees same as Superadmin in terms of these types.
       }
 
       const dynamicNotifs: NotificationItem[] = filteredLog.slice(0, 15).map((entry) => ({
@@ -84,48 +82,22 @@ export function AdminNotificationPopover() {
         ) as "order" | "payment" | "system",
       }));
 
-      // Append static activity-log.json entries as fallback if no dynamic data yet
-      if (dynamicNotifs.length === 0) {
-        let staticLogs = activityLog;
-        if (user?.role === "Content Writer") {
-          const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
-          staticLogs = staticLogs.filter((log: any) => !hiddenTypes.includes(log.type));
-        } else if (user?.role === "Developer") {
-          const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full"];
-          staticLogs = staticLogs.filter((log: any) => !hiddenTypes.includes(log.type));
-        }
-
-        const staticNotifs: NotificationItem[] = staticLogs.slice(0, 5).map((log, i) => ({
-          id: log.id,
-          title: log.type === "order_created" ? "Project Baru Masuk!"
-            : log.type === "invoice_paid" ? "Pembayaran Dikonfirmasi"
-            : "Aktivitas Sistem",
-          desc: log.description,
-          time: getTimeAgo(log.timestamp),
-          unread: i < 2,
-          type: (log.type === "order_created" ? "order" : log.type === "invoice_paid" ? "payment" : "system") as "order" | "payment" | "system",
-        }));
-        setNotifs(staticNotifs);
-        return;
-      }
-
       setNotifs(dynamicNotifs);
-    };
+    });
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "revtech_activity_log" || e.key === "revtech_inbox") {
-        loadNotifs();
+      // Still need this for "mark all as read" sync across tabs if we want, or inbox
+      if (e.key === "revtech_inbox") {
+        // inbox handling not implemented here currently
       }
     };
 
-    loadNotifs();
-    window.addEventListener("activityLogUpdated", loadNotifs);
     window.addEventListener("storage", handleStorage);
     return () => {
-      window.removeEventListener("activityLogUpdated", loadNotifs);
+      unsub();
       window.removeEventListener("storage", handleStorage);
     };
-  }, [isManager]);
+  }, [isManager, user]);
 
   const unreadCount = notifs.filter((n) => n.unread).length;
 

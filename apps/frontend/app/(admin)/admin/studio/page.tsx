@@ -73,302 +73,40 @@ function buildStackLabel(stack: ManualStack) {
 
 // ── Mock docs builder ──────────────────────────────────────────────────────────
 
+async function generateDocWithAI(data: ProjectData, stackLabel: string, docType: string): Promise<string> {
+  try {
+    const res = await fetch('/api/admin/studio-generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data, stackLabel, docType })
+    });
+    const json = await res.json();
+    return json.text || `Gagal membuat dokumen ${docType}`;
+  } catch (error) {
+    console.error('Failed to generate doc:', error);
+    return `Gagal membuat dokumen ${docType} (Error)`;
+  }
+}
+
 async function buildMockDocs(data: ProjectData, stackLabel: string): Promise<GeneratedDocs> {
+  const [prd, brand, design] = await Promise.all([
+    generateDocWithAI(data, stackLabel, 'prd'),
+    generateDocWithAI(data, stackLabel, 'brand'),
+    generateDocWithAI(data, stackLabel, 'design')
+  ]);
+
   return {
     agents: await buildAgentsContent({
       projectName: data.projectName || "Proyek Baru",
       idea: data.description,
       techStack: stackLabel,
     }),
-
     engine: await getEngineContent(),
-
-    prd: `# Product Requirement Document (PRD)
-
-## 1. Latar Belakang
-
-${data.description}
-
-## 2. Tujuan Produk
-
-Membangun solusi digital yang memudahkan operasional bisnis, meningkatkan efisiensi, dan memberikan pengalaman pengguna yang premium.
-
-## 3. Tech Stack
-
-${stackLabel}
-
-## 4. User Personas
-
-${data.audience.split(',').map(a => `### ${a.trim()}\n- Akses fitur yang relevan dengan peran ${a.trim()}`).join('\n\n')}
-
-## 5. User Stories
-
-- Sebagai pengguna, saya ingin dapat menggunakan sistem dengan mudah sesuai peran.
-- (Akan disesuaikan lebih spesifik oleh AI berdasarkan role: ${data.audience})
-
-## 6. Fitur Utama
-
-${data.features ? data.features.split('\n').map(f => `- [ ] ${f.trim()}`).join('\n') : '- [ ] Fitur standar'}
-
-## 7. Non-Functional Requirements
-
-- Waktu loading halaman < 2 detik
-- Responsif di semua ukuran layar (mobile-first)
-- WCAG AA accessibility compliance
-- Data dienkripsi saat transit (HTTPS)`,
-
-    brand: `# Brand Guide
-
-## Identitas Visual
-
-### Nama Produk
-${data.projectName}
-
-### Tone of Voice
-- **Profesional** namun tetap hangat
-- **Tegas** dan **to the point**
-- Gunakan bahasa Indonesia yang baik dan formal di konten produk
-
-### Gaya Visual
-- **${data.stylePreference}**
-
-${data.referenceImage ? `### Gambar Referensi\n> ⚠️ **PENTING**: Pengguna telah melampirkan sebuah gambar referensi desain. AI harus mempelajari dan mereplikasi struktur layout, rasio elemen, dan suasana (vibe) dari referensi tersebut ke dalam desain UI.\n${data.referenceNotes ? `> 📝 **Catatan Tambahan untuk Referensi**: ${data.referenceNotes}\n` : ''}` : ''}
-${data.logo ? `### Referensi Logo\n> ⚠️ **PENTING**: Logo telah diunggah oleh pengguna.\n> Warna utama (Primary) dan radius desain (border-radius) harus diekstrak dan disesuaikan secara dinamis dari file logo bisnis tersebut.\n` : ''}
-## Palet Warna
-
-### Warna Utama (Primary)
-${data.logo ? '*(Menyesuaikan warna dominan logo yang diunggah)*' : `\`\`\`
-Primary:    #6366F1  (Indigo-500)
-Primary Dk: #4F46E5  (Indigo-600)
-\`\`\``}
-
-### Warna Pendukung
-\`\`\`
-Success:  #10B981  (Emerald-500)
-Warning:  #F59E0B  (Amber-500)
-Danger:   #EF4444  (Red-500)
-Info:     #3B82F6  (Blue-500)
-\`\`\`
-
-### Warna Netral
-\`\`\`
-Background:   #F8FAFC
-Card:         #FFFFFF
-Border:       #E2E8F0
-Text Primary: #0F172A
-Text Muted:   #64748B
-\`\`\`
-
-## Tipografi
-
-\`\`\`
-Font Utama:   'Inter', sans-serif
-Font Kode:    'JetBrains Mono', monospace
-\`\`\`
-
-### Skala Font
-\`\`\`
-Heading 1:  2.25rem / font-bold
-Heading 2:  1.5rem  / font-bold
-Heading 3:  1.25rem / font-semibold
-Body:       0.875rem / font-medium
-Caption:    0.75rem  / font-semibold
-\`\`\`
-
-## Logo & Ikonografi
-- Gunakan Lucide React sebagai library ikon utama
-- Ikon berukuran 18-24px untuk UI standar
-- Selalu gunakan \`strokeWidth={2}\` sebagai default`,
-
-    design: `# Design System
-
-## Prinsip Desain
-
-1. **Clean & Premium** — hindari elemen dekoratif yang tidak fungsional
-2. **Consistent Spacing** — gunakan skala spacing yang konsisten
-3. **Mobile-First** — desain dari layar terkecil ke terbesar
-4. **Target Gaya Visual** — ${data.stylePreference}
-${data.logo ? '5. **Adaptif terhadap Logo** — Sesuaikan kelengkungan komponen (border-radius) dengan bentuk dominan logo.' : ''}
-
-## Spacing Scale
-
-\`\`\`
-xs:  4px   (0.25rem)
-sm:  8px   (0.5rem)
-md:  12px  (0.75rem)
-lg:  16px  (1rem)
-xl:  24px  (1.5rem)
-2xl: 32px  (2rem)
-3xl: 48px  (3rem)
-\`\`\`
-
-## Border Radius
-
-\`\`\`
-sm:   6px   (rounded)
-md:   12px  (rounded-xl)
-lg:   16px  (rounded-2xl)
-full: 9999px (rounded-full)
-\`\`\`
-
-## Komponen Standar
-
-### AdminButton
-\`\`\`tsx
-import { AdminButton } from "@/components/admin/ui";
-
-// Primary
-<AdminButton variant="primary">Label</AdminButton>
-
-// Secondary
-<AdminButton variant="secondary">Label</AdminButton>
-
-// Danger
-<AdminButton variant="danger" icon={<Trash2 size={16} />}>Hapus</AdminButton>
-\`\`\`
-
-### Input Field
-\`\`\`tsx
-<input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all" />
-\`\`\`
-
-### Card
-\`\`\`tsx
-<div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-  {/* card content */}
-</div>
-\`\`\`
-
-## Animasi (Framer Motion)
-
-\`\`\`tsx
-// Page transition
-initial={{ opacity: 0, y: 8 }}
-animate={{ opacity: 1, y: 0 }}
-exit={{ opacity: 0, y: -8 }}
-transition={{ duration: 0.2 }}
-
-// Hover card
-whileHover={{ y: -2 }}
-transition={{ type: "spring", stiffness: 300 }}
-\`\`\`
-
-## Responsive Breakpoints
-
-\`\`\`
-sm:  640px   (Tablet kecil)
-md:  768px   (Tablet)
-lg:  1024px  (Desktop kecil)
-xl:  1280px  (Desktop)
-2xl: 1536px  (Wide screen)
-\`\`\``,
-
-    architecture: `# Architecture Document
-
-## Tech Stack
-
-${stackLabel}
-
-## Struktur Folder
-
-\`\`\`text
-📦 project-root/
-├── 📁 src/
-│   ├── 📁 app/
-│   │   ├── 📁 (auth)/
-│   │   │   ├── login/page.tsx
-│   │   │   └── register/page.tsx
-│   │   ├── 📁 (dashboard)/
-│   │   │   ├── layout.tsx
-│   │   │   ├── page.tsx
-│   │   │   └── [feature]/page.tsx
-│   │   ├── 📁 api/
-│   │   │   └── [...routes]/route.ts
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── 📁 components/
-│   │   ├── 📁 ui/          ← Komponen atom (Button, Input, Card)
-│   │   ├── 📁 shared/      ← Komponen bersama (Header, Sidebar)
-│   │   └── 📁 features/    ← Komponen per fitur
-│   ├── 📁 lib/
-│   │   ├── utils.ts        ← Helper functions
-│   │   ├── validations.ts  ← Zod schemas
-│   │   └── constants.ts    ← Konstanta global
-│   ├── 📁 hooks/           ← Custom React hooks
-│   ├── 📁 types/           ← TypeScript type definitions
-│   └── 📁 store/           ← State management
-├── 📁 public/
-├── 📄 AGENTS.md
-├── 📄 .env.local
-├── 📄 next.config.js
-└── 📄 package.json
-\`\`\`
-
-## State Management
-
-- **Server State:** Supabase realtime / SWR untuk data fetching
-- **Client State:** useState untuk state lokal komponen
-- **Global State:** Hanya jika data benar-benar shared (Zustand/Context)
-
-## Data Flow
-
-\`\`\`
-User Action → Component → Server Action / API Route → Database → Response → UI Update
-\`\`\`
-
-## Autentikasi
-
-- Gunakan session-based auth (Supabase Auth / NextAuth.js)
-- Proteksi route di middleware.ts
-- Role check di server-side sebelum render`,
-
-    manifest: `# Manifest — Task Checklist
-
-> Kerjakan dari atas ke bawah. Tandai \`[x]\` setelah setiap task selesai.
-> Pastikan sudah membaca semua dokumen di AGENTS.md sebelum mulai.
-
-## Fase 1: Setup Project
-
-- [ ] Inisialisasi project dengan tech stack: ${stackLabel}
-- [ ] Konfigurasi \`.env.local\` dengan variabel yang diperlukan
-- [ ] Setup Tailwind CSS dengan palet warna dari \`docs/brand.md\`
-- [ ] Install dependensi utama (Framer Motion, Lucide React, Zod)
-- [ ] Setup TypeScript strict mode
-
-## Fase 2: Fondasi & Layout
-
-- [ ] Buat layout utama (RootLayout, DashboardLayout)
-- [ ] Implementasi sistem routing sesuai \`docs/architecture.md\`
-- [ ] Buat komponen UI dasar (Button, Input, Card, Badge) sesuai \`docs/design.md\`
-- [ ] Buat komponen Sidebar dan Header navigasi
-- [ ] Setup dark mode / light mode toggle
-
-## Fase 3: Autentikasi
-
-- [ ] Implementasi halaman Login
-- [ ] Implementasi halaman Register
-- [ ] Setup middleware untuk proteksi route
-- [ ] Implementasi role-based access control sesuai \`docs/prd.md\`
-
-## Fase 4: Fitur Utama
-
-- [ ] Buat halaman Dashboard dengan statistik
-- [ ] Implementasi manajemen data utama (CRUD)
-- [ ] Buat sistem notifikasi real-time
-- [ ] Implementasi laporan dan ekspor data
-
-## Fase 5: Finishing
-
-- [ ] Testing semua fitur secara menyeluruh
-- [ ] Optimasi performa (lazy loading, image optimization)
-- [ ] Pastikan responsif di semua ukuran layar
-- [ ] Deployment ke: ${stackLabel.includes("Vercel") ? "Vercel" : "production server"}
-
-## Catatan Penting
-
-- Setiap komponen harus reusable dan tidak hardcode data
-- Semua form harus ada validasi dengan Zod
-- Kode harus bisa di-review oleh engineer lain tanpa konteks tambahan`,
+    prd,
+    brand,
+    design,
+    architecture: `# Architecture\n(Otomatis dibuat oleh AI berdasarkan PRD dan Stack)`,
+    manifest: `# Manifest\n(Otomatis dibuat oleh AI berdasarkan PRD)`
   };
 }
 
@@ -523,7 +261,7 @@ export default function StudioPage() {
         type: "system",
         title: "Dokumen SOP",
         description: `${sopTab === "engine" ? "RevTech Engine" : "AGENTS Template"} diperbarui`,
-        user: user.name,
+        user: user?.name || "Admin",
       });
       setSopSaved(true);
       setTimeout(() => setSopSaved(false), 3000);
@@ -621,7 +359,7 @@ export default function StudioPage() {
         type: "studio_export",
         title: "Dokumen Proyek Di-generate",
         description: `AI berhasil merancang arsitektur dan membuat dokumen untuk proyek "${projectData.projectName || 'Baru'}"`,
-        user: user.name,
+        user: user?.name || "Admin",
       });
     } catch (err) {
       setError("Gagal melakukan generate dokumen.");

@@ -129,24 +129,11 @@ export default function ProdukDigitalPage() {
     setIsClient(true);
     
     const unsub = onSnapshot(collection(db, "digital_products"), async (snapshot) => {
-      if (snapshot.empty) {
-        try {
-          const batch = writeBatch(db);
-          MOCK_INITIAL.forEach(p => {
-            const docRef = doc(db, "digital_products", p.id);
-            batch.set(docRef, p);
-          });
-          await batch.commit();
-        } catch (err) {
-          console.error("Failed to migrate initial produk digital", err);
-        }
-      } else {
         const loaded = snapshot.docs.map(doc => ({
           ...doc.data(),
           id: doc.id
         })) as ProdukDigital[];
         setItems(loaded);
-      }
     });
 
     import("react-quill-new").then((mod) => {

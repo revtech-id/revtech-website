@@ -91,8 +91,9 @@ export default function LoginPage() {
         }
       }
       
-      // Login berhasil — reset rate limit
+      // Login berhasil — reset rate limit dan set session cookie synchronously
       setRateLimit({ count: 0, lockedUntil: 0 });
+      document.cookie = `_auth_token=1; path=/; SameSite=Strict`;
       router.push("/admin/dashboard");
     } catch (error: any) {
       // Catat gagal login

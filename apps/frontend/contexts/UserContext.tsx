@@ -72,7 +72,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 console.error("Akun karyawan dinonaktifkan.");
                 setUser(null);
                 await firebaseSignOut(auth);
-                if (pathname.startsWith("/admin")) router.push("/");
+                if (pathname.startsWith("/admin")) setTimeout(() => router.push("/"), 0);
                 setLoading(false);
                 return;
               }
@@ -104,7 +104,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             if (pathname.startsWith("/admin")) {
               const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
               sessionStorage.removeItem('logout_redirect');
-              router.push(redirectUrl);
+              setTimeout(() => router.push(redirectUrl), 0);
             }
           }
         } catch (error) {
@@ -119,7 +119,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (pathname.startsWith("/admin")) {
            const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
            sessionStorage.removeItem('logout_redirect');
-           router.push(redirectUrl);
+           setTimeout(() => router.push(redirectUrl), 0);
         }
       }
       setLoading(false);
@@ -134,7 +134,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUser(null);
     const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
     sessionStorage.removeItem('logout_redirect');
-    router.push(redirectUrl);
+    setTimeout(() => router.push(redirectUrl), 0);
   };
 
   return (

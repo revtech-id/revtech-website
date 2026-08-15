@@ -40,7 +40,7 @@ export default function SystemPage() {
   const { user, setUser } = useUser();
   const [form, setForm] = useState<FormState>({
     ...DEFAULTS,
-    founderName: user.name,
+    founderName: user?.name || "",
   });
   
   const [saved, setSaved] = useState(false);
@@ -73,7 +73,7 @@ export default function SystemPage() {
   const handleReset = () => {
     setForm({
       ...DEFAULTS,
-      founderName: user.name,
+      founderName: user?.name || "",
     });
     setLogoPreview(null);
   };
@@ -87,8 +87,8 @@ export default function SystemPage() {
     setIsSaving(true);
     
     setTimeout(() => {
-      if (form.founderName !== user.name) {
-        setUser({ ...user, name: form.founderName });
+      if (user && form.founderName !== user.name) {
+        setUser({ ...user, name: form.founderName } as any);
       }
       
       logActivity({

@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getSortedPostsData } from '@/lib/blog';
 import { getSortedPortfoliosData } from '@/lib/portfolio';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://hi-revtech.my.id';
   
   // Rute statis
@@ -22,7 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   // Rute dinamis blog
-  const posts = getSortedPostsData();
+  const posts = await getSortedPostsData();
   const blogRoutes = posts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.date),
@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   // Rute dinamis portofolio
-  const portfolios = getSortedPortfoliosData();
+  const portfolios = await getSortedPortfoliosData();
   const portfolioRoutes = portfolios.map((item) => ({
     url: `${baseUrl}/portofolio/${item.slug}`,
     lastModified: new Date(item.date),

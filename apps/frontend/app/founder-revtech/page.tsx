@@ -40,6 +40,8 @@ export default function LoginPage() {
          return;
       }
 
+      // Set session cookie synchronously before routing to avoid middleware redirect loop
+      document.cookie = `_auth_token=1; path=/; SameSite=Strict`;
       router.push("/admin/dashboard");
     } catch (error: any) {
       alert(error.message || "Gagal masuk dengan Google");

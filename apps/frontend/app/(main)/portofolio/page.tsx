@@ -12,8 +12,8 @@ export const metadata: Metadata = {
     description: "Kumpulan mahakarya inovasi digital RevTech, mulai dari arsitektur website, katalog produk, hingga sistem kustom terintegrasi.",
 };
 
-export default function Portofolio() {
-    const portfolios = getSortedPortfoliosData();
+export default async function Portofolio() {
+    const portfolios = await getSortedPortfoliosData();
 
     return (
         <Suspense fallback={<div className="min-h-screen bg-gray-50/50"></div>}>

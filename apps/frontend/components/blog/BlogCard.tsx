@@ -34,11 +34,7 @@ export default function BlogCard({ post, className = "" }: BlogCardProps) {
                     <div className="absolute inset-0 bg-blue-900/0 group-hover:bg-blue-900/5 transition-colors duration-500"></div>
                 </div>
                 <div className="p-6 md:p-8 flex flex-col flex-1">
-                    {post.publishedAt && (
-                        <div className="text-xs font-bold text-blue-600 mb-2">
-                            {new Date(post.publishedAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-                        </div>
-                    )}
+                    {/* Date removed per user request */}
                     <h4 className="text-[17px] md:text-lg font-bold text-gray-900 mb-3 line-clamp-2 leading-snug">{post.title}</h4>
                     <p className="text-xs sm:text-[13px] text-gray-500 line-clamp-2 leading-relaxed font-medium mb-6">{post.description}</p>
                     

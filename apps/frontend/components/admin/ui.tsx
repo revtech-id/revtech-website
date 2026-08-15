@@ -49,6 +49,51 @@ export function AdminButton({
   );
 }
 
+const inputCls = "w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] text-sm text-[var(--adm-text)] bg-transparent placeholder:text-[var(--adm-text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors";
+
+export function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+export function SEOPanel({ form, setForm, loading, onGenerate }: {
+  form: { metaTitle: string; metaDescription: string; keywords: string };
+  setForm: (f: { metaTitle: string; metaDescription: string; keywords: string }) => void;
+  loading: boolean;
+  onGenerate: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 h-full">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-[var(--adm-text-2)] uppercase tracking-wide">SEO Settings</h4>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading}
+          className="flex items-center gap-1 text-[var(--adm-accent)] text-[10px] font-bold hover:brightness-110 transition-all disabled:opacity-50 uppercase tracking-wide"
+        >
+          {loading ? <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-[14px]">auto_awesome</span>}
+          Generate SEO
+        </button>
+      </div>
+      <Field label="Meta Title" className="flex-1 flex flex-col">
+        <textarea value={form.metaTitle} onChange={(e) => setForm({ ...form, metaTitle: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan meta title (opsional)..." />
+        <p className="text-[10px] text-[var(--adm-text-3)] mt-1">{form.metaTitle.length}/60 karakter</p>
+      </Field>
+      <Field label="Meta Description" className="flex-[1.5] flex flex-col">
+        <textarea value={form.metaDescription} onChange={(e) => setForm({ ...form, metaDescription: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan deskripsi singkat (opsional)..." />
+        <p className="text-[10px] text-[var(--adm-text-3)] mt-1">{form.metaDescription.length}/160 karakter</p>
+      </Field>
+      <Field label="Keywords" className="flex-1 flex flex-col">
+        <textarea value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} className={`${inputCls} flex-1 resize-none`} placeholder="Masukkan kata kunci (opsional)..." />
+      </Field>
+    </div>
+  );
+}
 // ── StatCard ──────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
