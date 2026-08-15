@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import {
   LayoutDashboard,
   Inbox,
@@ -32,18 +34,18 @@ import { AdminModal, AdminButton } from "@/components/admin/ui";
 import { Separator } from "@/components/ui/separator";
 
 export const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
-  { label: "Leads", icon: Inbox, href: "/admin/inbox" },
-  { label: "Projects", icon: ShoppingBag, href: "/admin/pesanan" },
-  { label: "Maintenance", icon: Server, href: "/admin/maintenance" },
-  { label: "Invoice", icon: Receipt, href: "/admin/invoice" },
-  { label: "RevTech Studio", icon: Sparkles, href: "/admin/studio" },
-  { label: "Blog", icon: FileText, href: "/admin/blog" },
-  { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio" },
-  { label: "Testimoni", icon: Star, href: "/admin/testimoni" },
-  { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero" },
-  { label: "Jasa Web", icon: Globe, href: "/admin/jasa-web" },
-  { label: "Produk Digital", icon: Package, href: "/admin/produk-digital" },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard", roles: ["Superadmin", "Project Manager", "Developer", "Content Writer"] },
+  { label: "Leads", icon: Inbox, href: "/admin/leads", roles: ["Superadmin", "Project Manager"] },
+  { label: "Projects", icon: ShoppingBag, href: "/admin/projects", roles: ["Superadmin", "Project Manager", "Developer"] },
+  { label: "Maintenance", icon: Server, href: "/admin/maintenance", roles: ["Superadmin", "Project Manager"] },
+  { label: "Invoice", icon: Receipt, href: "/admin/invoice", roles: ["Superadmin", "Project Manager"] },
+  { label: "RevTech Studio", icon: Sparkles, href: "/admin/studio", roles: ["Superadmin"] },
+  { label: "Blog", icon: FileText, href: "/admin/blog", roles: ["Superadmin", "Content Writer"] },
+  { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio", roles: ["Superadmin", "Developer"] },
+  { label: "Testimoni", icon: Star, href: "/admin/testimoni", roles: ["Superadmin", "Project Manager"] },
+  { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero", roles: ["Superadmin"] },
+  { label: "Jasa Web", icon: Globe, href: "/admin/jasa-web", roles: ["Superadmin"] },
+  { label: "Produk Digital", icon: Package, href: "/admin/produk-digital", roles: ["Superadmin"] },
 ];
 
 export function SidebarProfileSection() {
@@ -51,6 +53,8 @@ export function SidebarProfileSection() {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { user } = useUser();
   const pathname = usePathname();
+
+  if (!user) return null;
 
   return (
     <div className="p-3.5 shrink-0 relative">
@@ -92,11 +96,12 @@ export function SidebarProfileSection() {
           {/* Options */}
           <div className="space-y-0.5">
             {[
-              { label: "Profil", icon: User, href: "/admin/profile" },
-              { label: "Activity Log", icon: History, href: "/admin/team/activity" },
-              { label: "Pengaturan", icon: Settings, href: "/admin/system" },
-              { label: "Tempat Sampah", icon: Trash2, href: "/admin/trash" },
-            ].map((opt) => {
+              { label: "Profil", icon: User, href: "/admin/profile", roles: ["Superadmin", "Project Manager", "Developer", "Content Writer"] },
+              { label: "Manajemen Tim", icon: Users, href: "/admin/team", roles: ["Superadmin"] },
+              { label: "Activity Log", icon: History, href: "/admin/team/activity", roles: ["Superadmin"] },
+              { label: "Pengaturan", icon: Settings, href: "/admin/system", roles: ["Superadmin"] },
+              { label: "Tempat Sampah", icon: Trash2, href: "/admin/trash", roles: ["Superadmin", "Project Manager"] },
+            ].filter(opt => opt.roles.map(r => r.toLowerCase()).includes((user?.role || "Project Manager").toLowerCase())).map((opt) => {
               const isActive = pathname === opt.href;
               const Icon = opt.icon;
               return (
@@ -167,9 +172,19 @@ export function SidebarProfileSection() {
           </AdminButton>
           <AdminButton
             variant="danger"
-            onClick={() => {
+            onClick={async () => {
               logActivity({ type: "system", title: "Logout", description: "Admin telah keluar dari dashboard.", user: "Admin" });
-              window.location.href = "/";
+              if (user?.role === "Superadmin") {
+                sessionStorage.setItem('logout_redirect', '/founder-revtech');
+              } else {
+                sessionStorage.setItem('logout_redirect', '/admin-revtech');
+              }
+              try {
+                await signOut(auth);
+              } catch (e) {
+                console.error("Logout error", e);
+              }
+              // Pengalihan akan ditangani oleh UserContext.tsx via sessionStorage
             }}
           >
             Ya, Keluar
@@ -182,6 +197,7 @@ export function SidebarProfileSection() {
 
 export function VerticalNav({ onItemClick, dark }: { onItemClick?: () => void, dark?: boolean }) {
   const pathname = usePathname();
+  const { user } = useUser();
 
   return (
     <div className="flex flex-col h-full">
@@ -198,7 +214,7 @@ export function VerticalNav({ onItemClick, dark }: { onItemClick?: () => void, d
 
           {/* Navigation List */}
           <div className="space-y-1.5 pt-6">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter(item => item.roles.map(r => r.toLowerCase()).includes((user?.role || "Project Manager").toLowerCase())).map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));

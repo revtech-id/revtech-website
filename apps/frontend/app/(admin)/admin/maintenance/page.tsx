@@ -8,6 +8,8 @@ import rawClients from "@/data/admin/clients.json";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { logActivity } from "@/lib/activityLog";
+import { db } from "@/lib/firebase";
+import { collection, doc, setDoc, query, getDocs, updateDoc, where, onSnapshot, addDoc, deleteDoc, orderBy } from "firebase/firestore";
 
 const SERVICE_TABS = ["Semua", "Jasa Website", "Produk Digital", "Custom Project"];
 
@@ -251,105 +253,35 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     setIsClient(true);
-    const savedClients = localStorage.getItem("revtech_clients");
-    let currentClients: Client[] = savedClients ? JSON.parse(savedClients) : [];
     
-    // Auto-sync from finished orders
-    const savedOrders = localStorage.getItem("revtech_orders");
-    if (savedOrders) {
-      const orders = JSON.parse(savedOrders);
-      const finishedOrders = orders.filter((o: any) => o.status === "selesai");
-
-      let changed = false;
-      finishedOrders.forEach((o: any) => {
-        const isTerimaBeres = o.handoverOption?.includes("Terima Beres");
-
-        // Derive domain from handover link (e.g. "https://majujaya.com" → "majujaya.com")
-        let derivedDomain: string | null = null;
-        if (o.handover) {
-          try {
-            derivedDomain = new URL(o.handover.startsWith("http") ? o.handover : `https://${o.handover}`).hostname;
-          } catch {
-            derivedDomain = o.handover;
-          }
-        }
-
-        const builtClient: Client = {
-          id: o.id,
-          name: o.company || o.client,
-          contact: o.client,
-          phone: o.phone,
-          email: "",
-          website: (o.handover && o.handover.startsWith("http")) ? o.handover : (derivedDomain ? `https://${derivedDomain}` : null),
-          websiteStatus: "active",
-          joinDate: (o.createdAt || "").split("T")[0],
-          totalSpend: o.total || 0,
-          activeProjects: 0,
-          domain: derivedDomain,
-          domainExpiry: o.nextBillingDate || null,
-          hosting: isTerimaBeres ? "RevTech Managed" : null,
-          hostingExpiry: isTerimaBeres ? (o.nextBillingDate || null) : null,
-          service: o.service,
-          handover: o.handoverOption || undefined,
-          recurringFee: o.recurringFee || undefined,
-        };
-
-        const existing = currentClients.find(c => c.id === o.id);
-        if (!existing) {
-          if (isTerimaBeres) {
-            changed = true;
-            currentClients.unshift(builtClient);
-          }
-        } else {
-          if (!isTerimaBeres) {
-            changed = true;
-            currentClients = currentClients.filter(c => c.id !== o.id);
-          } else {
-            // Fix previous bug where name and contact were swapped
-            if (existing.name === o.client && existing.contact === (o.company || o.client) && o.company) {
-              changed = true;
-              existing.name = o.company;
-              existing.contact = o.client;
+    const q = query(collection(db, "maintenance"), orderBy("joinDate", "desc"));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const firestoreClients: Client[] = [];
+      snapshot.forEach(document => {
+        firestoreClients.push({ id: document.id, ...document.data() } as Client);
+      });
+      setClients(firestoreClients);
+      
+      // Monthly Auto-Reset Quota for Plus Clients
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const savedMonth = localStorage.getItem("revtech_last_quota_reset_month");
+      
+      if (savedMonth !== currentMonth && firestoreClients.length > 0) {
+        let resetOccurred = false;
+        for (const c of firestoreClients) {
+          if ((c.handover || "").toLowerCase().includes("plus")) {
+            if (c.modificationsQuota !== 1) {
+               resetOccurred = true;
+               await updateDoc(doc(db, "maintenance", c.id), { modificationsQuota: 1 });
             }
           }
         }
-      });
-
-      if (changed) {
-        localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+        localStorage.setItem("revtech_last_quota_reset_month", currentMonth);
       }
-    }
-    
-    // Monthly Auto-Reset Quota for Plus Clients
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const savedMonth = localStorage.getItem("revtech_last_quota_reset_month");
-    
-    if (savedMonth !== currentMonth) {
-      let resetOccurred = false;
-      currentClients = currentClients.map(c => {
-        if ((c.handover || "").toLowerCase().includes("plus")) {
-          if (c.modificationsQuota !== 1) {
-             resetOccurred = true;
-             return { ...c, modificationsQuota: 1 };
-          }
-        }
-        return c;
-      });
-      
-      localStorage.setItem("revtech_last_quota_reset_month", currentMonth);
-      if (resetOccurred || !savedClients) {
-        localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
-      }
-    }
+    });
 
-    setClients(currentClients);
-    if (!savedClients && savedMonth === currentMonth) localStorage.setItem("revtech_clients", JSON.stringify(currentClients));
+    return () => unsubscribe();
   }, []);
-
-  function save(updated: Client[]) {
-    setClients(updated);
-    localStorage.setItem("revtech_clients", JSON.stringify(updated));
-  }
 
   function handleEdit(c: Client) {
     setForm({
@@ -376,7 +308,7 @@ export default function MaintenancePage() {
     });
   }
 
-  function confirmRenew() {
+  async function confirmRenew() {
     if (!renewingClient || !renewingClient.domainExpiry) return;
     const c = renewingClient;
 
@@ -394,62 +326,60 @@ export default function MaintenancePage() {
       ...c,
       domainExpiry: renewForm.newExpiryDate,
       hostingExpiry: updatedHostingExpiry,
-      websiteStatus: "active" as "active", // Pastikan status aktif
-      totalSpend: (c.totalSpend || 0) + renewForm.amountPaid, // Tambahkan tagihan ke total pengeluaran
+      websiteStatus: "active" as "active",
+      totalSpend: (c.totalSpend || 0) + renewForm.amountPaid,
       unpaidFee: finalUnpaidFee,
       modificationsQuota: (c.handover || "").toLowerCase().includes("plus") ? 1 : (c.modificationsQuota || 0),
     };
 
-    save(clients.map(client => client.id === c.id ? updatedClient : client));
-    
-    if (selectedClient && selectedClient.id === c.id) {
-      setSelectedClient(updatedClient);
+    try {
+      await updateDoc(doc(db, "maintenance", c.id), updatedClient);
+      if (selectedClient && selectedClient.id === c.id) setSelectedClient(updatedClient);
+      setRenewingClient(null);
+      showToast(`Layanan ${c.name} berhasil diperpanjang`);
+      logActivity({ type: "system", title: "Layanan Diperpanjang", description: `Layanan maintenance untuk klien ${c.name} diperpanjang hingga ${renewForm.newExpiryDate}.`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal memperpanjang layanan", "error");
     }
-    
-    setRenewingClient(null);
-    showToast(`Layanan ${c.name} berhasil diperpanjang`);
-    logActivity({ type: "system", title: "Layanan Diperpanjang", description: `Layanan maintenance untuk klien ${c.name} diperpanjang hingga ${renewForm.newExpiryDate}.`, user: "Admin" });
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     const clientToDelete = clients.find(c => c.id === id);
     if (clientToDelete) {
-      // Simpan ke trash
-      const savedTrash = localStorage.getItem("revtech_clients_trash");
-      const currentTrash = savedTrash ? JSON.parse(savedTrash) : [];
-      const trashItem = {
-        ...clientToDelete,
-        deletedAt: new Date().toISOString(),
-        deletedBy: "Admin"
-      };
-      localStorage.setItem("revtech_clients_trash", JSON.stringify([trashItem, ...currentTrash]));
-    }
+      try {
+        const trashItem = {
+          ...clientToDelete,
+          deletedAt: new Date().toISOString(),
+          deletedBy: "Admin",
+          _module: "Klien"
+        };
+        await setDoc(doc(db, "trash", id), trashItem);
+        await deleteDoc(doc(db, "maintenance", id));
 
-    save(clients.filter(c => c.id !== id));
-    
-    // Cascade delete: hapus tagihan maintenance terkait
-    try {
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      if (savedInvoices) {
-        let invoiceList = JSON.parse(savedInvoices);
-        invoiceList = invoiceList.filter((i: any) => i.orderId !== id);
-        localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+        // Cascade delete: hapus tagihan maintenance terkait
+        const qInvoices = query(collection(db, "invoices"), where("orderId", "==", id));
+        const invoiceDocs = await getDocs(qInvoices);
+        invoiceDocs.forEach(async (invDoc) => {
+          await deleteDoc(doc(db, "invoices", invDoc.id));
+        });
+
+        setDeletingId(null);
+        if (selectedClient?.id === id) setSelectedClient(null);
+        showToast("Data klien beserta tagihannya berhasil dihapus");
+        logActivity({ type: "system", title: "Klien Maintenance Dihapus", description: `Klien maintenance dengan ID ${id} dihapus.`, user: "Admin" });
+      } catch (err) {
+        console.error("Failed to delete client", err);
+        showToast("Gagal menghapus klien", "error");
       }
-    } catch (err) {
-      console.error("Failed to cascade delete invoices from maintenance", err);
     }
-
-    setDeletingId(null);
-    if (selectedClient?.id === id) setSelectedClient(null);
-    showToast("Data klien beserta tagihannya berhasil dihapus");
-    logActivity({ type: "system", title: "Klien Maintenance Dihapus", description: `Klien maintenance dengan ID ${id} dihapus.`, user: "Admin" });
   }
 
   function handleMessageClick(c: Client) {
     setSelectedClient(c);
   }
 
-  function confirmUseMod() {
+  async function confirmUseMod() {
     if (!usingModId) return;
     const clientName = clients.find(c => c.id === usingModId)?.name || "Klien";
     
@@ -460,10 +390,7 @@ export default function MaintenancePage() {
       return c;
     }));
     
-    // Auto Create Order for tracking
-    const savedOrders = localStorage.getItem("revtech_orders");
-    const orders = savedOrders ? JSON.parse(savedOrders) : [];
-    
+    // Auto Create Order for tracking in Firestore
     const clientData = clients.find(c => c.id === usingModId);
     
     const newOrder = {
@@ -481,8 +408,11 @@ export default function MaintenancePage() {
       notes: modNotes || "Menggunakan kuota revisi maintenance."
     };
     
-    orders.unshift(newOrder);
-    localStorage.setItem("revtech_orders", JSON.stringify(orders));
+    try {
+      await setDoc(doc(db, "orders", newOrder.id), newOrder);
+    } catch (err) {
+      console.error("Failed to create order in Firestore", err);
+    }
     
     setUsingModId(null);
     setModNotes("");
@@ -491,11 +421,15 @@ export default function MaintenancePage() {
     logActivity({ type: "system", title: "Klaim Kuota Revisi", description: `Klien ${clientName} menggunakan kuota revisi maintenance.`, user: "Admin" });
   }
 
-  function updateSelectedClient(field: keyof Client, value: any) {
+  async function updateSelectedClient(field: keyof Client, value: any) {
     if (!selectedClient) return;
     const updatedClient = { ...selectedClient, [field]: value };
-    setSelectedClient(updatedClient);
-    save(clients.map(c => c.id === updatedClient.id ? updatedClient : c));
+    try {
+      await updateDoc(doc(db, "maintenance", updatedClient.id), { [field]: value });
+      setSelectedClient(updatedClient);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   function getAutoDraft(c: Client | null) {
@@ -510,50 +444,43 @@ export default function MaintenancePage() {
     return draft;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    let updated = [...clients];
     if (editingId) {
-      updated = clients.map(c => c.id === editingId ? {
-        ...c, name: form.name, contact: form.contact, phone: form.phone,
+      const updatedClient = {
+        name: form.name, contact: form.contact, phone: form.phone,
         email: form.email, website: form.website || null, domain: form.domain || null,
         domainExpiry: form.domainExpiry || null, hosting: form.hosting || null,
         hostingExpiry: form.hostingExpiry || null, websiteStatus: form.websiteStatus, service: form.service || undefined,
         handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
         modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : undefined
-      } : c);
-
-      // Sinkronisasi perubahan ke invoice yang berstatus pending (jika ada)
+      };
+      
       try {
-        const savedInvoices = localStorage.getItem("revtech_invoices");
-        if (savedInvoices) {
-          let invoiceList = JSON.parse(savedInvoices);
-          let invoiceChanged = false;
-          invoiceList = invoiceList.map((inv: any) => {
-            // Update invoice jika orderId cocok, type "maintenance", dan status belum dibayar
-            if (inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending") {
-              invoiceChanged = true;
-              return {
-                ...inv,
-                client: form.contact || form.name,
-                company: form.name,
-                service: form.service || inv.service,
-                phone: form.phone || inv.phone,
-                amount: typeof form.recurringFee === "number" ? form.recurringFee : inv.amount
-              };
-            }
-            return inv;
+        await updateDoc(doc(db, "maintenance", editingId), updatedClient);
+
+        // Sinkronisasi perubahan ke invoice yang berstatus pending (jika ada)
+        const qInvoices = query(
+          collection(db, "invoices"), 
+          where("orderId", "==", editingId), 
+          where("type", "==", "maintenance"), 
+          where("status", "==", "pending")
+        );
+        const invoiceDocs = await getDocs(qInvoices);
+        invoiceDocs.forEach(async (invDoc) => {
+          const data = invDoc.data();
+          await updateDoc(doc(db, "invoices", invDoc.id), {
+            client: form.contact || form.name,
+            company: form.name,
+            service: form.service || data.service,
+            phone: form.phone || data.phone,
+            amount: typeof form.recurringFee === "number" ? form.recurringFee : data.amount
           });
-          if (invoiceChanged) {
-            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-            // Trigger event for other tabs to catch up (optional)
-            window.dispatchEvent(new Event("storage"));
-          }
-        }
+        });
+        logActivity({ type: "system", title: "Data Klien Maintenance Diedit", description: `Profil klien diperbarui untuk ${form.name}.`, user: "Admin" });
       } catch (err) {
-        console.error("Failed to sync invoice updates from maintenance edit", err);
+        console.error("Failed to sync invoice updates to Firestore", err);
       }
-      logActivity({ type: "system", title: "Data Klien Maintenance Diedit", description: `Profil klien diperbarui untuk ${form.name}.`, user: "Admin" });
     } else {
       const newClient = {
         id: `CLN-${Date.now().toString().slice(-5)}`,
@@ -566,10 +493,15 @@ export default function MaintenancePage() {
         handover: form.handover || undefined, recurringFee: form.recurringFee || undefined,
         modificationsQuota: typeof form.modificationsQuota === 'number' ? form.modificationsQuota : ((form.handover || "").toLowerCase().includes("plus") ? 1 : 0)
       };
-      updated = [newClient, ...clients];
-      logActivity({ type: "client_added", title: "Klien Maintenance Baru", description: `Klien maintenance baru ditambahkan: ${form.name}.`, user: "Admin" });
+      
+      try {
+        await setDoc(doc(db, "maintenance", newClient.id), newClient);
+        logActivity({ type: "client_added", title: "Klien Maintenance Baru", description: `Klien maintenance baru ditambahkan: ${form.name}.`, user: "Admin" });
+      } catch (err) {
+        console.error(err);
+      }
     }
-    save(updated);
+    
     setView("list");
     setEditingId(null);
     setForm(EMPTY_FORM);
@@ -1049,14 +981,16 @@ export default function MaintenancePage() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className={`fixed bottom-6 right-6 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 z-[100] ${
-              toastMessage.type === 'success' 
-                ? 'bg-emerald-500 text-white' 
-                : 'bg-red-500 text-white'
-            }`}
+            className="fixed bottom-6 right-6 z-[100] bg-[var(--adm-card)] border border-[var(--adm-border)] shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3"
           >
-            {toastMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-            <span className="font-medium text-sm">{toastMessage.text}</span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              toastMessage.type === 'success' 
+                ? 'bg-[var(--adm-success)]/20 text-[var(--adm-success)]' 
+                : 'bg-[var(--adm-danger)]/20 text-[var(--adm-danger)]'
+            }`}>
+              {toastMessage.type === 'success' ? <CheckCircle2 size={18} strokeWidth={2.5} /> : <AlertTriangle size={18} strokeWidth={2.5} />}
+            </div>
+            <p className="text-[13px] font-bold text-[var(--adm-text)]">{toastMessage.text}</p>
           </motion.div>
         )}
       </AnimatePresence>

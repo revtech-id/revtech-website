@@ -49,7 +49,14 @@ export default function ProfilePage() {
   const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function showToast(text: string, type: 'success' | 'error' = 'success') {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,7 +100,7 @@ export default function ProfilePage() {
     try {
       const res = await updateProfile({ profile });
       if (res.success) {
-        setSaved(true);
+        showToast("Perubahan profil berhasil disimpan.");
         setUser({ ...user, ...profile, avatar: avatarPreview });
         
         logActivity({
@@ -103,13 +110,11 @@ export default function ProfilePage() {
           user: user.name,
         });
 
-
-        setTimeout(() => setSaved(false), 2500);
       } else {
-        alert(res.message);
+        showToast(res.message, "error");
       }
     } catch (err) {
-      alert("Terjadi kesalahan saat menyimpan profil.");
+      showToast("Terjadi kesalahan saat menyimpan profil.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -306,12 +311,26 @@ export default function ProfilePage() {
         />
       )}
 
-      <AdminToast
-        isVisible={saved}
-        message="Perubahan profil berhasil disimpan."
-        type="success"
-        onClose={() => setSaved(false)}
-      />
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[100] bg-[var(--adm-card)] border border-[var(--adm-border)] shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3"
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              toastMessage.type === 'success' 
+                ? 'bg-[var(--adm-success)]/20 text-[var(--adm-success)]' 
+                : 'bg-[var(--adm-danger)]/20 text-[var(--adm-danger)]'
+            }`}>
+              {toastMessage.type === 'success' ? <CheckCircle2 size={18} strokeWidth={2.5} /> : <AlertTriangle size={18} strokeWidth={2.5} />}
+            </div>
+            <p className="text-[13px] font-bold text-[var(--adm-text)]">{toastMessage.text}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

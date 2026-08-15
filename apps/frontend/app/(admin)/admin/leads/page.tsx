@@ -8,6 +8,8 @@ import inboxData from "@/data/admin/inbox.json";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { logActivity } from "@/lib/activityLog";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, setDoc, query, orderBy, getDoc, getDocs, where } from "firebase/firestore";
 
 interface Lead {
   id: string;
@@ -129,7 +131,6 @@ export default function InboxPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("oldest");
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [deletedLeads, setDeletedLeads] = useState<Lead[]>([]);
   const [toastMessage, setToastMessage] = useState<{ text: string, type: "success" | "error" | "info" } | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -149,41 +150,19 @@ export default function InboxPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_inbox");
-    if (saved) {
-      setLeads(JSON.parse(saved));
-    } else {
-      setLeads([]);
-      localStorage.setItem("revtech_inbox", JSON.stringify([]));
-    }
-
-    const savedTrash = localStorage.getItem("revtech_inbox_trash");
-    if (savedTrash) {
-      setDeletedLeads(JSON.parse(savedTrash));
-    }
-
-    // Listener for auto-updating across tabs without refreshing
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "revtech_inbox" && e.newValue) {
-        setLeads(JSON.parse(e.newValue));
-      } else if (e.key === "revtech_inbox_trash" && e.newValue) {
-        setDeletedLeads(JSON.parse(e.newValue));
-      }
-    };
     
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    // Sinkronisasi Realtime dengan Firestore
+    const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const firestoreLeads: Lead[] = [];
+      snapshot.forEach(document => {
+        firestoreLeads.push({ id: document.id, ...document.data() } as Lead);
+      });
+      setLeads(firestoreLeads);
+    });
+
+    return () => unsubscribe();
   }, []);
-
-  function saveLeads(updated: Lead[]) {
-    setLeads(updated);
-    localStorage.setItem("revtech_inbox", JSON.stringify(updated));
-  }
-
-  function saveDeletedLeads(updated: Lead[]) {
-    setDeletedLeads(updated);
-    localStorage.setItem("revtech_inbox_trash", JSON.stringify(updated));
-  }
 
   function showToast(text: string, type: "success" | "error" | "info" = "success") {
     setToastMessage({ text, type });
@@ -232,17 +211,19 @@ export default function InboxPage() {
       return;
     }
     
-    const restrictedStatuses = ["deal", "ghosting"];
+    // Prevent changing from deal to something else
+    if (lead.status === "deal") {
+      showToast("Prospek ini sudah menjadi Project! Status tidak dapat diubah untuk mencegah hilangnya data.", "error");
+      return;
+    }
+    
+    const restrictedStatuses = ["ghosting"];
     if (!skipConfirm && restrictedStatuses.includes(lead.status) && newStatus !== lead.status) {
        setPendingStatusChange({ from: "list", newStatus, lead });
        return;
     }
 
-    const updated = leads.map(l => l.id === lead.id
-      ? { ...l, status: newStatus, lastContactedAt: new Date().toISOString() }
-      : l
-    );
-    saveLeads(updated);
+    updateDoc(doc(db, "leads", lead.id), { status: newStatus, lastContactedAt: new Date().toISOString() });
     showToast("Status berhasil diperbarui");
   }
 
@@ -283,7 +264,7 @@ export default function InboxPage() {
     setDeleteAction(isPermanent ? "permanent" : "soft");
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingId) return;
     
     if (deleteAction === "soft") {
@@ -292,69 +273,22 @@ export default function InboxPage() {
         const deletedLead = {
           ...leadToMove,
           deletedAt: new Date().toISOString(),
-          deletedBy: "Superadmin"
+          deletedBy: "Superadmin",
+          _module: "Inbox"
         };
-        saveLeads(leads.filter(l => l.id !== deletingId));
-        saveDeletedLeads([deletedLead, ...deletedLeads]);
+        await setDoc(doc(db, "trash", deletingId), deletedLead);
+        await deleteDoc(doc(db, "leads", deletingId));
         
-        // Cascade delete: hapus pesanan dan invoice terkait
-        try {
-          const savedOrders = localStorage.getItem("revtech_orders");
-          let relatedOrderId: string | null = null;
-          if (savedOrders) {
-            let orderList = JSON.parse(savedOrders);
-            const relatedOrder = orderList.find((o: any) => o.phone === leadToMove.phone);
-            if (relatedOrder) {
-              relatedOrderId = relatedOrder.id;
-              // Remove from active orders
-              orderList = orderList.filter((o: any) => o.id !== relatedOrderId);
-              localStorage.setItem("revtech_orders", JSON.stringify(orderList));
-              
-              // Move to deleted_orders
-              const deletedOrderList = JSON.parse(localStorage.getItem("revtech_deleted_orders") || "[]");
-              const delOrder = { ...relatedOrder, deletedAt: new Date().toISOString(), deletedBy: "System (Cascade)" };
-              localStorage.setItem("revtech_deleted_orders", JSON.stringify([delOrder, ...deletedOrderList]));
-            }
-          }
-
-          const savedInvoices = localStorage.getItem("revtech_invoices");
-          if (savedInvoices) {
-            let invoiceList = JSON.parse(savedInvoices);
-            invoiceList = invoiceList.filter((i: any) => 
-              !(i.id === `INV-DP-${leadToMove.id}` || (relatedOrderId && i.orderId === relatedOrderId))
-            );
-            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-          }
-
-          const savedClients = localStorage.getItem("revtech_clients");
-          if (savedClients) {
-            let clientList = JSON.parse(savedClients);
-            clientList = clientList.filter((c: any) => c.phone !== leadToMove.phone);
-            localStorage.setItem("revtech_clients", JSON.stringify(clientList));
-          }
-        } catch (err) {
-          console.error("Failed to cascade delete", err);
-        }
-
-        showToast("Prospek beserta data terkait dipindahkan ke tempat sampah.");
+        showToast("Prospek dipindahkan ke tempat sampah.");
       }
     } else {
-      saveDeletedLeads(deletedLeads.filter(l => l.id !== deletingId));
+      await deleteDoc(doc(db, "leads", deletingId));
       showToast("Prospek berhasil dihapus permanen.");
     }
     setDeletingId(null);
   }
 
-  function restoreLead(id: string) {
-    const leadToRestore = deletedLeads.find(l => l.id === id);
-    if (leadToRestore) {
-      saveDeletedLeads(deletedLeads.filter(l => l.id !== id));
-      saveLeads([leadToRestore, ...leads]);
-      showToast("Prospek berhasil dipulihkan.");
-    }
-  }
-
-  function handleAddLead(e?: React.FormEvent, skipConfirm = false) {
+  async function handleAddLead(e?: React.FormEvent, skipConfirm = false) {
     if (e && e.preventDefault) e.preventDefault();
     const serviceFull = newLead.serviceDetail
       ? `${newLead.service} - ${newLead.serviceDetail}`
@@ -371,7 +305,6 @@ export default function InboxPage() {
       finalBudget = `Rp ${finalBudget}`;
     }
 
-    let updatedLeads = [...leads];
     if (editingId) {
       const oldLead = leads.find(l => l.id === editingId);
       
@@ -380,20 +313,26 @@ export default function InboxPage() {
         showToast("Klien belum melakukan pembayaran awal! Silakan selesaikan terlebih dahulu.", "error");
         return;
       }
+      
+      // Prevent changing from deal to something else
+      if (oldLead && oldLead.status === "deal" && newLead.status !== "deal") {
+        showToast("Prospek sudah menjadi Project. Status tidak dapat diubah ke sebelumnya.", "error");
+        return;
+      }
 
-      const restrictedStatuses = ["deal", "ghosting"];
+      const restrictedStatuses = ["ghosting"];
       if (!skipConfirm && oldLead && restrictedStatuses.includes(oldLead.status) && newLead.status !== oldLead.status) {
         setPendingStatusChange({ from: "form" });
         return;
       }
       
-      updatedLeads = leads.map(l => l.id === editingId ? {
-        ...l, name: newLead.name, phone: finalPhone, company: newLead.company,
+      await updateDoc(doc(db, "leads", editingId), {
+        name: newLead.name, phone: finalPhone, company: newLead.company,
         service: serviceFull, budget: finalBudget || "-",
         message: newLead.message, status: newLead.status,
         handover: newLead.handover, followUpNote: newLead.followUpNote,
         referenceLink: newLead.referenceLink
-      } : l);
+      });
 
       // Cascade update to downstream data
       if (oldLead) {
@@ -402,58 +341,48 @@ export default function InboxPage() {
           const parsedAmount = budgetMatch ? parseInt(budgetMatch.join("").replace(/\./g, '')) : 0;
           const dpAmount = parsedAmount > 0 ? parsedAmount / 2 : 0;
 
-          // Update Orders
-          const savedOrders = localStorage.getItem("revtech_orders");
-          if (savedOrders) {
-            let orderList = JSON.parse(savedOrders);
-            let updated = false;
-            orderList = orderList.map((o: any) => {
-              if (o.phone === oldLead.phone) {
-                updated = true;
-                return { ...o, client: newLead.name, company: newLead.company || "-", phone: finalPhone, service: serviceFull };
-              }
-              return o;
+          // Update Orders in Firestore
+          const qOrders = query(collection(db, "orders"), where("phone", "==", oldLead.phone));
+          const orderDocs = await getDocs(qOrders);
+          orderDocs.forEach(async (orderDoc) => {
+            await updateDoc(doc(db, "orders", orderDoc.id), {
+              client: newLead.name,
+              company: newLead.company || "-",
+              phone: finalPhone,
+              service: serviceFull
             });
-            if (updated) localStorage.setItem("revtech_orders", JSON.stringify(orderList));
-          }
+          });
 
-          // Update Maintenance Clients
-          const savedClients = localStorage.getItem("revtech_clients");
-          if (savedClients) {
-            let clientList = JSON.parse(savedClients);
-            let updated = false;
-            clientList = clientList.map((c: any) => {
-              if (c.phone === oldLead.phone) {
-                updated = true;
-                return { ...c, name: newLead.company || newLead.name, contact: newLead.name, phone: finalPhone, service: serviceFull };
-              }
-              return c;
+          // Update Invoices in Firestore
+          const qInvoices = query(collection(db, "invoices"), where("phone", "==", oldLead.phone));
+          const invoiceDocs = await getDocs(qInvoices);
+          invoiceDocs.forEach(async (invDoc) => {
+            await updateDoc(doc(db, "invoices", invDoc.id), {
+              client: newLead.name,
+              company: newLead.company || "-",
+              phone: finalPhone,
+              service: serviceFull
             });
-            if (updated) localStorage.setItem("revtech_clients", JSON.stringify(clientList));
-          }
+          });
 
-          // Update Invoices
-          const savedInvoices = localStorage.getItem("revtech_invoices");
-          if (savedInvoices) {
-            let invoiceList = JSON.parse(savedInvoices);
-            let updated = false;
-            invoiceList = invoiceList.map((i: any) => {
-              if (i.phone === oldLead.phone) {
-                updated = true;
-                let updatedInv = { ...i, client: newLead.name, company: newLead.company || "-", phone: finalPhone, service: serviceFull };
-                return updatedInv;
-              }
-              return i;
+          // Update Maintenance Clients in Firestore
+          const qClients = query(collection(db, "maintenance"), where("phone", "==", oldLead.phone));
+          const clientDocs = await getDocs(qClients);
+          clientDocs.forEach(async (clientDoc) => {
+            await updateDoc(doc(db, "maintenance", clientDoc.id), {
+              name: newLead.company || newLead.name,
+              contact: newLead.name,
+              phone: finalPhone,
+              service: serviceFull
             });
-            if (updated) localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-          }
+          });
         } catch (err) {
-          console.error("Failed to cascade update", err);
+          console.error("Failed to cascade update to Firestore", err);
         }
       }
     } else {
-      updatedLeads.unshift({
-        id: "LD-" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"),
+      await addDoc(collection(db, "leads"), {
+        ticketNumber: "LD-" + Math.floor(Math.random() * 1000).toString().padStart(3, "0"),
         name: newLead.name, phone: finalPhone, company: newLead.company || "-",
         service: serviceFull, budget: finalBudget || "-",
         message: newLead.message || "-", status: newLead.status,
@@ -462,8 +391,6 @@ export default function InboxPage() {
         referenceLink: newLead.referenceLink
       });
     }
-
-    saveLeads(updatedLeads);
     
     // Log activity
     if (!editingId) {
@@ -482,13 +409,9 @@ export default function InboxPage() {
     setNewLead({ name: "", phone: "", company: "", service: "", serviceDetail: "", budget: "", message: "", status: "new", handover: "", followUpNote: "", referenceLink: "" });
   }
 
-  function handleConfirmDeal(lead: Lead, data: { total: number; dp: number; deadline: string; handover: string }) {
+  async function handleConfirmDeal(lead: Lead, data: { total: number; dp: number; deadline: string; handover: string }) {
     // 1. Tandai lead sebagai deal di Inbox
-    const updatedLeads = leads.map(l => l.id === lead.id
-      ? { ...l, status: "deal", handover: data.handover, lastContactedAt: new Date().toISOString() }
-      : l
-    );
-    saveLeads(updatedLeads);
+    await updateDoc(doc(db, "leads", lead.id), { status: "deal", handover: data.handover, lastContactedAt: new Date().toISOString() });
 
     const orderId = `ORD-${Date.now().toString().slice(-5)}`;
     const today = new Date().toISOString().split("T")[0];
@@ -511,48 +434,35 @@ export default function InboxPage() {
       progressLog: [{ date: new Date().toISOString(), note: "Project masuk antrean dari Leads.", by: "Admin" }]
     };
 
-    // 3. Update atau Buat Invoice Pertama (DP / Lunas)
-    const savedInvoices = localStorage.getItem("revtech_invoices");
-    let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
-    
+    // 3. Buat Invoice Pertama (DP / Lunas) ke Firestore
     const isLunas = data.dp >= data.total;
     const dpPercent = Math.round((data.dp / (data.total || 1)) * 100);
     const invDesc = isLunas 
       ? `Pembayaran Penuh — ${lead.service || lead.company || lead.name}` 
       : `DP ${dpPercent}% — ${lead.service || lead.company || lead.name}`;
 
-    let existingDpIndex = invoiceList.findIndex((i: any) => i.id === `INV-DP-${lead.id}`);
-    if (existingDpIndex !== -1) {
-      invoiceList[existingDpIndex].status = "paid";
-      invoiceList[existingDpIndex].paidAt = new Date().toISOString();
-      invoiceList[existingDpIndex].amount = data.dp; // update amount just in case they changed it in modal
-      invoiceList[existingDpIndex].description = invDesc;
-    } else {
-      const invoiceDP = {
-        id: `INV-DP-${lead.id}`,
-        orderId: lead.id,
-        client: lead.name,
-        company: lead.company,
-        service: lead.service,
-        phone: lead.phone,
-        type: isLunas ? "pelunasan" : "dp", // Use pelunasan type if fully paid upfront to signify full payment, though dp works too. Let's stick to dp type but change desc. Or we can leave type "dp" since it's the initial invoice. Let's use "dp".
-        amount: data.dp,
-        status: "paid",
-        issuedAt: new Date().toISOString(),
-        paidAt: new Date().toISOString(), // Sudah lunas saat deal
-        dueDate: today, 
-        description: invDesc,
-      };
-      // actually let's set type to 'pelunasan' if fully paid, or keep it 'dp'. I'll keep it 'dp' for consistency with ID.
-      invoiceDP.type = "dp"; 
-      invoiceList = [invoiceDP, ...invoiceList];
-    }
+    const invoiceDP = {
+      id: `INV-DP-${lead.id}`,
+      orderId: orderId, // Terhubung ke Order ID baru
+      client: lead.name,
+      company: lead.company,
+      service: lead.service,
+      phone: lead.phone,
+      type: "dp",
+      amount: data.dp,
+      status: "paid",
+      issuedAt: new Date().toISOString(),
+      paidAt: new Date().toISOString(),
+      dueDate: today, 
+      description: invDesc,
+    };
 
     // 4. Buat Invoice Pelunasan otomatis (Pending) JIKA BELUM LUNAS
+    let invoicePelunasan = null;
     if (!isLunas) {
-      const invoicePelunasan = {
+      invoicePelunasan = {
         id: `INV-PL-${orderId}`,
-        orderId,
+        orderId: orderId,
         client: lead.name,
         company: lead.company,
         service: lead.service,
@@ -565,19 +475,18 @@ export default function InboxPage() {
         dueDate: data.deadline || today, 
         description: `Pelunasan — ${lead.service || lead.company || lead.name}`,
       };
-      invoiceList = [invoicePelunasan, ...invoiceList];
     }
 
     try {
-      // Simpan order
-      const savedOrders = localStorage.getItem("revtech_orders");
-      const ordersList = savedOrders ? JSON.parse(savedOrders) : [];
-      localStorage.setItem("revtech_orders", JSON.stringify([orderPayload, ...ordersList]));
-
-      // Simpan invoices
-      localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
+      // Simpan ke Firestore
+      await setDoc(doc(db, "orders", orderId), orderPayload);
+      await setDoc(doc(db, "invoices", invoiceDP.id), invoiceDP);
+      if (invoicePelunasan) {
+        await setDoc(doc(db, "invoices", invoicePelunasan.id), invoicePelunasan);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Gagal memindahkan data ke tabel pesanan:", err);
+      showToast("Gagal memindahkan data ke tabel pesanan", "error");
     }
 
     setDealLead(null);

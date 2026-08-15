@@ -1,8 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { useRouter, usePathname } from "next/navigation";
 
-interface UserProfile {
+export interface UserProfile {
   name: string;
   role: string;
   email: string;
@@ -11,50 +15,130 @@ interface UserProfile {
   location: string;
   website: string;
   avatar: string | null;
+  requirePasswordChange?: boolean;
+  _collection?: "admins" | "staff";
 }
 
 interface UserContextValue {
-  user: UserProfile;
-  setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
+  user: UserProfile | null;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  loading: boolean;
+  logout: () => Promise<void>;
 }
 
 const defaultUser: UserProfile = {
   name: "Revan Fatkhurezi",
-  role: "Founder & CEO",
+  role: "Superadmin",
   email: "revtech.id.contact@gmail.com",
   phone: "6281290018819",
   bio: "Solo founder & lead engineer di RevTech Business OS. Mengembangkan solusi website & digital agency untuk UMKM dan bisnis modern.",
   location: "Indonesia",
   website: "https://hi-revtech.my.id",
   avatar: null,
+  requirePasswordChange: false,
+  _collection: "admins",
 };
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile>(defaultUser);
-  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const stored = localStorage.getItem("adm-user-profile");
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch (e) {
-        // ignore
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser && firebaseUser.email) {
+        try {
+          // 1. Cek tabel admins (Superadmin) terlebih dahulu
+          const adminQ = query(collection(db, "admins"), where("email", "==", firebaseUser.email));
+          const adminSnap = await getDocs(adminQ);
+          
+          let userData = null;
+          let userType: "admins" | "staff" = "staff";
+
+          if (!adminSnap.empty) {
+            userData = adminSnap.docs[0].data();
+            userType = "admins";
+          } else {
+            // 2. Jika tidak ada di admins, cek tabel staff (Karyawan Biasa)
+            const staffQ = query(collection(db, "staff"), where("email", "==", firebaseUser.email));
+            const staffSnap = await getDocs(staffQ);
+            if (!staffSnap.empty) {
+              // Cek status karyawan, jika nonaktif tolak login
+              const staffData = staffSnap.docs[0].data();
+              if (staffData.status === "Nonaktif") {
+                console.error("Akun karyawan dinonaktifkan.");
+                setUser(null);
+                await firebaseSignOut(auth);
+                if (pathname.startsWith("/admin")) router.push("/");
+                setLoading(false);
+                return;
+              }
+              userData = staffData;
+              userType = "staff";
+            }
+          }
+          
+          if (userData) {
+            setUser({
+              name: userData.name || firebaseUser.displayName || "Admin RevTech",
+              role: userData.role || "Admin",
+              email: firebaseUser.email,
+              phone: userData.phone || "-",
+              bio: userData.bio || "-",
+              location: userData.location || "Indonesia",
+              website: userData.website || "-",
+              avatar: userData.avatar || firebaseUser.photoURL || null,
+              requirePasswordChange: userData.requirePasswordChange || false,
+              _collection: userType,
+            });
+            // Set session cookie for middleware to detect login
+            document.cookie = `_auth_token=1; path=/; SameSite=Strict`;
+          } else {
+            // Jika tidak ada di admins maupun staff
+            console.error("Akun terotentikasi tapi tidak terdaftar di sistem internal.");
+            setUser(null);
+            await firebaseSignOut(auth);
+            if (pathname.startsWith("/admin")) {
+              const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
+              sessionStorage.removeItem('logout_redirect');
+              router.push(redirectUrl);
+            }
+          }
+        } catch (error) {
+          console.error("Gagal mengambil profil admin:", error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+        // Clear session cookie on logout
+        document.cookie = `_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict`;
+        // Jika sedang di halaman admin dan tidak ada sesi, redirect
+        if (pathname.startsWith("/admin")) {
+           const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
+           sessionStorage.removeItem('logout_redirect');
+           router.push(redirectUrl);
+        }
       }
-    }
-    setMounted(true);
-  }, []);
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem("adm-user-profile", JSON.stringify(user));
-    }
-  }, [user, mounted]);
+    return () => unsubscribe();
+  }, [pathname, router]);
+
+  const logout = async () => {
+    setLoading(true);
+    await firebaseSignOut(auth);
+    setUser(null);
+    const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
+    sessionStorage.removeItem('logout_redirect');
+    router.push(redirectUrl);
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, loading, logout }}>
       {children}
     </UserContext.Provider>
   );

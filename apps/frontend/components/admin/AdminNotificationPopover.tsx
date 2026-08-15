@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@/contexts/UserContext";
 
 import activityLog from "@/data/admin/activity-log.json";
 
@@ -32,8 +33,11 @@ function getTimeAgo(dateString: string) {
 }
 
 export function AdminNotificationPopover() {
+  const { user } = useUser();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+
+  const isManager = user?.role === "Superadmin" || user?.role === "Project Manager";
 
   useEffect(() => {
     const loadNotifs = () => {
@@ -43,7 +47,20 @@ export function AdminNotificationPopover() {
       // Track which IDs have been marked as read (persisted)
       const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
 
-      const filteredLog = localLog.filter(entry => entry.notify === true);
+      let filteredLog = localLog.filter(entry => entry.notify === true);
+      
+      if (user?.role === "Content Writer") {
+        // Content Writer should not see any leads, orders, or payments
+        const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
+        filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
+      } else if (user?.role === "Developer") {
+        // Developer shouldn't see leads and payments, but CAN see order status
+        const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full"];
+        filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
+      } else if (user?.role === "Project Manager") {
+        // PM sees almost everything, but maybe we hide system things? 
+        // For now, PM sees same as Superadmin in terms of these types.
+      }
 
       const dynamicNotifs: NotificationItem[] = filteredLog.slice(0, 15).map((entry) => ({
         id: entry.id,
@@ -69,7 +86,16 @@ export function AdminNotificationPopover() {
 
       // Append static activity-log.json entries as fallback if no dynamic data yet
       if (dynamicNotifs.length === 0) {
-        const staticNotifs: NotificationItem[] = activityLog.slice(0, 5).map((log, i) => ({
+        let staticLogs = activityLog;
+        if (user?.role === "Content Writer") {
+          const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
+          staticLogs = staticLogs.filter((log: any) => !hiddenTypes.includes(log.type));
+        } else if (user?.role === "Developer") {
+          const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full"];
+          staticLogs = staticLogs.filter((log: any) => !hiddenTypes.includes(log.type));
+        }
+
+        const staticNotifs: NotificationItem[] = staticLogs.slice(0, 5).map((log, i) => ({
           id: log.id,
           title: log.type === "order_created" ? "Project Baru Masuk!"
             : log.type === "invoice_paid" ? "Pembayaran Dikonfirmasi"
@@ -99,13 +125,15 @@ export function AdminNotificationPopover() {
       window.removeEventListener("activityLogUpdated", loadNotifs);
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
+  }, [isManager]);
 
   const unreadCount = notifs.filter((n) => n.unread).length;
 
   const markAllRead = () => {
-    const readIds = notifs.map((n) => n.id);
-    localStorage.setItem("revtech_notif_read", JSON.stringify(readIds));
+    const existingIds = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
+    const currentUnreadIds = notifs.filter((n) => n.unread).map((n) => n.id);
+    const newReadIds = Array.from(new Set([...existingIds, ...currentUnreadIds]));
+    localStorage.setItem("revtech_notif_read", JSON.stringify(newReadIds));
     setNotifs((list) => list.map((item) => ({ ...item, unread: false })));
   };
 
@@ -203,6 +231,13 @@ export function AdminNotificationPopover() {
                     setNotifs((list) =>
                       list.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
                     );
+                    if (item.unread) {
+                      const existingIds = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
+                      if (!existingIds.includes(item.id)) {
+                        existingIds.push(item.id);
+                        localStorage.setItem("revtech_notif_read", JSON.stringify(existingIds));
+                      }
+                    }
                   }}
                   className={`flex items-start gap-3 p-3 rounded-xl transition-all cursor-pointer hover:bg-[var(--adm-bg)] ${
                     item.unread ? "" : "opacity-60"
@@ -227,16 +262,18 @@ export function AdminNotificationPopover() {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-2.5 border-t border-[var(--adm-border)]">
-            <Link
-              href="/admin/team/activity"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-semibold transition-colors hover:opacity-100 opacity-70"
-              style={{ color: "var(--adm-text)" }}
-            >
-              Lihat Semua Aktivitas Sistem
-            </Link>
-          </div>
+          {user?.role === "Superadmin" && (
+            <div className="px-5 py-2.5 border-t border-[var(--adm-border)]">
+              <Link
+                href="/admin/team/activity"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-semibold transition-colors hover:opacity-100 opacity-70"
+                style={{ color: "var(--adm-text)" }}
+              >
+                Lihat Semua Aktivitas Sistem
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

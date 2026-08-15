@@ -7,6 +7,8 @@ import { PageHeader, AdminToast, AdminConfirmModal, AdminModal, AdminButton } fr
 
 import { pricingPlans as defaultPlans, modificationMenu as defaultMods } from "@/data/pricing";
 import { calculateDiscount } from "@/lib/utils";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -178,61 +180,72 @@ export default function JasaWebAdminPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const savedPlans = localStorage.getItem("revtech_jasa_web_plans");
-    const savedHandovers = localStorage.getItem("revtech_jasa_web_handovers");
-    const savedMods = localStorage.getItem("revtech_modifications");
+    
+    const unsub = onSnapshot(doc(db, "settings", "jasa-web"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.plans) setPlans(data.plans);
+        if (data.handovers) setHandovers(data.handovers);
+        if (data.mods) setMods(data.mods);
+      } else {
+        // Fallback to defaults if document doesn't exist yet
+        setPlans(defaultPlans.map(p => ({
+          id: p.id,
+          name: p.name,
+          basicPrice: p.basicPrice,
+          originalPrice: p.originalPrice,
+          promoBadge: p.promoBadge,
+          description: p.description,
+          popular: p.popular,
+          basicFeatures: p.basicFeatures,
+          fullFeatures: p.fullFeatures || [],
+          demoLink: "",
+        })));
+        setHandovers(toHandoverOptions());
+        setMods(defaultMods.map(m => ({
+          category: m.category,
+          description: m.description,
+          items: m.items.map(i => ({ name: i.name, price: i.price }))
+        })));
+      }
+    });
 
-    if (savedPlans) {
-      const parsedPlans: PricingPlan[] = JSON.parse(savedPlans);
-      setPlans(parsedPlans.map(p => ({
-        ...p,
-        fullFeatures: p.fullFeatures || [],
-        demoLink: p.demoLink || ""
-      })));
-    } else {
-      setPlans(defaultPlans.map(p => ({
-        id: p.id,
-        name: p.name,
-        basicPrice: p.basicPrice,
-        originalPrice: p.originalPrice,
-        promoBadge: p.promoBadge,
-        description: p.description,
-        popular: p.popular,
-        basicFeatures: p.basicFeatures,
-        fullFeatures: p.fullFeatures || [],
-        demoLink: "",
-      })));
-    }
-
-    setHandovers(savedHandovers ? JSON.parse(savedHandovers) : toHandoverOptions());
-    setMods(savedMods ? JSON.parse(savedMods) : defaultMods.map(m => ({
-      category: m.category,
-      description: m.description,
-      items: m.items.map(i => ({ name: i.name, price: i.price }))
-    })));
+    return () => unsub();
   }, []);
 
-  const savePlans = (newPlans: PricingPlan[]) => {
+  const savePlans = async (newPlans: PricingPlan[]) => {
     setPlans(newPlans);
-    localStorage.setItem("revtech_jasa_web_plans", JSON.stringify(newPlans));
-    window.dispatchEvent(new Event("jasa-web-updated"));
-    setToast({ isVisible: true, message: "Harga paket berhasil disimpan", type: "success" });
-    setEditingPlanId(null);
+    try {
+      await setDoc(doc(db, "settings", "jasa-web"), { plans: newPlans }, { merge: true });
+      setToast({ isVisible: true, message: "Harga paket berhasil disimpan", type: "success" });
+      setEditingPlanId(null);
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan harga paket", type: "error" });
+    }
   };
 
-  const saveHandovers = (newHandovers: HandoverOption[]) => {
+  const saveHandovers = async (newHandovers: HandoverOption[]) => {
     setHandovers(newHandovers);
-    localStorage.setItem("revtech_jasa_web_handovers", JSON.stringify(newHandovers));
-    window.dispatchEvent(new Event("jasa-web-updated"));
-    setToast({ isVisible: true, message: "Opsi serah terima disimpan", type: "success" });
-    setEditingHandoverIdx(null);
+    try {
+      await setDoc(doc(db, "settings", "jasa-web"), { handovers: newHandovers }, { merge: true });
+      setToast({ isVisible: true, message: "Opsi serah terima disimpan", type: "success" });
+      setEditingHandoverIdx(null);
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan serah terima", type: "error" });
+    }
   };
 
-  const saveMods = (newMods: ModCategory[]) => {
+  const saveMods = async (newMods: ModCategory[]) => {
     setMods(newMods);
-    localStorage.setItem("revtech_modifications", JSON.stringify(newMods));
-    window.dispatchEvent(new Event("jasa-web-updated"));
-    setToast({ isVisible: true, message: "Katalog modifikasi disimpan", type: "success" });
+    try {
+      await setDoc(doc(db, "settings", "jasa-web"), { mods: newMods }, { merge: true });
+      setToast({ isVisible: true, message: "Katalog modifikasi disimpan", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan modifikasi", type: "error" });
+    }
   };
 
   if (!isClient) return null;

@@ -26,6 +26,8 @@
     "ai": "^7.0.31",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^12.17.1",
+    "firebase-admin": "^14.2.0",
     "framer-motion": "^12.40.0",
     "gray-matter": "^4.0.3",
     "jszip": "^3.10.1",

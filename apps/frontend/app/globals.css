@@ -142,6 +142,39 @@
   body {
     background-color: #ffffff;
     color: #1a202c;
+    /* Prevent I-beam cursor when clicking non-input areas */
+    cursor: default;
+  }
+
+  body input,
+  body textarea,
+  body select {
+    cursor: text;
+  }
+
+  body button,
+  body a,
+  body [role="button"],
+  body label[for] {
+    cursor: pointer;
+  }
+
+  /* Brand-consistent text selection color — public pages */
+  ::selection {
+    background-color: rgba(0, 82, 255, 0.15);
+    color: inherit;
+  }
+
+  /* Admin light mode selection */
+  .admin-light ::selection {
+    background-color: rgba(0, 82, 255, 0.18);
+    color: inherit;
+  }
+
+  /* Admin dark mode selection */
+  .admin-dark ::selection {
+    background-color: rgba(0, 82, 255, 0.35);
+    color: #ffffff;
   }
 
   /* Custom Global & Component Scrollbar */
@@ -209,6 +242,28 @@
     --adm-scrollbar:   #CBD5E1;
     --adm-color-scheme: light;
     color-scheme: light;
+
+    /* Prevent I-beam text cursor appearing when clicking non-input areas */
+    cursor: default;
+  }
+
+  .admin-light input,
+  .admin-light textarea,
+  .admin-light select {
+    cursor: text;
+  }
+
+  .admin-light button,
+  .admin-light a,
+  .admin-light [role="button"] {
+    cursor: pointer;
+  }
+
+  .admin-light [contenteditable],
+  .admin-light [contenteditable="true"],
+  .admin-light .ql-editor,
+  .admin-light .ql-editor * {
+    cursor: text;
   }
 
   .admin-dark {
@@ -233,6 +288,28 @@
     --adm-scrollbar:   #475569;
     --adm-color-scheme: dark;
     color-scheme: dark;
+
+    /* Prevent I-beam text cursor appearing when clicking non-input areas */
+    cursor: default;
+  }
+
+  .admin-dark input,
+  .admin-dark textarea,
+  .admin-dark select {
+    cursor: text;
+  }
+
+  .admin-dark button,
+  .admin-dark a,
+  .admin-dark [role="button"] {
+    cursor: pointer;
+  }
+
+  .admin-dark [contenteditable],
+  .admin-dark [contenteditable="true"],
+  .admin-dark .ql-editor,
+  .admin-dark .ql-editor * {
+    cursor: text;
   }
 }
 

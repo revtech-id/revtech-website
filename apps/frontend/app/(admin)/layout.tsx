@@ -3,7 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { AdminSidebar, VerticalNav } from "@/components/admin/AdminSidebar";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -25,15 +25,15 @@ export const useAdminTheme = () => useContext(ThemeContext);
 
 const PAGE_TITLES: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
-  "/admin/inbox": "Leads",
-  "/admin/pesanan": "Projects",
+  "/admin/leads": "Leads",
+  "/admin/projects": "Projects",
   "/admin/klien": "Klien & Website",
   "/admin/invoice": "Invoice",
   "/admin/maintenance": "Maintenance",
   "/admin/studio": "RevTech Studio",
   "/admin/blog": "Blog",
   "/admin/portofolio": "Portofolio",
-  "/admin/team": "Struktur Tim",
+  "/admin/team": "Manajemen Tim",
   "/admin/team/activity": "Activity Log",
   "/admin/profile": "Profil Saya",
   "/admin/system": "Pengaturan",
@@ -44,19 +44,39 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/hero": "Hero Banner",
   "/admin/jasa-web": "Jasa Web",
   "/admin/produk-digital": "Produk Digital",
+  "/admin/change-password": "Ubah Kata Sandi",
+};
+
+const ROUTE_ROLES: Record<string, string[]> = {
+  "/admin/dashboard": ["Superadmin", "Project Manager", "Developer", "Content Writer"],
+  "/admin/leads": ["Superadmin", "Project Manager"],
+  "/admin/projects": ["Superadmin", "Project Manager", "Developer"],
+  "/admin/maintenance": ["Superadmin", "Project Manager"],
+  "/admin/invoice": ["Superadmin", "Project Manager"],
+  "/admin/studio": ["Superadmin"],
+  "/admin/blog": ["Superadmin", "Content Writer"],
+  "/admin/portofolio": ["Superadmin", "Developer"],
+  "/admin/testimoni": ["Superadmin", "Project Manager"],
+  "/admin/hero": ["Superadmin"],
+  "/admin/jasa-web": ["Superadmin"],
+  "/admin/produk-digital": ["Superadmin"],
+  "/admin/profile": ["Superadmin", "Project Manager", "Developer", "Content Writer"],
+  "/admin/team": ["Superadmin"],
+  "/admin/trash": ["Superadmin", "Project Manager"],
+  "/admin/system": ["Superadmin"],
 };
 
 const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/dashboard": "Berikut adalah ringkasan operasional dan performa bisnis hari ini.",
-  "/admin/inbox": "Pusat penerimaan prospek klien, antrean follow-up, dan konversi CRM",
-  "/admin/pesanan": "Pipeline manajemen seluruh pesanan & proyek klien",
+  "/admin/leads": "Pusat penerimaan prospek klien, antrean follow-up, dan konversi CRM",
+  "/admin/projects": "Pipeline manajemen seluruh pesanan & proyek klien",
   "/admin/klien": "Database klien terdaftar dan pemantauan situs aktif",
   "/admin/invoice": "Kelola tagihan DP, pelunasan, dan status pembayaran",
   "/admin/maintenance": "Pemantauan masa aktif domain & hosting seluruh klien",
   "/admin/studio": "AI Copilot untuk merancang arsitektur & men-generate dokumen spesifikasi proyek",
   "/admin/blog": "Kelola artikel edukasi & konten pemasaran",
   "/admin/portofolio": "Showcase studi kasus & proyek terbaik RevTech",
-  "/admin/team": "Org chart Solo Founder & AI Co-Pilot",
+  "/admin/team": "Atur akses dan peran anggota tim atau staf Anda.",
   "/admin/team/activity": "Jejak rekam pergerakan sistem & login",
   "/admin/profile": "Kelola informasi data diri, kontak, dan akses keamanan akun Anda.",
   "/admin/system": "Konfigurasi informasi profil bisnis, kontak, dan pengaturan utama",
@@ -105,15 +125,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 }
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
+  const { user, loading } = useUser();
   const [dark, setDark] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const pageTitle = PAGE_TITLES[pathname] ?? "Admin";
   const today = new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+  // Route Guard Effect
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.requirePasswordChange && pathname !== "/admin/change-password") {
+        router.push("/admin/change-password");
+        return;
+      }
+      
+      if (!user.requirePasswordChange && pathname === "/admin/change-password") {
+        router.push("/admin/dashboard");
+        return;
+      }
 
+      // Check route permission
+      let matchedRoute = false;
+      let allowed = false;
+      const role = user.role.toLowerCase();
+      
+      for (const [route, roles] of Object.entries(ROUTE_ROLES)) {
+        if (pathname === route || pathname.startsWith(`${route}/`)) {
+          matchedRoute = true;
+          if (roles.map(r => r.toLowerCase()).includes(role)) {
+            allowed = true;
+          }
+          break;
+        }
+      }
+      
+      if (matchedRoute && !allowed && pathname !== "/admin/change-password") {
+         router.push("/admin/dashboard");
+      }
+    }
+  }, [pathname, user, loading, router]);
 
   // Persist dark mode preference
   useEffect(() => {
@@ -141,6 +194,31 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       }
       return newVal;
     });
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[100svh] flex flex-col items-center justify-center bg-[var(--adm-bg)] text-[var(--adm-text)]">
+        <div className="w-12 h-12 border-4 border-[var(--adm-accent)] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 font-semibold text-sm">Memeriksa Akses Keamanan...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  // Prevent flashing unauthorized content
+  if (user.requirePasswordChange && pathname !== "/admin/change-password") return null;
+
+  // Render minimal layout if on change-password page
+  if (pathname === "/admin/change-password") {
+    return (
+      <ThemeContext.Provider value={{ dark, toggle: toggleDark }}>
+        <div style={{ minHeight: "100svh", background: "var(--adm-bg)", color: "var(--adm-text)", transition: "background 0.3s, color 0.3s" }}>
+          {children}
+        </div>
+      </ThemeContext.Provider>
+    );
   }
 
   return (
@@ -189,9 +267,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               <h1 
                 className={pageTitle === "Dashboard" ? "text-2xl lg:text-3xl font-bold tracking-tight" : "text-xl sm:text-2xl font-bold tracking-tight truncate shrink-0"}
                 style={pageTitle === "Dashboard" ? { color: "var(--adm-text)", fontFamily: "var(--font-heading)" } : { color: "var(--adm-text)" }}
-                title={pageTitle === "Dashboard" ? `Selamat Datang, ${user.name}` : undefined}
+                title={pageTitle === "Dashboard" ? `Selamat Datang, ${user?.name}` : undefined}
               >
-                {pageTitle === "Dashboard" ? `Selamat Datang, ${user.name}` : pageTitle}
+                {pageTitle === "Dashboard" ? `Selamat Datang, ${user?.name || 'Admin'}` : pageTitle}
               </h1>
               {PAGE_DESCRIPTIONS[pathname] && (
                 <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--adm-text-3)" }}>

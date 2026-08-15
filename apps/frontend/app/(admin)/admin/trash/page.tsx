@@ -6,6 +6,8 @@ import { Trash2, Undo2, AlertTriangle, CheckCircle2, ChevronDown, MoreHorizontal
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminModal, AdminTable, AdminButton } from "@/components/admin/ui";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, orderBy, query } from "firebase/firestore";
 
 // Tipe data berdasarkan model Inbox (sementara hanya inbox yang didukung)
 interface Lead {
@@ -51,43 +53,27 @@ export default function TrashPage() {
 
   useEffect(() => {
     setIsClient(true);
-    let allTrash: Lead[] = [];
     
-    const savedInboxTrash = localStorage.getItem("revtech_inbox_trash");
-    if (savedInboxTrash) {
-      const parsed = JSON.parse(savedInboxTrash);
-      allTrash = [...allTrash, ...parsed.map((item: any) => ({ ...item, _module: "Inbox", _original: item }))];
-    }
-    
-    const savedOrdersTrash = localStorage.getItem("revtech_orders_trash");
-    if (savedOrdersTrash) {
-      const parsed = JSON.parse(savedOrdersTrash);
-      allTrash = [...allTrash, ...parsed.map((item: any) => ({
-        ...item,
-        _module: "Pesanan",
-        _original: item,
-        name: item.client,
-        budget: item.total ? `Rp ${item.total}` : "-",
-        message: item.notes || "-"
-      }))];
-    }
+    const q = query(collection(db, "trash"), orderBy("deletedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const trashItems: any[] = [];
+      snapshot.forEach(document => {
+        const data = document.data();
+        trashItems.push({ 
+          id: document.id, 
+          ...data,
+          name: data.name || data.client || "-",
+          company: data.company || data.contact || "-",
+          budget: data.total ? `Rp ${data.total}` : (data.recurringFee ? `Rp ${data.recurringFee}` : (data.amount ? `Rp ${data.amount}` : (data.budget || "-"))),
+          message: data.notes || data.message || data.domain || data.description || "Tidak ada detail",
+          service: data.service || data.handover || "-",
+          _original: data
+        });
+      });
+      setDeletedLeads(trashItems);
+    });
 
-    const savedClientsTrash = localStorage.getItem("revtech_clients_trash");
-    if (savedClientsTrash) {
-      const parsed = JSON.parse(savedClientsTrash);
-      allTrash = [...allTrash, ...parsed.map((item: any) => ({
-        ...item,
-        _module: "Klien",
-        _original: item,
-        name: item.name,
-        company: item.contact || "-",
-        budget: item.recurringFee ? `Rp ${item.recurringFee.toLocaleString('id-ID')}` : "-",
-        message: item.domain || "Tidak ada domain",
-        service: item.handover || item.service || "-"
-      }))];
-    }
-    
-    setDeletedLeads(allTrash);
+    return () => unsubscribe();
   }, []);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -95,56 +81,37 @@ export default function TrashPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const processRestore = (itemsToRestore: Lead[]) => {
-    const inboxItems = itemsToRestore.filter(i => i._module !== "Pesanan");
-    const orderItems = itemsToRestore.filter(i => i._module === "Pesanan");
-    
-    if (inboxItems.length > 0) {
-      const savedInboxTrash = localStorage.getItem("revtech_inbox_trash");
-      let currentInboxTrash = savedInboxTrash ? JSON.parse(savedInboxTrash) : [];
-      currentInboxTrash = currentInboxTrash.filter((t: any) => !inboxItems.find(i => i.id === t.id));
-      localStorage.setItem("revtech_inbox_trash", JSON.stringify(currentInboxTrash));
-      
-      const savedInbox = localStorage.getItem("revtech_inbox");
-      const currentInbox = savedInbox ? JSON.parse(savedInbox) : [];
-      localStorage.setItem("revtech_inbox", JSON.stringify([...inboxItems.map(i => i._original), ...currentInbox]));
+  const processRestore = async (itemsToRestore: any[]) => {
+    try {
+      for (const item of itemsToRestore) {
+        let collectionName = "leads"; // default fallback for Inbox
+        if (item._module === "Pesanan") collectionName = "orders";
+        else if (item._module === "Klien") collectionName = "maintenance";
+        else if (item._module === "Tagihan") collectionName = "invoices";
+        
+        const restoreData = { ...item._original };
+        delete restoreData.deletedAt;
+        delete restoreData.deletedBy;
+        delete restoreData._module;
+
+        await setDoc(doc(db, collectionName, item.id), restoreData);
+        await deleteDoc(doc(db, "trash", item.id));
+      }
+    } catch (error) {
+      console.error("Gagal memulihkan:", error);
+      showToast("Gagal memulihkan beberapa item", "error");
     }
-    
-    if (orderItems.length > 0) {
-      const savedOrdersTrash = localStorage.getItem("revtech_orders_trash");
-      let currentOrdersTrash = savedOrdersTrash ? JSON.parse(savedOrdersTrash) : [];
-      currentOrdersTrash = currentOrdersTrash.filter((t: any) => !orderItems.find(i => i.id === t.id));
-      localStorage.setItem("revtech_orders_trash", JSON.stringify(currentOrdersTrash));
-      
-      const savedOrders = localStorage.getItem("revtech_orders");
-      const currentOrders = savedOrders ? JSON.parse(savedOrders) : [];
-      localStorage.setItem("revtech_orders", JSON.stringify([...orderItems.map(i => i._original), ...currentOrders]));
-    }
-    
-    const restoredIds = itemsToRestore.map(i => i.id);
-    setDeletedLeads(deletedLeads.filter(l => !restoredIds.includes(l.id)));
   };
 
-  const processPermanentDelete = (itemsToDelete: Lead[]) => {
-    const inboxItems = itemsToDelete.filter(i => i._module !== "Pesanan");
-    const orderItems = itemsToDelete.filter(i => i._module === "Pesanan");
-    
-    if (inboxItems.length > 0) {
-      const savedInboxTrash = localStorage.getItem("revtech_inbox_trash");
-      let currentInboxTrash = savedInboxTrash ? JSON.parse(savedInboxTrash) : [];
-      currentInboxTrash = currentInboxTrash.filter((t: any) => !inboxItems.find(i => i.id === t.id));
-      localStorage.setItem("revtech_inbox_trash", JSON.stringify(currentInboxTrash));
+  const processPermanentDelete = async (itemsToDelete: any[]) => {
+    try {
+      for (const item of itemsToDelete) {
+        await deleteDoc(doc(db, "trash", item.id));
+      }
+    } catch (error) {
+      console.error("Gagal menghapus:", error);
+      showToast("Gagal menghapus permanen", "error");
     }
-    
-    if (orderItems.length > 0) {
-      const savedOrdersTrash = localStorage.getItem("revtech_orders_trash");
-      let currentOrdersTrash = savedOrdersTrash ? JSON.parse(savedOrdersTrash) : [];
-      currentOrdersTrash = currentOrdersTrash.filter((t: any) => !orderItems.find(i => i.id === t.id));
-      localStorage.setItem("revtech_orders_trash", JSON.stringify(currentOrdersTrash));
-    }
-    
-    const deletedIds = itemsToDelete.map(i => i.id);
-    setDeletedLeads(deletedLeads.filter(l => !deletedIds.includes(l.id)));
   };
 
   const handleRestoreLead = (id: string) => {
@@ -161,7 +128,7 @@ export default function TrashPage() {
         type: "system",
         title: "Data Dihapus Permanen",
         description: `${selectedIds.length} data telah dihapus secara permanen dari Tempat Sampah`,
-        user: user.name
+        user: user?.name || "Sistem"
       });
 
       setDeletingBulk(false);
@@ -179,7 +146,7 @@ export default function TrashPage() {
         type: "system",
         title: "Data Dihapus Permanen",
         description: `Data "${itemToDelete.name}" telah dihapus secara permanen`,
-        user: user.name
+        user: user?.name || "Sistem"
       });
     }
     setDeletingId(null);
@@ -205,7 +172,7 @@ export default function TrashPage() {
           type: "system",
           title: "Data Dipulihkan",
           description: `Data "${leadToRestore.name}" telah dipulihkan ke ${leadToRestore._module || "Sistem"}`,
-          user: user.name
+          user: user?.name || "Sistem"
         });
         showToast(`Item berhasil dipulihkan ke ${leadToRestore._module === "Pesanan" ? "Project" : "Leads Utama"}`);
       }
@@ -216,7 +183,7 @@ export default function TrashPage() {
         type: "system",
         title: "Data Dipulihkan",
         description: `${leadsToRestore.length} data telah dipulihkan ke modul asalnya`,
-        user: user.name
+        user: user?.name || "Sistem"
       });
     } else if (restoringAction === "all") {
       const leadsToRestore = filteredLeads;
@@ -225,7 +192,7 @@ export default function TrashPage() {
         type: "system",
         title: "Semua Data Dipulihkan",
         description: `${leadsToRestore.length} data telah dipulihkan ke modul asalnya`,
-        user: user.name
+        user: user?.name || "Sistem"
       });
     }
     setRestoringAction(null);
@@ -574,17 +541,19 @@ export default function TrashPage() {
       <AnimatePresence>
         {toastMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold z-[999] flex items-center gap-2
-              ${toastMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-                toastMessage.type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 
-                'bg-blue-50 text-blue-700 border-blue-200'}
-            `}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[100] bg-[var(--adm-card)] border border-[var(--adm-border)] shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3"
           >
-            {toastMessage.type === 'success' ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertTriangle size={18} className="text-red-500" />}
-            {toastMessage.text}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              toastMessage.type === 'success' 
+                ? 'bg-[var(--adm-success)]/20 text-[var(--adm-success)]' 
+                : 'bg-[var(--adm-danger)]/20 text-[var(--adm-danger)]'
+            }`}>
+              {toastMessage.type === 'success' ? <CheckCircle2 size={18} strokeWidth={2.5} /> : <AlertTriangle size={18} strokeWidth={2.5} />}
+            </div>
+            <p className="text-[13px] font-bold text-[var(--adm-text)]">{toastMessage.text}</p>
           </motion.div>
         )}
       </AnimatePresence>

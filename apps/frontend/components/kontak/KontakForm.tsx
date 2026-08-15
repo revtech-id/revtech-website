@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { countries } from '@/lib/countries';
 import { CountrySelector } from '@/components/ui/CountrySelector';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 type ServiceCategory = '' | 'jasa_web' | 'produk_digital' | 'custom';
 type JasaWebPackage = 'Usaha' | 'Profesional' | 'Eksklusif';
@@ -86,7 +88,7 @@ export default function KontakForm() {
         setWaLink(waUrl);
         setSubmittedData(data);
         
-        // Simpan otomatis ke Inbox (Local Storage simulasi)
+        // Simpan otomatis ke Firestore (Tabel leads)
         try {
             let basePrice = 0;
             if (service === 'jasa_web') {
@@ -97,9 +99,8 @@ export default function KontakForm() {
                 basePrice = 150000;
             }
 
-            
             const newLead = {
-                id: `LD-${Math.floor(10000 + Math.random() * 90000)}`,
+                ticketNumber: `LD-${Math.floor(10000 + Math.random() * 90000)}`,
                 name: data.name,
                 phone: `${selectedCountry.dial_code.replace('+', '')}${cleanWhatsApp}`,
                 company: data.business || "-",
@@ -113,13 +114,8 @@ export default function KontakForm() {
                 referenceLink: service === 'custom' ? (data.reference || "") : ""
             };
 
-            const saved = localStorage.getItem("revtech_inbox");
-            let inboxData = [];
-            if (saved) {
-                inboxData = JSON.parse(saved);
-            }
-            inboxData.unshift(newLead);
-            localStorage.setItem("revtech_inbox", JSON.stringify(inboxData));
+            await addDoc(collection(db, "leads"), newLead);
+
             
             // Log activity for notification popover
             import("@/lib/activityLog").then(({ logActivity }) => {

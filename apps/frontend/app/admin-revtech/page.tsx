@@ -1,11 +1,35 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-
+import { Mail, Lock, Eye, EyeOff, Loader2, ShieldAlert } from "lucide-react";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { motion } from "framer-motion";
+
+const RATE_LIMIT_KEY = "revtech_login_attempts";
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 menit
+
+function getRateLimit() {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY);
+    if (!raw) return { count: 0, lockedUntil: 0 };
+    return JSON.parse(raw) as { count: number; lockedUntil: number };
+  } catch { return { count: 0, lockedUntil: 0 }; }
+}
+
+function setRateLimit(data: { count: number; lockedUntil: number }) {
+  localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data));
+}
+
+function formatCountdown(ms: number) {
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,21 +38,78 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotMessage, setShowForgotMessage] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [lockedMs, setLockedMs] = useState(0);
 
-  const handleEmailLogin = (e: React.FormEvent) => {
+  // Countdown timer saat akun terkunci
+  useEffect(() => {
+    const { lockedUntil } = getRateLimit();
+    const remaining = lockedUntil - Date.now();
+    if (remaining > 0) setLockedMs(remaining);
+  }, []);
+
+  useEffect(() => {
+    if (lockedMs <= 0) return;
+    const interval = setInterval(() => {
+      setLockedMs(prev => {
+        if (prev <= 1000) { clearInterval(interval); return 0; }
+        return prev - 1000;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockedMs > 0]);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoadingType("email");
-    setTimeout(() => {
-      router.push("/admin/dashboard");
-    }, 1500);
-  };
+    setErrorMsg("");
 
-  const handleLogin = () => {
-    setLoadingType("google");
-    // Dummy simulation of OAuth redirect / loading
-    setTimeout(() => {
+    // Cek rate limit
+    const rl = getRateLimit();
+    if (rl.lockedUntil > Date.now()) {
+      setLockedMs(rl.lockedUntil - Date.now());
+      return;
+    }
+
+    setLoadingType("email");
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+      
+      // Cek Whitelist (Dual-Auth)
+      if (!user.email) throw new Error("Gagal mendapatkan email pengguna.");
+      
+      let querySnapshot = await getDocs(query(collection(db, "admins"), where("email", "==", user.email)));
+      
+      if (querySnapshot.empty) {
+        querySnapshot = await getDocs(query(collection(db, "staff"), where("email", "==", user.email)));
+        
+        if (querySnapshot.empty) {
+          await auth.signOut();
+          setErrorMsg("Akun tidak terdaftar dalam sistem. Hubungi Superadmin.");
+          setLoadingType(null);
+          return;
+        }
+      }
+      
+      // Login berhasil — reset rate limit
+      setRateLimit({ count: 0, lockedUntil: 0 });
       router.push("/admin/dashboard");
-    }, 1500);
+    } catch (error: any) {
+      // Catat gagal login
+      const rl = getRateLimit();
+      const newCount = rl.count + 1;
+      if (newCount >= MAX_ATTEMPTS) {
+        const lockedUntil = Date.now() + LOCKOUT_MS;
+        setRateLimit({ count: newCount, lockedUntil });
+        setLockedMs(LOCKOUT_MS);
+        setErrorMsg("");
+      } else {
+        setRateLimit({ count: newCount, lockedUntil: 0 });
+        const remaining = MAX_ATTEMPTS - newCount;
+        setErrorMsg(`Email atau kata sandi salah. Sisa percobaan: ${remaining}`);
+      }
+      setLoadingType(null);
+    }
   };
 
   return (
@@ -63,6 +144,29 @@ export default function LoginPage() {
               Selamat datang kembali! Silakan masuk ke akun Anda.
             </p>
 
+            {/* Error & Lockout Banner */}
+            {lockedMs > 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-left"
+              >
+                <ShieldAlert size={18} className="text-red-600 shrink-0" />
+                <div>
+                  <p className="text-[12px] font-bold text-red-700">Akses Diblokir Sementara</p>
+                  <p className="text-[11px] text-red-600">Terlalu banyak percobaan gagal. Coba lagi dalam <strong>{formatCountdown(lockedMs)}</strong>.</p>
+                </div>
+              </motion.div>
+            ) : errorMsg ? (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5"
+              >
+                <span className="text-[12px] text-red-700 font-medium">{errorMsg}</span>
+              </motion.div>
+            ) : null}
+
             <form onSubmit={handleEmailLogin} className="w-full mb-6 text-left">
               <div className="space-y-4 mb-6">
                 <div className="relative group">
@@ -73,7 +177,8 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Alamat Email"
                     required
-                    className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-[15px] shadow-sm"
+                    disabled={lockedMs > 0}
+                    className="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-[15px] shadow-sm disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -85,7 +190,8 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Kata Sandi"
                       required
-                      className="w-full pl-11 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-[15px] shadow-sm"
+                      disabled={lockedMs > 0}
+                      className="w-full pl-11 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-[15px] shadow-sm disabled:opacity-50"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors outline-none z-10">
                       {showPassword ? <EyeOff size={20} strokeWidth={2} /> : <Eye size={20} strokeWidth={2} />}
@@ -115,7 +221,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loadingType !== null}
+                disabled={loadingType !== null || lockedMs > 0}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3.5 font-bold transition-all shadow-[0_4px_14px_0_rgba(37,99,235,0.2)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center text-[15px]"
               >
                 {loadingType === "email" ? (
@@ -123,42 +229,13 @@ export default function LoginPage() {
                     <Loader2 className="animate-spin" size={18} />
                     <span>Memverifikasi...</span>
                   </div>
+                ) : lockedMs > 0 ? (
+                  `Tunggu ${formatCountdown(lockedMs)}`
                 ) : (
                   "Masuk"
                 )}
               </button>
             </form>
-
-            <div className="flex items-center w-full mb-6">
-              <div className="flex-1 border-t border-gray-200"></div>
-              <span className="px-4 text-[11px] uppercase tracking-wider text-gray-400 font-bold">Atau masuk dengan</span>
-              <div className="flex-1 border-t border-gray-200"></div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleLogin}
-              disabled={loadingType !== null}
-              className="w-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 rounded-xl px-4 py-3.5 flex items-center justify-center gap-3 font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-sm active:scale-[0.98] text-[15px]"
-            >
-              {loadingType === "google" ? (
-                <>
-                  <Loader2 className="animate-spin text-blue-600" size={20} />
-                  <span>Memverifikasi...</span>
-                </>
-              ) : (
-                <>
-                  <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  <span>Google</span>
-                </>
-              )}
-            </button>
-
       </motion.div>
     </main>
   );

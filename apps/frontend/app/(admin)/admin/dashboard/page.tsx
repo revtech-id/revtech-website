@@ -5,6 +5,9 @@ import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { StatCard, ProgressRingCard, AdminCard, DonutChart } from "@/components/admin/ui";
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useUser } from "@/contexts/UserContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,6 +65,23 @@ interface Lead {
   company: string;
   service: string;
   status: string;
+}
+
+interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  status: "draft" | "published";
+  category: string;
+  thumbnailUrl?: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  authorAvatar: string;
+  createdAt: number | string;
+  updatedAt: number | string;
+  isPinned?: boolean;
 }
 
 // ── Recharts (dynamic — SSR safe) ─────────────────────────────────────────────
@@ -246,7 +266,7 @@ function AIInsightWidget({ invoices, clients, orders }: { invoices: Invoice[], c
             <p className="text-[13px] flex-1 leading-relaxed" style={{ color: "var(--adm-text)" }} title={`Mohon perhatian: Anda memiliki ${alertSentence} hari ini.`}>
               Mohon perhatian: Anda memiliki <strong className="font-bold">{alertSentence}</strong> hari ini.
             </p>
-            <Link href={urgentDeadlines.length > 0 ? "/admin/pesanan" : "/admin/invoice"} className={`text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 text-center shadow-sm ${theme.button}`}>
+            <Link href={urgentDeadlines.length > 0 ? "/admin/projects" : "/admin/invoice"} className={`text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 text-center shadow-sm ${theme.button}`}>
               Selesaikan Sekarang
             </Link>
           </div>
@@ -307,41 +327,74 @@ const CustomTick = ({ x, y, payload }: any) => (
   </g>
 );
 
-export default function DashboardPage() {
+export default function AdminDashboard() {
+  const { user } = useUser();
+  const isManager = user?.role === "Superadmin" || user?.role === "Project Manager";
+
   const [activeTab, setActiveTab] = useState<"proyek" | "server">("proyek");
   const [isClient, setIsClient] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     setIsClient(true);
     
-    function loadData() {
-      const savedOrders = localStorage.getItem("revtech_orders");
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
+    // Subscribe to Firestore collections
+    const qOrders = query(collection(db, "orders"));
+    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+      const firestoreOrders: Order[] = [];
+      snapshot.forEach(doc => {
+        firestoreOrders.push({ id: doc.id, ...doc.data() } as Order);
+      });
+      setOrders(firestoreOrders);
+    });
 
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
+    const qInvoices = query(collection(db, "invoices"));
+    const unsubInvoices = onSnapshot(qInvoices, (snapshot) => {
+      const firestoreInvoices: Invoice[] = [];
+      snapshot.forEach(doc => {
+        firestoreInvoices.push({ id: doc.id, ...doc.data() } as Invoice);
+      });
+      setInvoices(firestoreInvoices);
+    });
 
-      const savedClients = localStorage.getItem("revtech_clients");
-      if (savedClients) setClients(JSON.parse(savedClients));
-
-      const savedLeads = localStorage.getItem("revtech_inbox");
-      if (savedLeads) setLeads(JSON.parse(savedLeads));
-    }
-
-    loadData();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "revtech_orders" || e.key === "revtech_invoices" || e.key === "revtech_clients" || e.key === "revtech_inbox") {
-        loadData();
-      }
-    };
+    const qLeads = query(collection(db, "leads"));
+    const unsubLeads = onSnapshot(qLeads, (snapshot) => {
+      const firestoreLeads: Lead[] = [];
+      snapshot.forEach(doc => {
+        firestoreLeads.push({ id: doc.id, ...doc.data() } as Lead);
+      });
+      setLeads(firestoreLeads);
+    });
     
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    const qClients = query(collection(db, "maintenance"));
+    const unsubClients = onSnapshot(qClients, (snapshot) => {
+      const firestoreClients: Client[] = [];
+      snapshot.forEach(doc => {
+        firestoreClients.push({ id: doc.id, ...doc.data() } as Client);
+      });
+      setClients(firestoreClients);
+    });
+
+    const qPosts = query(collection(db, "posts"));
+    const unsubPosts = onSnapshot(qPosts, (snapshot) => {
+      const firestorePosts: Post[] = [];
+      snapshot.forEach(doc => {
+        firestorePosts.push({ id: doc.id, ...doc.data() } as Post);
+      });
+      setPosts(firestorePosts);
+    });
+
+    return () => {
+      unsubOrders();
+      unsubInvoices();
+      unsubLeads();
+      unsubClients();
+      unsubPosts();
+    };
   }, []);
 
   if (!isClient) return null;
@@ -388,6 +441,208 @@ export default function DashboardPage() {
     { label: "Kritis / Mati", value: expiredClients.length, color: "#EF4444" }
   ];
 
+  const publishedPosts = posts.filter(p => p.status === "published");
+  const draftPosts = posts.filter(p => p.status === "draft");
+
+  if (user?.role === "Content Writer") {
+    return (
+      <div className="space-y-5">
+        {/* Baris 1: Blog Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <motion.div {...fadeUp(1)}>
+            <StatCard
+              label="Total Artikel"
+              value={posts.length}
+              sub="Keseluruhan artikel"
+              icon="article"
+              iconColor="#3B82F6"
+              trend="neutral"
+              href="/admin/blog"
+            />
+          </motion.div>
+          <motion.div {...fadeUp(2)}>
+            <StatCard
+              label="Terpublikasi"
+              value={publishedPosts.length}
+              sub="Tampil di website"
+              icon="check_circle"
+              iconColor="#10B981"
+              trend="neutral"
+              href="/admin/blog"
+            />
+          </motion.div>
+          <motion.div {...fadeUp(3)}>
+            <StatCard
+              label="Draft"
+              value={draftPosts.length}
+              sub="Belum dipublikasikan"
+              icon="edit_document"
+              iconColor="#F59E0B"
+              trend="neutral"
+              href="/admin/blog"
+            />
+          </motion.div>
+        </div>
+
+        {/* Baris 2: Recent Posts Table */}
+        <motion.div {...fadeUp(4)} className="h-full">
+          <AdminCard className="h-full flex flex-col">
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Artikel Terbaru</h3>
+              </div>
+              <a
+                href="/admin/blog"
+                className="text-xs font-semibold hover:opacity-70 transition-opacity"
+                style={{ color: "var(--adm-text)" }}
+              >
+                Lihat semua →
+              </a>
+            </div>
+            <div className="overflow-x-auto flex-1 px-4 pb-2">
+              <table className="w-full text-xs min-w-[450px] border-separate" style={{ borderSpacing: "0 8px" }}>
+              <thead>
+                <tr>
+                  <th className="py-1 px-4 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Judul Artikel</th>
+                  <th className="py-1 px-2 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Kategori</th>
+                  <th className="py-1 px-2 text-left font-semibold" style={{ color: "var(--adm-text-3)" }}>Status</th>
+                  <th className="py-1 px-4 text-left font-semibold pr-4" style={{ color: "var(--adm-text-3)" }}>Tanggal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.slice(0, 8).map((p) => {
+                  const isPub = p.status === "published";
+                  return (
+                    <tr
+                      key={p.id}
+                      style={{ background: isPub ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)" }}
+                      className="transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110"
+                    >
+                      <td className="px-4 py-2.5 rounded-l-full">
+                        <span className="truncate max-w-[250px] block font-medium" style={{ color: "var(--adm-text)" }}>{p.title}</span>
+                      </td>
+                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>{p.category}</td>
+                      <td className="px-2 py-2.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: isPub ? "#059669" : "#D97706" }}>
+                          {isPub ? "Published" : "Draft"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5 rounded-r-full pr-4">
+                        <span className="whitespace-nowrap" style={{ color: "var(--adm-text)" }}>
+                          {new Date(p.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </AdminCard>
+      </motion.div>
+      </div>
+    );
+  }
+
+  if (user?.role === "Developer") {
+    return (
+      <div className="space-y-5">
+        {/* Baris 1: Proyek Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <motion.div {...fadeUp(1)}>
+            <StatCard
+              label="Project Aktif"
+              value={activeOrders.length}
+              sub={`${completedOrders.length} project selesai`}
+              icon="work"
+              iconColor="#2563EB"
+              trend="up"
+              trendLabel="Tugas pengerjaan"
+              href="/admin/projects"
+            />
+          </motion.div>
+          <motion.div {...fadeUp(2)}>
+            <StatCard
+              label="Project Selesai"
+              value={completedOrders.length}
+              sub="Total sepanjang waktu"
+              icon="task_alt"
+              iconColor="#10B981"
+              trend="neutral"
+              href="/admin/portofolio"
+            />
+          </motion.div>
+        </div>
+
+        {/* Baris 2: Active Orders Table */}
+        <motion.div {...fadeUp(3)} className="h-full">
+          <AdminCard className="h-full flex flex-col">
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Project Aktif</h3>
+              </div>
+              <a
+                href="/admin/projects"
+                className="text-xs font-semibold hover:opacity-70 transition-opacity"
+                style={{ color: "var(--adm-text)" }}
+              >
+                Lihat semua →
+              </a>
+            </div>
+            <div className="overflow-x-auto flex-1 px-4 pb-2">
+              <table className="w-full text-xs min-w-[450px] border-separate" style={{ borderSpacing: "0 8px" }}>
+              <thead>
+                <tr>
+                  {["Klien", "Layanan", "Stage", "Deadline"].map((h, i) => (
+                    <th key={h} className={`py-1 text-left font-semibold ${i===0 ? 'px-4' : 'px-2'} ${h==="Deadline" ? 'pr-4' : ''}`} style={{ color: "var(--adm-text-3)" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {activeOrders.slice(0, 10).map((o) => {
+                  const style = STATUS_COLOR[o.status] ?? STATUS_COLOR.inbox;
+                  const deadlineDays = daysUntil(o.deadline);
+                  const isUrgent = deadlineDays !== null && deadlineDays <= 3;
+                  return (
+                    <tr
+                      key={o.id}
+                      style={{ background: style.bg }}
+                      className="transition-all cursor-pointer hover:brightness-95 dark:hover:brightness-110"
+                    >
+                      <td className="px-4 py-2.5 rounded-l-full">
+                        <span className="truncate max-w-[150px] block" style={{ color: "var(--adm-text)" }}>{o.client}</span>
+                      </td>
+                      <td className="px-2 py-2.5" style={{ color: "var(--adm-text)" }}>{o.service}</td>
+                      <td className="px-2 py-2.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--adm-text)" }}>
+                          {STATUS_LABEL[o.status] || o.status}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5 rounded-r-full pr-4">
+                        {o.deadline ? (
+                          <span
+                            className="whitespace-nowrap"
+                            style={{ color: isUrgent ? "var(--adm-danger)" : "var(--adm-text)" }}
+                          >
+                            {new Date(o.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                          </span>
+                        ) : (
+                          <span className="opacity-30 font-bold">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </AdminCard>
+      </motion.div>
+      </div>
+    );
+  }
+
+  // --- Manager Dashboard ---
   return (
     <div className="space-y-5">
 
@@ -437,7 +692,7 @@ export default function DashboardPage() {
                 iconColor="#2563EB"
                 trend="up"
                 trendLabel="5 project baru mgg ini"
-                href="/admin/pesanan"
+                href="/admin/projects"
               />
             </motion.div>
             <motion.div {...fadeUp(4)}>
@@ -534,7 +789,7 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-bold" style={{ color: "var(--adm-text)" }}>Project Aktif</h3>
               </div>
               <a
-                href="/admin/pesanan"
+                href="/admin/projects"
                 className="text-xs font-semibold hover:opacity-70 transition-opacity"
                 style={{ color: "var(--adm-text)" }}
               >
@@ -546,7 +801,7 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   {["Klien", "Layanan", "Stage", "Total", "Deadline"].map((h, i) => (
-                    <th key={h} className={`py-1 text-left font-semibold ${i===0 ? 'px-4' : 'px-2'} ${i===4 ? 'pr-4' : ''}`} style={{ color: "var(--adm-text-3)" }}>{h}</th>
+                    <th key={h} className={`py-1 text-left font-semibold ${i===0 ? 'px-4' : 'px-2'} ${h==="Deadline" ? 'pr-4' : ''}`} style={{ color: "var(--adm-text-3)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>

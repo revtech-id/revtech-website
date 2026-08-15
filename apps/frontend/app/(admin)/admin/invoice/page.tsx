@@ -7,6 +7,8 @@ import { CheckCircle2, MessageSquare, Trash2, X, MoreHorizontal, ChevronDown, Al
 import { logActivity } from "@/lib/activityLog";
 import rawInvoices from "@/data/admin/invoices.json";
 import rawInbox from "@/data/admin/inbox.json";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, setDoc } from "firebase/firestore";
 
 interface Invoice {
   id: string;
@@ -177,28 +179,54 @@ export default function InvoicePage() {
   const [lunasInvoice, setLunasInvoice] = useState<Invoice | null>(null);
   const [lunasDate, setLunasDate] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  }
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_invoices");
-    let currentInvoices: Invoice[] = saved ? JSON.parse(saved) : [];
     
-    setInvoiceList(currentInvoices);
-    if (!saved) localStorage.setItem("revtech_invoices", JSON.stringify(currentInvoices));
+    // Sinkronisasi Realtime dengan Firestore untuk Invoices
+    const qInvoices = query(collection(db, "invoices"), orderBy("issuedAt", "desc"));
+    const unsubInvoices = onSnapshot(qInvoices, (snapshot) => {
+      const firestoreInvoices: Invoice[] = [];
+      snapshot.forEach(document => {
+        firestoreInvoices.push({ id: document.id, ...document.data() } as Invoice);
+      });
+      setInvoiceList(firestoreInvoices);
+    });
 
-    const savedOrders = localStorage.getItem("revtech_orders");
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    }
+    // Sinkronisasi Realtime dengan Firestore untuk Orders (dibutuhkan untuk filter Layanan)
+    const qOrders = query(collection(db, "orders"));
+    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+      const firestoreOrders: any[] = [];
+      snapshot.forEach(document => {
+        firestoreOrders.push({ id: document.id, ...document.data() });
+      });
+      setOrders(firestoreOrders);
+    });
+
+    return () => {
+      unsubInvoices();
+      unsubOrders();
+    };
   }, []);
 
-  const handleMarkPaid = (inv: Invoice, date: string) => {
-    const updated: Invoice[] = invoiceList.map((item) =>
-      item.id === inv.id ? { ...item, status: "paid" as const, paidAt: date } : item
-    );
-    setInvoiceList(updated);
-    localStorage.setItem("revtech_invoices", JSON.stringify(updated));
-    logActivity({ type: "system", title: "Invoice Dilunasi", description: `Invoice ${inv.id} untuk klien ${inv.client} telah dilunasi.`, user: "Admin" });
+  const handleMarkPaid = async (inv: Invoice, date: string) => {
+    try {
+      await updateDoc(doc(db, "invoices", inv.id), {
+        status: "paid",
+        paidAt: date
+      });
+      logActivity({ type: "system", title: "Invoice Dilunasi", description: `Invoice ${inv.id} untuk klien ${inv.client} telah dilunasi.`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memperbarui status invoice.");
+    }
   };
 
   const confirmLunas = () => {
@@ -336,8 +364,7 @@ export default function InvoicePage() {
   ];
 
   function save(updated: Invoice[]) {
-    setInvoiceList(updated);
-    localStorage.setItem("revtech_invoices", JSON.stringify(updated));
+    // No-op karena onSnapshot akan menangani update UI
   }
 
   function handleQuickLunas(inv: Invoice) {
@@ -346,10 +373,31 @@ export default function InvoicePage() {
   }
 
   function handleDelete(id: string) {
-    if (window.confirm("Apakah Anda yakin ingin menghapus tagihan ini?")) {
-      save(invoiceList.filter(inv => inv.id !== id));
-      logActivity({ type: "system", title: "Invoice Dihapus", description: `Invoice dengan ID ${id} telah dihapus.`, user: "Admin" });
+    setDeletingId(id);
+  }
+
+  async function confirmDelete() {
+    if (!deletingId) return;
+    try {
+      const invoiceToDelete = invoiceList.find(i => i.id === deletingId);
+      if (invoiceToDelete) {
+        const trashItem = {
+          ...invoiceToDelete,
+          deletedAt: new Date().toISOString(),
+          deletedBy: "Admin",
+          _module: "Tagihan"
+        };
+        await setDoc(doc(db, "trash", deletingId), trashItem);
+      }
+      
+      await deleteDoc(doc(db, "invoices", deletingId));
+      logActivity({ type: "system", title: "Invoice Dihapus", description: `Invoice dengan ID ${deletingId} telah dihapus.`, user: "Admin" });
+      showToast("Invoice berhasil dihapus dari sistem.");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menghapus invoice.");
     }
+    setDeletingId(null);
   }
 
   const filtered = invoiceList.filter(i => {
@@ -537,63 +585,73 @@ export default function InvoicePage() {
         </>
 
       {/* Modal Konfirmasi Lunas */}
-      <AdminModal isOpen={!!lunasInvoice} onClose={() => setLunasInvoice(null)} maxWidth="max-w-md" noPadding={true}>
+      <AnimatePresence>
         {lunasInvoice && (
-          <>
-            <div className="p-5 border-b border-[var(--adm-border)] flex justify-between items-center bg-[var(--adm-bg)]">
-              <h3 className="font-bold text-lg text-[var(--adm-text)] flex items-center gap-2">
-                <CircleDollarSign className="text-[var(--adm-success)]" size={20} strokeWidth={2.5} />
-                Konfirmasi Pelunasan
-              </h3>
-              <button onClick={() => setLunasInvoice(null)} className="text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors">
-                <X size={20} strokeWidth={2.5} />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="bg-[var(--adm-bg)] p-3 rounded-xl border border-[var(--adm-border)] flex justify-between items-center mb-2">
-                <div>
-                  <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Total Tagihan</p>
-                  <p className="font-bold text-[var(--adm-text)] text-sm">{formatRp(lunasInvoice.amount)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-[var(--adm-text-3)] uppercase tracking-wide mb-0.5">Klien</p>
-                  <p className="font-bold text-[var(--adm-text)] text-sm">{lunasInvoice.client}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[var(--adm-text-2)] uppercase tracking-wide block mb-1.5">Tanggal Pelunasan</label>
+          <AdminModal isOpen={true} title="Konfirmasi Pelunasan" onClose={() => setLunasInvoice(null)}>
+            <div className="space-y-4">
+              <p className="text-[13px] text-[var(--adm-text)] leading-relaxed">
+                Tandai invoice <strong className="font-bold">{lunasInvoice.id}</strong> ({lunasInvoice.client}) sebagai LUNAS?
+              </p>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-bold text-[var(--adm-text-2)] ml-1">Tanggal Pembayaran</label>
                 <input
                   type="date"
                   value={lunasDate}
                   onChange={(e) => setLunasDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-transparent text-sm font-semibold text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-success)]/30 border border-[var(--adm-border)] [color-scheme:dark]"
+                  className="w-full bg-[var(--adm-bg)] border border-[var(--adm-border)] rounded-xl px-4 py-2.5 text-[13px] text-[var(--adm-text)] focus:outline-none focus:border-[var(--adm-primary)] transition-colors"
                 />
               </div>
-            </div>
 
-            <div className="p-5 border-t border-[var(--adm-border)] flex gap-3 bg-[var(--adm-bg)]">
-              <button 
-                onClick={() => setLunasInvoice(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-[var(--adm-text-2)] bg-transparent hover:text-[var(--adm-text)] transition-colors"
-              >
-                Batal
-              </button>
-              <button 
-                onClick={() => {
-                  save(invoiceList.map(inv => inv.id === lunasInvoice.id ? { ...inv, status: "paid", paidAt: new Date(lunasDate).toISOString().split("T")[0] } : inv));
-                  setLunasInvoice(null);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-[var(--adm-success)] text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
-              >
-                <CheckCircle2 size={18} strokeWidth={2.5} />
-                Tandai Lunas
-              </button>
+              <div className="flex gap-3 pt-2">
+                <AdminButton variant="secondary" onClick={() => setLunasInvoice(null)} className="flex-1">Batal</AdminButton>
+                <AdminButton variant="primary" onClick={() => confirmLunas()} className="flex-1">
+                  <CheckCircle2 size={18} strokeWidth={2.5} className="mr-2" />
+                  Tandai Lunas
+                </AdminButton>
+              </div>
             </div>
-          </>
+          </AdminModal>
         )}
-      </AdminModal>
+
+        {/* Modal Hapus */}
+        {deletingId && (
+          <AdminModal isOpen={true} title="Hapus Invoice" onClose={() => setDeletingId(null)}>
+            <div className="space-y-4">
+              <p className="text-[13px] text-[var(--adm-text)] leading-relaxed">
+                Apakah Anda yakin ingin menghapus tagihan <strong className="font-bold">{deletingId}</strong>?
+                Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <AdminButton variant="secondary" onClick={() => setDeletingId(null)} className="flex-1">Batal</AdminButton>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl transition-colors text-[13px]"
+                >
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </AdminModal>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50 bg-[var(--adm-card)] border border-[var(--adm-border)] shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--adm-success)]/20 flex items-center justify-center text-[var(--adm-success)] shrink-0">
+              <CheckCircle2 size={18} strokeWidth={2.5} />
+            </div>
+            <p className="text-[13px] font-bold text-[var(--adm-text)]">{toastMessage}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

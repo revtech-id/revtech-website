@@ -7,6 +7,7 @@ import { useDropzone } from "react-dropzone";
 import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
+import { useUser } from "@/contexts/UserContext";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -95,6 +96,9 @@ const QUILL_MODULES = {
   }
 };
 
+import { db } from "@/lib/firebase";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
+
 interface BlogPost {
   id: string;
   title: string;
@@ -106,9 +110,10 @@ interface BlogPost {
   metaDescription: string;
   keywords: string;
   pinned?: boolean;
+  content?: string;
 }
 
-// TODO: replace with API call — currently using static mock
+// TODO: replace with API call — currently using static mock for initial seed
 const MOCK_POSTS: BlogPost[] = [
   {
     id: "1",
@@ -121,6 +126,7 @@ const MOCK_POSTS: BlogPost[] = [
     metaDescription: "Pelajari mengapa kehadiran online melalui website profesional krusial untuk pertumbuhan bisnis Anda di era digital 2026.",
     keywords: "website bisnis, pentingnya website, digital marketing",
     pinned: true,
+    content: "<h2>Pentingnya Website di 2026</h2><p>Di era ini, website bukan lagi opsional, melainkan fondasi bisnis.</p>",
   },
   {
     id: "2",
@@ -133,6 +139,7 @@ const MOCK_POSTS: BlogPost[] = [
     metaDescription: "",
     keywords: "",
     pinned: false,
+    content: "<p>Memilih tech stack yang tepat dapat menghemat biaya server dan mempermudah scaling UMKM Anda.</p>",
   },
 ];
 
@@ -183,6 +190,9 @@ function SEOPanel({ form, setForm, loading, onGenerate }: {
 }
 
 export default function BlogPage() {
+  const { user } = useUser();
+  const canDelete = user?.role === "Superadmin" || user?.role === "Project Manager";
+
   const [isClient, setIsClientState] = useState(false);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [filter, setFilter] = useState("all");
@@ -216,9 +226,29 @@ export default function BlogPage() {
 
   useEffect(() => {
     setIsClientState(true);
-    const saved = localStorage.getItem("revtech_blog");
-    setPosts(saved ? JSON.parse(saved) : MOCK_POSTS);
-    if (!saved) localStorage.setItem("revtech_blog", JSON.stringify(MOCK_POSTS));
+    
+    // Subscribe to Firestore
+    const unsub = onSnapshot(collection(db, "blog_posts"), async (snapshot) => {
+      if (snapshot.empty) {
+        // Migration: If empty, write MOCK_POSTS
+        try {
+          const batch = writeBatch(db);
+          MOCK_POSTS.forEach(p => {
+            const docRef = doc(db, "blog_posts", p.id);
+            batch.set(docRef, p);
+          });
+          await batch.commit();
+        } catch (err) {
+          console.error("Failed to migrate initial blog posts", err);
+        }
+      } else {
+        const loadedPosts = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as BlogPost[];
+        setPosts(loadedPosts);
+      }
+    });
 
     // Register Divider Blot dynamically for ReactQuill
     import("react-quill-new").then((mod) => {
@@ -232,19 +262,20 @@ export default function BlogPage() {
         Quill.register(DividerBlot as any);
       }
     });
+    
+    return () => unsub();
   }, []);
 
-  function savePosts(updated: BlogPost[]) {
-    setPosts(updated);
-    localStorage.setItem("revtech_blog", JSON.stringify(updated));
-  }
-
-  function togglePin(id: string) {
-    const updated = posts.map(p => p.id === id ? { ...p, pinned: !p.pinned } : p);
-    savePosts(updated);
-    const post = updated.find(p => p.id === id);
-    if (post) {
-      logActivity({ type: "blog_updated", title: post.pinned ? "Artikel Disematkan" : "Pin Artikel Dilepas", description: `Status pin diperbarui untuk artikel ${post.title}.`, user: "Admin" });
+  async function togglePin(id: string) {
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
+    
+    try {
+      await updateDoc(doc(db, "blog_posts", id), { pinned: !post.pinned });
+      logActivity({ type: "blog_updated", title: !post.pinned ? "Artikel Disematkan" : "Pin Artikel Dilepas", description: `Status pin diperbarui untuk artikel ${post.title}.`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyematkan artikel", type: "error" });
     }
   }
 
@@ -255,27 +286,42 @@ export default function BlogPage() {
       message: "Artikel ini akan dihapus secara permanen dan tidak dapat dikembalikan.",
       confirmText: "Hapus",
       confirmVariant: "danger",
-      action: () => {
-        savePosts(posts.filter(p => p.id !== id));
-        setToast({ isVisible: true, message: "Perubahan berhasil disimpan", type: "success" });
-        logActivity({ type: "blog_deleted", title: "Artikel Dihapus", description: `Artikel blog dengan ID ${id} dihapus.`, user: "Admin" });
-        setView("list");
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      action: async () => {
+        try {
+          await deleteDoc(doc(db, "blog_posts", id));
+          setToast({ isVisible: true, message: "Perubahan berhasil disimpan", type: "success" });
+          logActivity({ type: "blog_deleted", title: "Artikel Dihapus", description: `Artikel blog dengan ID ${id} dihapus.`, user: "Admin" });
+          setView("list");
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menghapus artikel", type: "error" });
+        }
       }
     });
   }
 
-  function confirmArchive(id: string, currentStatus: string) {
+  async function confirmArchive(id: string, currentStatus: string) {
     const isArchived = currentStatus === "archived";
-    savePosts(posts.map(p => p.id === id ? { ...p, status: isArchived ? "draft" : "archived" } : p));
-    setToast({ isVisible: true, message: isArchived ? "Artikel dikembalikan ke Draft" : "Artikel berhasil diarsipkan", type: "success" });
-    logActivity({ type: "blog_updated", title: isArchived ? "Artikel Dipulihkan" : "Artikel Diarsipkan", description: `Artikel blog ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
+    try {
+      await updateDoc(doc(db, "blog_posts", id), { status: isArchived ? "draft" : "archived" });
+      setToast({ isVisible: true, message: isArchived ? "Artikel dikembalikan ke Draft" : "Artikel berhasil diarsipkan", type: "success" });
+      logActivity({ type: "blog_updated", title: isArchived ? "Artikel Dipulihkan" : "Artikel Diarsipkan", description: `Artikel blog ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal mengubah status artikel", type: "error" });
+    }
   }
 
-  function confirmPublish(id: string) {
-    savePosts(posts.map(p => p.id === id ? { ...p, status: "published", publishedAt: p.publishedAt || new Date().toISOString() } : p));
-    setToast({ isVisible: true, message: "Artikel berhasil diterbitkan", type: "success" });
-    logActivity({ type: "blog_updated", title: "Artikel Diterbitkan", description: `Artikel blog ID ${id} dipublish.`, user: "Admin" });
+  async function confirmPublish(id: string) {
+    try {
+      await updateDoc(doc(db, "blog_posts", id), { status: "published", publishedAt: new Date().toISOString() });
+      setToast({ isVisible: true, message: "Artikel berhasil diterbitkan", type: "success" });
+      logActivity({ type: "blog_updated", title: "Artikel Diterbitkan", description: `Artikel blog ID ${id} dipublish.`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menerbitkan artikel", type: "error" });
+    }
   }
 
   function openNew() {
@@ -286,12 +332,11 @@ export default function BlogPage() {
   }
 
   function handleEdit(post: BlogPost) {
-    const postContent = localStorage.getItem(`revtech_blog_content_${post.id}`) || "";
-    setSeoForm({ metaTitle: post.metaTitle, metaDescription: post.metaDescription, keywords: post.keywords });
+    setSeoForm({ metaTitle: post.metaTitle || "", metaDescription: post.metaDescription || "", keywords: post.keywords || "" });
     setContentForm({ 
-      title: post.title, 
+      title: post.title || "", 
       coverImage: post.coverImage || "", 
-      content: postContent, 
+      content: post.content || "", 
       pinned: post.pinned || false,
       publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : ""
     });
@@ -319,67 +364,72 @@ export default function BlogPage() {
     }
   }
 
-  function savePost(asDraft: boolean) {
+  async function savePost(asDraft: boolean) {
     let slug = editPost?.slug || '';
-
-    if (editPost) {
-      const updated: BlogPost = {
-        ...editPost,
-        title: contentForm.title,
-        coverImage: contentForm.coverImage,
-        status: asDraft ? "draft" : "published",
-        metaTitle: seoForm.metaTitle,
-        metaDescription: seoForm.metaDescription,
-        keywords: seoForm.keywords,
-        pinned: contentForm.pinned,
-        publishedAt: asDraft ? (editPost.publishedAt || null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
-      };
-      savePosts(posts.map(p => p.id === editPost.id ? updated : p));
-      localStorage.setItem(`revtech_blog_content_${editPost.id}`, contentForm.content);
-    } else {
-      const newId = `post_${Date.now()}`;
-      slug = contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-      const newPost: BlogPost = {
-        id: newId,
-        title: contentForm.title,
-        slug,
-        status: asDraft ? "draft" : "published",
-        coverImage: contentForm.coverImage,
-        publishedAt: asDraft ? (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
-        metaTitle: seoForm.metaTitle,
-        metaDescription: seoForm.metaDescription,
-        keywords: seoForm.keywords,
-        pinned: contentForm.pinned,
-      };
-      savePosts([...posts, newPost]);
-      localStorage.setItem(`revtech_blog_content_${newId}`, contentForm.content);
-    }
-
-    // Sync to public page via API when publishing
-    if (!asDraft) {
-      fetch("/api/admin/blog", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: slug || contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+    
+    try {
+      if (editPost) {
+        const updated: BlogPost = {
+          ...editPost,
           title: contentForm.title,
-          content: contentForm.content,
           coverImage: contentForm.coverImage,
-          description: seoForm.metaDescription,
-          category: "",
-          publishedAt: contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString(),
-        }),
-      }).catch(console.error);
-    }
+          content: contentForm.content,
+          status: asDraft ? "draft" : "published",
+          metaTitle: seoForm.metaTitle,
+          metaDescription: seoForm.metaDescription,
+          keywords: seoForm.keywords,
+          pinned: contentForm.pinned,
+          publishedAt: asDraft ? (editPost.publishedAt || null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
+        };
+        await setDoc(doc(db, "blog_posts", editPost.id), updated, { merge: true });
+      } else {
+        const newId = `post_${Date.now()}`;
+        slug = contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        const newPost: BlogPost = {
+          id: newId,
+          title: contentForm.title,
+          slug,
+          status: asDraft ? "draft" : "published",
+          coverImage: contentForm.coverImage,
+          content: contentForm.content,
+          publishedAt: asDraft ? (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : null) : (contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString()),
+          metaTitle: seoForm.metaTitle,
+          metaDescription: seoForm.metaDescription,
+          keywords: seoForm.keywords,
+          pinned: contentForm.pinned,
+        };
+        await setDoc(doc(db, "blog_posts", newId), newPost);
+      }
 
-    setView("list");
-    setToast({ isVisible: true, message: asDraft ? "Draft berhasil disimpan" : "Artikel berhasil dipublish", type: "success" });
-    logActivity({ 
-      type: "blog_updated", 
-      title: asDraft ? "Draft Artikel Disimpan" : (editPost ? "Artikel Diperbarui" : "Artikel Baru Diterbitkan"), 
-      description: `Artikel "${contentForm.title}" ${asDraft ? "disimpan sebagai draft" : "dipublish"}.`, 
-      user: "Admin" 
-    });
+      // Sync to public page via API when publishing
+      if (!asDraft) {
+        fetch("/api/admin/blog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug: slug || contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+            title: contentForm.title,
+            content: contentForm.content,
+            coverImage: contentForm.coverImage,
+            description: seoForm.metaDescription,
+            category: "",
+            publishedAt: contentForm.publishedAt ? new Date(contentForm.publishedAt).toISOString() : new Date().toISOString(),
+          }),
+        }).catch(console.error);
+      }
+
+      setView("list");
+      setToast({ isVisible: true, message: asDraft ? "Draft berhasil disimpan" : "Artikel berhasil dipublish", type: "success" });
+      logActivity({ 
+        type: "blog_updated", 
+        title: asDraft ? "Draft Artikel Disimpan" : (editPost ? "Artikel Diperbarui" : "Artikel Baru Diterbitkan"), 
+        description: `Artikel "${contentForm.title}" ${asDraft ? "disimpan sebagai draft" : "dipublish"}.`, 
+        user: "Admin" 
+      });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan artikel", type: "error" });
+    }
   }
 
   const published = posts.filter((p) => p.status === "published");
@@ -461,9 +511,11 @@ export default function BlogPage() {
             <button onClick={() => confirmArchive(post.id, post.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={post.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
               <Archive size={14} strokeWidth={2} className={post.status === "archived" ? "text-amber-500" : ""} />
             </button>
-            <button onClick={() => confirmDelete(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
-              <Trash2 size={14} strokeWidth={2} />
-            </button>
+            {canDelete && (
+              <button onClick={() => confirmDelete(post.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+                <Trash2 size={14} strokeWidth={2} />
+              </button>
+            )}
           </div>
         </div>
       )

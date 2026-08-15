@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { AdminToast, AdminConfirmModal, AdminModal, AdminButton } from "@/components/admin/ui";
 import { logActivity } from "@/lib/activityLog";
+import { db } from "@/lib/firebase";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
 
 // Types
 interface TestimonialMessage {
@@ -154,17 +156,20 @@ export default function TestimonialWhatsAppAdmin() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_testimonials");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setItems(parsed);
-        if (parsed.length > 0) setActiveId(parsed[0].id);
-      } catch (e) {
-        console.error("Failed to parse testimonials");
+    const unsub = onSnapshot(collection(db, "testimonials"), (snapshot) => {
+      const loaded = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      })) as Testimonial[];
+      setItems(loaded);
+      
+      // Auto-select first item if none selected and items exist
+      if (loaded.length > 0 && !activeId) {
+        setActiveId(loaded[0].id);
       }
-    }
-  }, []);
+    });
+    return () => unsub();
+  }, [activeId]);
 
   useEffect(() => {
     // Auto-scroll to bottom when messages change
@@ -172,12 +177,6 @@ export default function TestimonialWhatsAppAdmin() {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [items, activeId]);
-
-  const saveToStorage = (newItems: Testimonial[]) => {
-    setItems(newItems);
-    localStorage.setItem("revtech_testimonials", JSON.stringify(newItems));
-    window.dispatchEvent(new Event("testimonials-updated"));
-  };
 
   const getColorFromName = (name: string) => {
     let hash = 0;
@@ -213,35 +212,35 @@ export default function TestimonialWhatsAppAdmin() {
       message: "Seluruh riwayat obrolan dengan klien ini akan dihapus permanen.",
       confirmText: "Hapus",
       confirmVariant: "danger",
-      action: () => {
-        const newItems = items.filter(i => i.id !== id);
-        saveToStorage(newItems);
-        if (activeId === id) {
-          setActiveId(newItems.length > 0 ? newItems[0].id : null);
+      action: async () => {
+        try {
+          await deleteDoc(doc(db, "testimonials", id));
+          if (activeId === id) setActiveId(null);
+          setToast({ isVisible: true, message: "Testimoni berhasil dihapus", type: "success" });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menghapus", type: "error" });
         }
-        setToast({ isVisible: true, message: "Testimoni berhasil dihapus", type: "success" });
       }
     });
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim() || !activeId) return;
-    
+    const targetItem = items.find(i => i.id === activeId);
+    if (!targetItem) return;
+
     if (editingMessageId) {
-      const newItems = items.map(item => {
-        if (item.id === activeId) {
-          return {
-            ...item,
-            messages: item.messages.map(m => m.id === editingMessageId ? { ...m, text: chatInput.trim() } : m)
-          };
-        }
-        return item;
-      });
-      saveToStorage(newItems);
-      setEditingMessageId(null);
-      setChatInput("");
-      setToast({ isVisible: true, message: "Pesan berhasil diubah", type: "success" });
-      logActivity({ type: "testimonial_updated", title: "Pesan Testimoni Diedit", description: `Pesan klien diedit di Testimoni ID: ${activeId}`, user: "Admin" });
+      try {
+        const newMessages = targetItem.messages.map(m => m.id === editingMessageId ? { ...m, text: chatInput.trim() } : m);
+        await updateDoc(doc(db, "testimonials", activeId), { messages: newMessages });
+        setEditingMessageId(null);
+        setChatInput("");
+        setToast({ isVisible: true, message: "Pesan berhasil diubah", type: "success" });
+        logActivity({ type: "testimonial_updated", title: "Pesan Testimoni Diedit", description: `Pesan klien diedit di Testimoni ID: ${activeId}`, user: "Admin" });
+      } catch (err) {
+        console.error(err);
+      }
       return;
     }
 
@@ -252,16 +251,13 @@ export default function TestimonialWhatsAppAdmin() {
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
     };
 
-    const newItems = items.map(item => {
-      if (item.id === activeId) {
-        return { ...item, messages: [...item.messages, newMessage] };
-      }
-      return item;
-    });
-
-    saveToStorage(newItems);
-    setChatInput("");
-    logActivity({ type: "testimonial_updated", title: "Pesan Baru Testimoni", description: `Pesan baru ditambahkan di Testimoni ID: ${activeId}`, user: "Admin" });
+    try {
+      await updateDoc(doc(db, "testimonials", activeId), { messages: [...targetItem.messages, newMessage] });
+      setChatInput("");
+      logActivity({ type: "testimonial_updated", title: "Pesan Baru Testimoni", description: `Pesan baru ditambahkan di Testimoni ID: ${activeId}`, user: "Admin" });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleDeleteMessage = (msgId: string) => {
@@ -273,16 +269,19 @@ export default function TestimonialWhatsAppAdmin() {
       confirmText: "Hapus",
       confirmVariant: "danger",
       icon: <Trash2 size={20} />,
-      action: () => {
-        const newItems = items.map(item => {
-          if (item.id === activeId) {
-            return { ...item, messages: item.messages.filter(m => m.id !== msgId) };
+      action: async () => {
+        const targetItem = items.find(i => i.id === activeId);
+        if (targetItem) {
+          try {
+            await updateDoc(doc(db, "testimonials", activeId), { 
+              messages: targetItem.messages.filter(m => m.id !== msgId) 
+            });
+            setToast({ isVisible: true, message: "Pesan berhasil dihapus", type: "success" });
+            logActivity({ type: "testimonial_deleted", title: "Pesan Testimoni Dihapus", description: `Satu pesan dihapus dari Testimoni ID: ${activeId}`, user: "Admin" });
+          } catch (err) {
+            console.error(err);
           }
-          return item;
-        });
-        saveToStorage(newItems);
-        setToast({ isVisible: true, message: "Pesan berhasil dihapus", type: "success" });
-        logActivity({ type: "testimonial_deleted", title: "Pesan Testimoni Dihapus", description: `Satu pesan dihapus dari Testimoni ID: ${activeId}`, user: "Admin" });
+        }
       }
     });
   };
@@ -313,33 +312,33 @@ export default function TestimonialWhatsAppAdmin() {
     setDraftClient({ ...draftClient, ...updates, initials: newInitials, avatarBg: newAvatarBg });
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!draftClient) return;
     
     const isExisting = items.some(i => i.id === draftClient.id);
     const nameToSave = draftClient.name.trim() === "" ? "Klien Tanpa Nama" : draftClient.name;
     const finalClient = { ...draftClient, name: nameToSave };
     
-    let newItems;
-    if (isExisting) {
-      newItems = items.map(i => i.id === finalClient.id ? finalClient : i);
-    } else {
-      newItems = [finalClient, ...items];
-      setActiveId(finalClient.id);
+    try {
+      await setDoc(doc(db, "testimonials", finalClient.id), finalClient, { merge: true });
+      if (!isExisting) setActiveId(finalClient.id);
+      
+      setDraftClient(null);
+      setToast({ 
+        isVisible: true, 
+        message: isExisting ? "Perubahan data klien berhasil disimpan" : "Klien baru berhasil ditambahkan", 
+        type: "success" 
+      });
+      logActivity({ 
+        type: "testimonial_updated", 
+        title: isExisting ? "Data Klien Testimoni Diedit" : "Klien Testimoni Baru", 
+        description: isExisting ? `Profil klien diperbarui untuk ${finalClient.name}` : `Klien baru ditambahkan: ${finalClient.name}`, 
+        user: "Admin" 
+      });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
     }
-    saveToStorage(newItems);
-    setDraftClient(null);
-    setToast({ 
-      isVisible: true, 
-      message: isExisting ? "Perubahan data klien berhasil disimpan" : "Klien baru berhasil ditambahkan", 
-      type: "success" 
-    });
-    logActivity({ 
-      type: "testimonial_updated", 
-      title: isExisting ? "Data Klien Testimoni Diedit" : "Klien Testimoni Baru", 
-      description: isExisting ? `Profil klien diperbarui untuk ${finalClient.name}` : `Klien baru ditambahkan: ${finalClient.name}`, 
-      user: "Admin" 
-    });
   };
     
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -366,19 +365,27 @@ export default function TestimonialWhatsAppAdmin() {
     return 0;
   });
 
-  const toggleArchive = (id: string) => {
+  const toggleArchive = async (id: string) => {
     const item = items.find(i => i.id === id);
     if (!item) return;
     const newStatus = item.status === "archived" ? "draft" : "archived";
-    const newItems = items.map(i => i.id === id ? { ...i, status: newStatus as any } : i);
-    saveToStorage(newItems);
-    setToast({ isVisible: true, message: newStatus === "archived" ? "Chat berhasil diarsipkan" : "Chat berhasil dipulihkan", type: "success" });
-    if (activeId === id && newStatus === "archived") setActiveId(null);
+    try {
+      await updateDoc(doc(db, "testimonials", id), { status: newStatus });
+      setToast({ isVisible: true, message: newStatus === "archived" ? "Chat berhasil diarsipkan" : "Chat berhasil dipulihkan", type: "success" });
+      if (activeId === id && newStatus === "archived") setActiveId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const togglePin = (id: string) => {
-    const newItems = items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i);
-    saveToStorage(newItems);
+  const togglePin = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    try {
+      await updateDoc(doc(db, "testimonials", id), { pinned: !item.pinned });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -396,13 +403,22 @@ export default function TestimonialWhatsAppAdmin() {
       message: "Seluruh obrolan yang dipilih akan dihapus permanen.",
       confirmText: "Hapus",
       confirmVariant: "danger",
-      action: () => {
-        const newItems = items.filter(i => !selectedIds.has(i.id));
-        saveToStorage(newItems);
-        if (activeId && selectedIds.has(activeId)) setActiveId(newItems[0]?.id ?? null);
-        setSelectedIds(new Set());
-        setSelectMode(false);
-        setToast({ isVisible: true, message: "Testimoni terpilih berhasil dihapus", type: "success" });
+      action: async () => {
+        try {
+          const batch = writeBatch(db);
+          selectedIds.forEach(id => {
+            batch.delete(doc(db, "testimonials", id));
+          });
+          await batch.commit();
+          
+          if (activeId && selectedIds.has(activeId)) setActiveId(null);
+          setSelectedIds(new Set());
+          setSelectMode(false);
+          setToast({ isVisible: true, message: "Testimoni terpilih berhasil dihapus", type: "success" });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menghapus", type: "error" });
+        }
       }
     });
   };

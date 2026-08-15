@@ -7,6 +7,9 @@ import { StatusBadge, AdminToolbar, AdminModal, AdminTable, AdminButton } from "
 import { Pencil, Trash2, MessageSquare, Handshake, X, ChevronDown, Globe, MonitorPlay, Box, SlidersHorizontal, CheckCircle2, Undo2, AlertTriangle, CircleDollarSign, CheckSquare, Calendar, Star, FolderKanban } from "lucide-react";
 import rawOrders from "@/data/admin/orders.json";
 import { logActivity } from "@/lib/activityLog";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, setDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { useUser } from "@/contexts/UserContext";
 
 type OrderStatus = "antrean" | "pengerjaan" | "revisi" | "pelunasan" | "handover" | "selesai" | "batal";
 
@@ -187,7 +190,7 @@ function WAModal({ order, onClose }: WAModalProps) {
 
 // ── Order Card ────────────────────────────────────────────────────────────────
 
-function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover, onIncrementRevision, onCardClick, onTestimoniClick, onPortofolioClick }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; onIncrementRevision: () => void; onCardClick: () => void; onTestimoniClick: () => void; onPortofolioClick: () => void; }) {
+function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQuickLunas, onQuickHandover, onIncrementRevision, onCardClick, onTestimoniClick, onPortofolioClick, canDelete }: { order: Order; index: number; onWA: () => void; onEdit: () => void; onDelete: () => void; onStatusChange: (status: OrderStatus) => void; onQuickLunas: () => void; onQuickHandover: () => void; onIncrementRevision: () => void; onCardClick: () => void; onTestimoniClick: () => void; onPortofolioClick: () => void; canDelete?: boolean }) {
   const pipelineIndex = PIPELINE.findIndex((p) => p.status === order.status);
   const badge = PIPELINE[pipelineIndex] || PIPELINE[0];
 
@@ -389,9 +392,11 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
               <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
                 <Pencil size={13} strokeWidth={2} />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
-                <Trash2 size={13} strokeWidth={2} />
-              </button>
+              {canDelete && (
+                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
+                  <Trash2 size={13} strokeWidth={2} />
+                </button>
+              )}
             </div>
 
             <div className="w-px h-4 bg-[var(--adm-border)] hidden sm:block"></div>
@@ -417,9 +422,11 @@ function OrderCard({ order, index, onWA, onEdit, onDelete, onStatusChange, onQui
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function PesananPage() {
+  const { user } = useUser();
+  const canDelete = user?.role === "Superadmin" || user?.role === "Project Manager";
+
   const [isClient, setIsClient] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [deletedOrders, setDeletedOrders] = useState<Order[]>([]);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "all">("all");
   const [serviceFilter, setServiceFilter] = useState("Semua");
   const [search, setSearch] = useState("");
@@ -463,12 +470,18 @@ export default function PesananPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_orders");
-    if (saved) setOrders(JSON.parse(saved));
-    else setOrders(defaultOrders);
+    
+    // Sinkronisasi Realtime dengan Firestore
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const firestoreOrders: Order[] = [];
+      snapshot.forEach(document => {
+        firestoreOrders.push({ id: document.id, ...document.data() } as Order);
+      });
+      setOrders(firestoreOrders);
+    });
 
-    const savedDeleted = localStorage.getItem("revtech_orders_trash");
-    if (savedDeleted) setDeletedOrders(JSON.parse(savedDeleted));
+    return () => unsubscribe();
   }, []);
 
   // Auto-calculate next billing date based on handover option
@@ -491,16 +504,6 @@ export default function PesananPage() {
     }
   }, [handoverOptionState, handoverOrder]);
 
-  const saveOrders = (newOrders: Order[]) => {
-    setOrders(newOrders);
-    localStorage.setItem("revtech_orders", JSON.stringify(newOrders));
-  };
-
-  const saveDeletedOrders = (newDeleted: Order[]) => {
-    setDeletedOrders(newDeleted);
-    localStorage.setItem("revtech_orders_trash", JSON.stringify(newDeleted));
-  };
-
   const triggerRevision = (id: string) => {
     const order = orders.find(o => o.id === id);
     if (order) {
@@ -509,198 +512,266 @@ export default function PesananPage() {
     }
   };
 
-  const confirmRevision = () => {
+  const confirmRevision = async () => {
     if (!revisionOrder) return;
-    const updated = orders.map(o => {
-      if (o.id === revisionOrder.id && (o.usedRevisions || 0) < (o.maxRevisions || 0)) {
-        const newUsed = (o.usedRevisions || 0) + 1;
-        const noteText = revisionNote ? `Menggunakan revisi (${newUsed}/${o.maxRevisions}): ${revisionNote}` : `Menggunakan revisi (${newUsed}/${o.maxRevisions})`;
-        const newLog = {
-          date: new Date().toISOString(),
-          note: noteText,
-          by: "Admin"
-        };
-        const currentLogs = o.progressLog || [];
-        return { ...o, usedRevisions: newUsed, progressLog: [...currentLogs, newLog] } as Order;
+    
+    if ((revisionOrder.usedRevisions || 0) < (revisionOrder.maxRevisions || 0)) {
+      const newUsed = (revisionOrder.usedRevisions || 0) + 1;
+      const noteText = revisionNote ? `Menggunakan revisi (${newUsed}/${revisionOrder.maxRevisions}): ${revisionNote}` : `Menggunakan revisi (${newUsed}/${revisionOrder.maxRevisions})`;
+      const newLog = {
+        date: new Date().toISOString(),
+        note: noteText,
+        by: "Admin"
+      };
+      const currentLogs = revisionOrder.progressLog || [];
+      
+      try {
+        await updateDoc(doc(db, "orders", revisionOrder.id), {
+          usedRevisions: newUsed,
+          progressLog: [...currentLogs, newLog]
+        });
+        showToast("Revisi berhasil dicatat", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal mencatat revisi", "error");
       }
-      return o;
-    });
-    setOrders(updated);
-    saveOrders(updated);
+    }
+
     setRevisionOrder(null);
-    showToast("Revisi berhasil dicatat", "success");
   };
 
   // Deadline is now completely manual, no auto-calculation based on service.
 
-  const confirmLunas = () => {
+  const confirmLunas = async () => {
     if (!lunasOrder) return;
-    const newTotal = lunasOrder.total;
-    const newDp = lunasOrder.dp + (lunasPayment || 0);
-    const isPaid = newDp >= newTotal;
+    const currentOrder = lunasOrder; // capture locally
+    const currentPayment = lunasPayment || 0;
+    const currentNote = lunasNote;
     
-    const newOrders = orders.map(o => {
-      if (o.id !== lunasOrder.id) return o;
-      
-      let cleanedNotes = o.notes ? o.notes.replace(/\s*\|\s*Pembayaran:.*$/, "").replace(/^Pembayaran:.*$/, "") : "";
-      
-      let updatedNotes = cleanedNotes;
-      
-      if (!isPaid && lunasNote.trim()) {
-        updatedNotes = cleanedNotes 
-          ? `${cleanedNotes} | Pembayaran: ${lunasNote.trim()}`
-          : `Pembayaran: ${lunasNote.trim()}`;
-      }
-
-      return {
-        ...o,
-        total: newTotal,
-        dp: newDp,
-        notes: updatedNotes,
-        ...(isPaid && { status: "handover" as OrderStatus })
-      };
-    });
-    
-    saveOrders(newOrders);
-    
-    // Auto-update or create Pelunasan Invoice
-    if (isPaid) {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const savedInvoices = localStorage.getItem("revtech_invoices");
-        let invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
-        const existingIndex = invoiceList.findIndex((i: any) => i.id === `INV-PL-${lunasOrder.id}`);
-        
-        if (existingIndex !== -1) {
-          // Update existing invoice to paid
-          invoiceList[existingIndex].status = "paid";
-          invoiceList[existingIndex].paidAt = today;
-          localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-        } else {
-          // Create new if it doesn't exist for some reason
-          const invoicePelunasan = {
-            id: `INV-PL-${lunasOrder.id}`,
-            orderId: lunasOrder.id,
-            client: lunasOrder.client,
-            company: lunasOrder.company,
-            service: lunasOrder.service,
-            phone: lunasOrder.phone,
-            type: "pelunasan",
-            amount: newTotal - lunasOrder.dp,
-            status: "paid",
-            issuedAt: today,
-            paidAt: today,
-            dueDate: today,
-            description: `Pelunasan — ${lunasOrder.service || lunasOrder.client}`,
-          };
-          localStorage.setItem("revtech_invoices", JSON.stringify([invoicePelunasan, ...invoiceList]));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
+    // Immediately clear state to prevent double clicks
     setLunasOrder(null);
     setLunasNote("");
     setLunasPayment(0);
+
+    const newTotal = currentOrder.total;
+    const newDp = currentOrder.dp + currentPayment;
+    const isPaid = newDp >= newTotal;
     
-    // Log activity
-    if (isPaid) {
-      logActivity({
-        type: "order_lunas",
-        title: "Pembayaran Lunas",
-        description: `Project ${lunasOrder.client} (${lunasOrder.service}) telah lunas sepenuhnya.`,
-        user: "Admin",
-      });
-    } else {
-      logActivity({
-        type: "invoice_paid",
-        title: "Pembayaran Diterima",
-        description: `Pembayaran Rp ${(lunasPayment || 0).toLocaleString('id-ID')} diterima untuk project ${lunasOrder.client}.`,
-        user: "Admin",
-      });
+    let cleanedNotes = currentOrder.notes ? currentOrder.notes.replace(/\s*\|\s*Pembayaran:.*$/, "").replace(/^Pembayaran:.*$/, "") : "";
+    let updatedNotes = cleanedNotes;
+    
+    if (!isPaid && currentNote.trim()) {
+      updatedNotes = cleanedNotes 
+        ? `${cleanedNotes} | Pembayaran: ${currentNote.trim()}`
+        : `Pembayaran: ${currentNote.trim()}`;
     }
-    
-    showToast(isPaid ? "Lunas! Status otomatis berubah ke Handover." : "Pembayaran berhasil ditambahkan!");
+
+    try {
+      await updateDoc(doc(db, "orders", currentOrder.id), {
+        total: newTotal,
+        dp: newDp,
+        notes: updatedNotes,
+        ...(isPaid && { status: "handover" })
+      });
+
+      // Auto-update or create Invoices di Firestore
+      const today = new Date().toISOString().split("T")[0];
+      
+      if (isPaid) {
+        const invoicePelunasan = {
+          id: `INV-PL-${currentOrder.id}`,
+          orderId: currentOrder.id,
+          client: currentOrder.client,
+          company: currentOrder.company || "",
+          service: currentOrder.service,
+          phone: currentOrder.phone,
+          type: "pelunasan",
+          amount: newTotal - currentOrder.dp, // Sisa yg dilunasi saat ini
+          status: "paid",
+          issuedAt: today,
+          paidAt: today,
+          dueDate: today,
+          description: `Pelunasan — ${currentOrder.service || currentOrder.client}`,
+        };
+        await setDoc(doc(db, "invoices", invoicePelunasan.id), invoicePelunasan, { merge: true });
+      } else {
+        // Jika belum lunas (hanya bayar cicilan / DP tambahan)
+        const paymentId = Date.now().toString().slice(-4);
+        const invoiceCicilan = {
+          id: `INV-DP-${currentOrder.id}-${paymentId}`,
+          orderId: currentOrder.id,
+          client: currentOrder.client,
+          company: currentOrder.company || "",
+          service: currentOrder.service,
+          phone: currentOrder.phone,
+          type: "dp",
+          amount: currentPayment,
+          status: "paid",
+          issuedAt: today,
+          paidAt: today,
+          dueDate: today,
+          description: `Pembayaran DP / Cicilan — ${currentOrder.service || currentOrder.client}`,
+        };
+        await setDoc(doc(db, "invoices", invoiceCicilan.id), invoiceCicilan);
+
+        // Update sisa tagihan pada invoice pelunasan yang masih pending (jika ada)
+        const pendingPelunasan = {
+          id: `INV-PL-${currentOrder.id}`,
+          amount: newTotal - newDp,
+        };
+        await setDoc(doc(db, "invoices", pendingPelunasan.id), pendingPelunasan, { merge: true });
+      }
+
+      // Log activity
+      if (isPaid) {
+        logActivity({
+          type: "order_lunas",
+          title: "Pembayaran Lunas",
+          description: `Project ${currentOrder.client} (${currentOrder.service}) telah lunas sepenuhnya.`,
+          user: "Admin",
+        });
+      } else {
+        logActivity({
+          type: "invoice_paid",
+          title: "Pembayaran Diterima",
+          description: `Pembayaran Rp ${currentPayment.toLocaleString('id-ID')} diterima untuk project ${currentOrder.client}.`,
+          user: "Admin",
+        });
+      }
+      
+      showToast(isPaid ? "Lunas! Status otomatis berubah ke Handover." : "Pembayaran berhasil ditambahkan!");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menyimpan pembayaran", "error");
+    }
   };
 
-  const submitHandover = () => {
+  const submitHandover = async () => {
     if (!handoverOrder) return;
-    
-    const newOrders = orders.map(o => {
-      if (o.id !== handoverOrder.id) return o;
-      
-      let cleanedNotes = o.notes ? o.notes.replace(/\s*\|\s*Handover:.*$/, "").replace(/^Handover:.*$/, "") : "";
-      let updatedNotes = cleanedNotes;
-      
-      if (handoverNote.trim()) {
-        updatedNotes = cleanedNotes 
-          ? `${cleanedNotes} | Handover: ${handoverNote.trim()}`
-          : `Handover: ${handoverNote.trim()}`;
-      }
+    const currentOrder = handoverOrder; // capture locally
+    const currentOption = handoverOptionState;
+    const currentLink = handoverLink;
+    const currentNote = handoverNote;
+    const currentFee = recurringFeeState;
+    const currentBilling = nextBillingDateState;
 
-      return {
-        ...o,
-        status: "selesai" as OrderStatus,
-        handoverOption: handoverOptionState,
-        handover: handoverLink.trim(),
-        recurringFee: recurringFeeState,
-        nextBillingDate: nextBillingDateState,
-        notes: updatedNotes
-      };
-    });
-    
-    saveOrders(newOrders);
-
-    // Auto-generate Maintenance Invoice
-    if (handoverOptionState.includes("Terima Beres") && nextBillingDateState && recurringFeeState > 0) {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const invoiceMaint = {
-          id: `INV-MT-${handoverOrder.id}`,
-          orderId: handoverOrder.id,
-          client: handoverOrder.client,
-          company: handoverOrder.company,
-          service: handoverOrder.service,
-          phone: handoverOrder.phone,
-          type: "maintenance",
-          amount: recurringFeeState,
-          status: "pending",
-          issuedAt: new Date().toISOString(),
-          paidAt: null,
-          dueDate: nextBillingDateState,
-          description: `Maintenance (${handoverOptionState}) — ${handoverOrder.service || handoverOrder.client}`,
-        };
-        const savedInvoices = localStorage.getItem("revtech_invoices");
-        const invoiceList = savedInvoices ? JSON.parse(savedInvoices) : [];
-        const existing = invoiceList.find((i: any) => i.id === invoiceMaint.id);
-        if (!existing) {
-          localStorage.setItem("revtech_invoices", JSON.stringify([invoiceMaint, ...invoiceList]));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
+    // Immediately clear state to prevent double clicks
     setHandoverOrder(null);
+    setHandoverOptionState("");
     setHandoverLink("");
     setHandoverNote("");
-    setHandoverOptionState("");
     setRecurringFeeState(0);
     setNextBillingDateState("");
     
-    // Log activity
-    logActivity({
-      type: "order_handover",
-      title: "Project Selesai & Diserahterimakan",
-      description: `Project ${handoverOrder.client} (${handoverOrder.service}) telah selesai dan diserahterimakan.`,
-      user: "Admin",
-    });
+    let cleanedNotes = currentOrder.notes ? currentOrder.notes.replace(/\s*\|\s*Handover:.*$/, "").replace(/^Handover:.*$/, "") : "";
+    let updatedNotes = cleanedNotes;
     
-    showToast("Project selesai & Handover tersimpan!");
+    if (currentNote.trim()) {
+      updatedNotes = cleanedNotes 
+        ? `${cleanedNotes} | Handover: ${currentNote.trim()}`
+        : `Handover: ${currentNote.trim()}`;
+    }
+
+    try {
+      await updateDoc(doc(db, "orders", currentOrder.id), {
+        status: "selesai",
+        handoverOption: currentOption,
+        handover: currentLink.trim(),
+        recurringFee: currentFee,
+        nextBillingDate: currentBilling,
+        notes: updatedNotes
+      });
+
+      const isTerimaBeres = currentOption.includes("Terima Beres");
+
+      // Auto-generate Maintenance Invoice di Firestore
+      if (isTerimaBeres && currentBilling && currentFee > 0) {
+        const invoiceMaint = {
+          id: `INV-MT-${currentOrder.id}`,
+          orderId: currentOrder.id,
+          client: currentOrder.client,
+          company: currentOrder.company || "",
+          service: currentOrder.service,
+          phone: currentOrder.phone,
+          type: "maintenance",
+          amount: currentFee,
+          status: "pending",
+          issuedAt: new Date().toISOString(),
+          paidAt: null,
+          dueDate: currentBilling,
+          description: `Maintenance (${currentOption}) — ${currentOrder.service || currentOrder.client}`,
+        };
+        await setDoc(doc(db, "invoices", invoiceMaint.id), invoiceMaint, { merge: true });
+      }
+
+      // SYNC to Maintenance (Clients - Firestore)
+      try {
+        if (isTerimaBeres) {
+          // Check if client already exists
+          const qClients = query(collection(db, "maintenance"), orderBy("joinDate"));
+          const clientDocs = await getDocs(qClients);
+          let foundClient = false;
+          
+          clientDocs.forEach(async (clientDoc: any) => {
+            const c = clientDoc.data();
+            if (c.id === currentOrder.id) {
+              foundClient = true;
+              await updateDoc(doc(db, "maintenance", clientDoc.id), {
+                handover: currentOption,
+                recurringFee: currentFee,
+                domainExpiry: currentBilling,
+                hostingExpiry: currentBilling,
+                website: currentLink.trim() || c.website,
+              });
+            }
+          });
+          
+          if (!foundClient) {
+            let derivedDomain = null;
+            if (currentLink.trim()) {
+              try { derivedDomain = new URL(currentLink.startsWith("http") ? currentLink : `https://${currentLink}`).hostname; }
+              catch { derivedDomain = currentLink; }
+            }
+            await addDoc(collection(db, "maintenance"), {
+              id: currentOrder.id,
+              name: currentOrder.company || currentOrder.client,
+              contact: currentOrder.client,
+              phone: currentOrder.phone,
+              email: "",
+              website: currentLink.startsWith("http") ? currentLink : (derivedDomain ? `https://${derivedDomain}` : null),
+              websiteStatus: "active",
+              joinDate: new Date().toISOString().split("T")[0],
+              totalSpend: currentOrder.total || 0,
+              activeProjects: 0,
+              domain: derivedDomain,
+              domainExpiry: currentBilling || null,
+              hosting: "RevTech Managed",
+              hostingExpiry: currentBilling || null,
+              service: currentOrder.service,
+              handover: currentOption,
+              recurringFee: currentFee,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync to maintenance", err);
+      }
+
+      logActivity({
+        type: "order_handover",
+        title: "Project Selesai & Handover",
+        description: `Project ${currentOrder.client} (${currentOrder.service}) diselesaikan dengan opsi ${currentOption}.`,
+        user: "Admin",
+      });
+
+      showToast("Project selesai & Handover tersimpan!");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal memproses handover", "error");
+    }
   };
 
-  const changeOrderStatus = (id: string, newStatus: OrderStatus) => {
+  const changeOrderStatus = async (id: string, newStatus: OrderStatus) => {
     const originalOrder = orders.find(o => o.id === id);
     
     // Prevent changing to selesai/handover if not fully paid
@@ -716,39 +787,34 @@ export default function PesananPage() {
       setConfirmStatusChangeData({ ...originalOrder, status: newStatus } as Order);
       return;
     }
-    const updated = orders.map(o => {
-      if (o.id === id) {
-        const newLog = {
-          date: new Date().toISOString(),
-          note: `Status diubah dari ${o.status.toUpperCase()} menjadi ${newStatus.toUpperCase()}`,
-          by: "Admin"
-        };
-        const currentLogs = o.progressLog || [];
-        return { ...o, status: newStatus, progressLog: [...currentLogs, newLog] };
-      }
-      return o;
-    });
-    setOrders(updated);
-    saveOrders(updated);
-    showToast("Status berhasil diperbarui");
 
-    // Jika dibatalkan, hanguskan DP (biarkan Lunas) dan batalkan (hapus) tagihan pelunasan
-    if (newStatus === "batal") {
+    if (originalOrder) {
+      const newLog = {
+        date: new Date().toISOString(),
+        note: `Status diubah dari ${originalOrder.status.toUpperCase()} menjadi ${newStatus.toUpperCase()}`,
+        by: "Admin"
+      };
+      const currentLogs = originalOrder.progressLog || [];
+      
       try {
-        const savedInvoices = localStorage.getItem("revtech_invoices");
-        if (savedInvoices) {
-          const invoiceList = JSON.parse(savedInvoices);
-          // Hapus tagihan pelunasan yang masih pending untuk order ini
-          const updatedInvoices = invoiceList.filter((i: any) => !(i.id === `INV-PL-${id}` && i.status === "pending"));
-          localStorage.setItem("revtech_invoices", JSON.stringify(updatedInvoices));
+        await updateDoc(doc(db, "orders", id), {
+          status: newStatus,
+          progressLog: [...currentLogs, newLog]
+        });
+        showToast("Status berhasil diperbarui");
+        
+        // Jika dibatalkan, hanguskan DP (biarkan Lunas) dan batalkan (hapus) tagihan pelunasan di Firestore
+        if (newStatus === "batal") {
+           await deleteDoc(doc(db, "invoices", `INV-PL-${id}`));
         }
       } catch (err) {
         console.error(err);
+        showToast("Gagal memperbarui status", "error");
       }
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingId) return;
     const orderToDelete = orders.find(o => o.id === deletingId);
     if (!orderToDelete) {
@@ -756,37 +822,42 @@ export default function PesananPage() {
       return;
     }
     
-    // Add to deleted
-    const deletedOrder = { ...orderToDelete, id: orderToDelete.id, deletedAt: new Date().toISOString(), deletedBy: "Superadmin" };
-    saveDeletedOrders([deletedOrder, ...deletedOrders]);
-    
-    // Remove from active
-    saveOrders(orders.filter(o => o.id !== deletingId));
-
-    // Cascade delete: hapus invoice terkait
     try {
-      const savedInvoices = localStorage.getItem("revtech_invoices");
-      if (savedInvoices) {
-        let invoiceList = JSON.parse(savedInvoices);
-        invoiceList = invoiceList.filter((i: any) => i.orderId !== deletingId);
-        localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-      }
+      // Add to deleted local (history) in Trash Collection
+      const deletedOrder = { ...orderToDelete, id: orderToDelete.id, deletedAt: new Date().toISOString(), deletedBy: "Superadmin", _module: "Pesanan" };
+      await setDoc(doc(db, "trash", deletingId), deletedOrder);
 
-      const savedClients = localStorage.getItem("revtech_clients");
-      if (savedClients) {
-        let clientList = JSON.parse(savedClients);
-        clientList = clientList.filter((c: any) => c.id !== deletingId);
-        localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+      // Hapus dari active Firestore
+      await deleteDoc(doc(db, "orders", deletingId));
+
+      // Cascade delete: hapus invoice terkait
+      await deleteDoc(doc(db, "invoices", `INV-DP-${deletingId}`));
+      await deleteDoc(doc(db, "invoices", `INV-PL-${deletingId}`));
+      await deleteDoc(doc(db, "invoices", `INV-MT-${deletingId}`));
+
+      // Hapus dari clients (Firestore Maintenance)
+      try {
+        const qClients = query(collection(db, "maintenance"), orderBy("joinDate"));
+        const clientDocs = await getDocs(qClients);
+        clientDocs.forEach(async (clientDoc: any) => {
+          if (clientDoc.data().id === deletingId) {
+            await deleteDoc(doc(db, "maintenance", clientDoc.id));
+          }
+        });
+      } catch (err) {
+        console.error("Failed to delete client from maintenance", err);
       }
+      
+      showToast("Project berhasil dihapus dari database", "error");
     } catch (err) {
-      console.error("Failed to cascade delete invoices/clients", err);
+      console.error(err);
+      showToast("Gagal menghapus pesanan", "error");
     }
 
     setDeletingId(null);
-    showToast("Project beserta tagihan terkait dipindah ke Tempat Sampah", "error");
   };
 
-  const handleAddOrder = (e: React.FormEvent) => {
+  const handleAddOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrder.client || !newOrder.phone || !newOrder.service) return;
 
@@ -812,46 +883,43 @@ export default function PesananPage() {
         nextBillingDate: isTerimaBeres ? newOrder.nextBillingDate : "",
       };
       
-      const updated = orders.map(o => o.id === editingId ? { ...o, ...orderToSave } as Order : o);
-      saveOrders(updated);
-      
-      // SYNC to Maintenance (Clients)
       try {
-        const savedClients = localStorage.getItem("revtech_clients");
-        if (savedClients) {
-          let clientList = JSON.parse(savedClients);
-          let clientChanged = false;
+        await updateDoc(doc(db, "orders", editingId), orderToSave);
+
+        // SYNC to Maintenance (Clients - Firestore)
+        try {
+          const qClients = query(collection(db, "maintenance"), orderBy("joinDate"));
+          const clientDocs = await getDocs(qClients);
           
           if (!isTerimaBeres) {
-            const prevLength = clientList.length;
-            clientList = clientList.filter((c: any) => c.id !== editingId);
-            if (clientList.length !== prevLength) clientChanged = true;
+            clientDocs.forEach(async (clientDoc: any) => {
+              if (clientDoc.data().id === editingId) {
+                await deleteDoc(doc(db, "maintenance", clientDoc.id));
+              }
+            });
           } else {
             let foundClient = false;
-            clientList = clientList.map((c: any) => {
+            clientDocs.forEach(async (clientDoc: any) => {
+              const c = clientDoc.data();
               if (c.id === editingId) {
-                clientChanged = true;
                 foundClient = true;
-                return {
-                  ...c,
+                await updateDoc(doc(db, "maintenance", clientDoc.id), {
                   handover: orderToSave.handoverOption !== undefined ? orderToSave.handoverOption : c.handover,
                   recurringFee: orderToSave.recurringFee !== undefined ? orderToSave.recurringFee : c.recurringFee,
                   domainExpiry: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : c.domainExpiry,
                   hostingExpiry: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : c.hostingExpiry,
                   website: orderToSave.handover !== undefined ? orderToSave.handover : c.website,
-                };
+                });
               }
-              return c;
             });
             
-            // Re-create client if it was previously removed
             if (!foundClient && orderToSave.status === "selesai") {
               let derivedDomain = null;
               if (orderToSave.handover) {
                 try { derivedDomain = new URL(orderToSave.handover.startsWith("http") ? orderToSave.handover : `https://${orderToSave.handover}`).hostname; }
                 catch { derivedDomain = orderToSave.handover; }
               }
-              clientList.unshift({
+              await addDoc(collection(db, "maintenance"), {
                 id: editingId,
                 name: orderToSave.company || orderToSave.client,
                 contact: orderToSave.client,
@@ -870,74 +938,45 @@ export default function PesananPage() {
                 handover: orderToSave.handoverOption,
                 recurringFee: orderToSave.recurringFee,
               });
-              clientChanged = true;
             }
           }
-          
-          if (clientChanged) {
-            localStorage.setItem("revtech_clients", JSON.stringify(clientList));
+        } catch (err) {
+          console.error("Failed to sync to maintenance", err);
+        }
+
+        // SYNC to Invoices Firestore
+        if (!isTerimaBeres) {
+          await deleteDoc(doc(db, "invoices", `INV-MT-${editingId}`));
+        } else {
+          if (orderToSave.status === "selesai" && orderToSave.nextBillingDate && orderToSave.recurringFee) {
+            const invoiceMaint = {
+              id: `INV-MT-${editingId}`,
+              orderId: editingId,
+              client: orderToSave.client,
+              company: orderToSave.company || "",
+              service: orderToSave.service,
+              phone: orderToSave.phone,
+              type: "maintenance",
+              amount: orderToSave.recurringFee || 0,
+              status: "pending",
+              issuedAt: new Date().toISOString(),
+              paidAt: null,
+              dueDate: orderToSave.nextBillingDate || "",
+              description: `Pembayaran Maintenance — ${orderToSave.company || orderToSave.client}`
+            };
+            await setDoc(doc(db, "invoices", invoiceMaint.id), invoiceMaint, { merge: true });
           }
         }
-      } catch (err) {}
 
-      // SYNC to Invoices
-      try {
-        const savedInvoices = localStorage.getItem("revtech_invoices");
-        if (savedInvoices) {
-          let invoiceList = JSON.parse(savedInvoices);
-          let invoiceChanged = false;
-          
-          if (!isTerimaBeres) {
-            const prevLength = invoiceList.length;
-            invoiceList = invoiceList.filter((inv: any) => !(inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending"));
-            if (invoiceList.length !== prevLength) invoiceChanged = true;
-          } else {
-            let foundInvoice = false;
-            invoiceList = invoiceList.map((inv: any) => {
-              if (inv.orderId === editingId && inv.type === "maintenance" && inv.status === "pending") {
-                invoiceChanged = true;
-                foundInvoice = true;
-                return {
-                  ...inv,
-                  amount: orderToSave.recurringFee !== undefined ? orderToSave.recurringFee : inv.amount,
-                  dueDate: orderToSave.nextBillingDate !== undefined ? orderToSave.nextBillingDate : inv.dueDate,
-                };
-              }
-              return inv;
-            });
-            
-            // Re-create invoice if it was previously removed
-            if (!foundInvoice && orderToSave.status === "selesai") {
-              invoiceList.unshift({
-                id: `INV-${Date.now().toString().slice(-5)}`,
-                orderId: editingId,
-                client: orderToSave.client,
-                company: orderToSave.company || "",
-                service: orderToSave.service,
-                phone: orderToSave.phone,
-                type: "maintenance",
-                amount: orderToSave.recurringFee || 0,
-                status: "pending",
-                issuedAt: new Date().toISOString(),
-                paidAt: null,
-                dueDate: orderToSave.nextBillingDate || "",
-                description: `Pembayaran Maintenance — ${orderToSave.company || orderToSave.client}`
-              });
-              invoiceChanged = true;
-            }
-          }
-          
-          if (invoiceChanged) {
-            localStorage.setItem("revtech_invoices", JSON.stringify(invoiceList));
-            window.dispatchEvent(new Event("storage"));
-          }
-        }
-      } catch (err) {}
-
-      showToast("Project berhasil diperbarui");
+        showToast("Project berhasil diperbarui");
+      } catch(err) {
+         console.error(err);
+         showToast("Gagal memperbarui pesanan", "error");
+      }
     } else {
+      const orderId = `ORD-${Date.now().toString().slice(-5)}`;
       const order: Order = {
-        id: `ord-${Date.now()}`,
+        id: orderId,
         client: newOrder.client!,
         phone: newOrder.phone!,
         service: newOrder.service!,
@@ -950,10 +989,56 @@ export default function PesananPage() {
         handover: newOrder.handover || "",
         recurringFee: newOrder.recurringFee || 0,
         nextBillingDate: newOrder.nextBillingDate || "",
-        createdAt: new Date().toISOString().split("T")[0]
+        createdAt: new Date().toISOString().split("T")[0],
+        progressLog: [{ date: new Date().toISOString(), note: "Project dibuat secara manual", by: "Admin" }]
       };
-      saveOrders([order, ...orders]);
-      showToast("Project baru berhasil ditambahkan");
+      
+      try {
+        await setDoc(doc(db, "orders", order.id), order);
+        
+        // Buat Invoice Tagihan DP/Lunas
+        const isLunas = order.dp >= order.total;
+        const invoice = {
+          id: `INV-DP-${orderId}`,
+          orderId: orderId,
+          client: order.client,
+          company: "",
+          service: order.service,
+          phone: order.phone,
+          type: "dp",
+          amount: order.dp,
+          status: "paid",
+          issuedAt: new Date().toISOString(),
+          paidAt: new Date().toISOString(),
+          dueDate: order.createdAt,
+          description: isLunas ? `Pembayaran Penuh — ${order.client}` : `DP — ${order.client}`,
+        };
+        await setDoc(doc(db, "invoices", invoice.id), invoice);
+        
+        if (!isLunas) {
+          const invoicePelunasan = {
+            id: `INV-PL-${orderId}`,
+            orderId: orderId,
+            client: order.client,
+            company: "",
+            service: order.service,
+            phone: order.phone,
+            type: "pelunasan",
+            amount: order.total - order.dp,
+            status: "pending",
+            issuedAt: new Date().toISOString(),
+            paidAt: null,
+            dueDate: order.deadline || order.createdAt,
+            description: `Pelunasan — ${order.client}`,
+          };
+          await setDoc(doc(db, "invoices", invoicePelunasan.id), invoicePelunasan);
+        }
+
+        showToast("Project baru berhasil ditambahkan");
+      } catch (err) {
+        console.error(err);
+        showToast("Gagal menyimpan pesanan", "error");
+      }
     }
     
     setView("list");
@@ -1153,9 +1238,11 @@ export default function PesananPage() {
           <button onClick={(e) => { e.stopPropagation(); handleEdit(order); }} className="p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title="Edit">
             <Pencil size={14} strokeWidth={2} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); setDeletingId(order.id); }} className="p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
-            <Trash2 size={14} strokeWidth={2} />
-          </button>
+          {canDelete && (
+            <button onClick={(e) => { e.stopPropagation(); setDeletingId(order.id); }} className="p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none" title="Hapus">
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
         </div>
       ),
     }
@@ -1780,12 +1867,42 @@ export default function PesananPage() {
         </div>
         <div className="p-4 bg-[var(--adm-card)] border-t border-[var(--adm-border)] flex gap-3">
           <button onClick={() => setConfirmStatusChangeData(null)} className="flex-1 px-4 py-2 text-sm font-bold text-[var(--adm-text-2)] bg-transparent border border-[var(--adm-border)] rounded-xl hover:text-[var(--adm-text)] transition-colors">Batal</button>
-          <button onClick={() => {
-            const updated = orders.map(o => o.id === editingId ? { ...o, ...confirmStatusChangeData } as Order : o);
-            saveOrders(updated);
-            showToast("Status project berhasil diubah", "success");
-            setView("list");
-            setConfirmStatusChangeData(null);
+          <button onClick={async () => {
+            if (!editingId || !confirmStatusChangeData) return;
+            try {
+              const newLog = {
+                date: new Date().toISOString(),
+                note: `Status dikembalikan dari Pipeline Akhir ke ${confirmStatusChangeData.status?.toUpperCase()}`,
+                by: "Admin"
+              };
+              const currentLogs = confirmStatusChangeData.progressLog || [];
+              
+              await updateDoc(doc(db, "orders", editingId), {
+                status: confirmStatusChangeData.status,
+                progressLog: [...currentLogs, newLog],
+                handover: "",
+                handoverOption: "",
+                recurringFee: 0,
+                nextBillingDate: ""
+              });
+              
+              // Hapus otomatis invoice maintenance jika status dibatalkan dari selesai
+              try {
+                await deleteDoc(doc(db, "invoices", `INV-MT-${editingId}`));
+                
+                // Hapus juga dari Maintenance Clients
+                await deleteDoc(doc(db, "maintenance", editingId));
+              } catch(err) {
+                console.log("Cleanup maintenance data error/skipped", err);
+              }
+              
+              showToast("Status project berhasil diubah & data di-reset", "success");
+              setView("list");
+              setConfirmStatusChangeData(null);
+            } catch (err) {
+              console.error(err);
+              showToast("Gagal mengubah status", "error");
+            }
           }} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[var(--adm-warning)] rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all">
             Ya, Ubah Status
           </button>
@@ -1809,14 +1926,20 @@ export default function PesananPage() {
           </Link>
 
           <button 
-            onClick={() => {
+            onClick={async () => {
               if(!actionPopup) return;
               const isAdded = actionPopup.type === 'testimoni' ? 'isTestimoniAdded' : 'isPortofolioAdded';
               const orderToUpdate = orders.find(o => o.id === actionPopup.orderId);
               if(orderToUpdate) {
-                const updated = orders.map(o => o.id === actionPopup.orderId ? { ...o, [isAdded]: !o[isAdded] } : o);
-                saveOrders(updated);
-                showToast(`Status ${actionPopup.type} diperbarui`, "success");
+                try {
+                  await updateDoc(doc(db, "orders", actionPopup.orderId), {
+                    [isAdded]: !orderToUpdate[isAdded]
+                  });
+                  showToast(`Status ${actionPopup.type} diperbarui`, "success");
+                } catch (err) {
+                  console.error(err);
+                  showToast(`Gagal memperbarui status`, "error");
+                }
               }
               setActionPopup(null);
             }}

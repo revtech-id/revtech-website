@@ -7,6 +7,7 @@ import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
+import { useUser } from "@/contexts/UserContext";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -95,6 +96,9 @@ const QUILL_MODULES = {
   }
 };
 
+import { db } from "@/lib/firebase";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
+
 interface Portfolio {
   id: string;
   title: string;
@@ -125,6 +129,9 @@ const EMPTY_FORM: {
 };
 
 export default function PortofolioPage() {
+  const { user } = useUser();
+  const canDelete = user?.role === "Superadmin" || user?.role === "Project Manager";
+
   const [isClient, setIsClient] = useState(false);
   const [items, setItems] = useState<Portfolio[]>([]);
   const [filter, setFilter] = useState("Semua");
@@ -158,9 +165,29 @@ export default function PortofolioPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_portfolio");
-    setItems(saved ? JSON.parse(saved) : MOCK_INITIAL);
-    if (!saved) localStorage.setItem("revtech_portfolio", JSON.stringify(MOCK_INITIAL));
+    
+    // Subscribe to Firestore
+    const unsub = onSnapshot(collection(db, "portfolio"), async (snapshot) => {
+      if (snapshot.empty) {
+        // Migration: If empty, write MOCK_INITIAL
+        try {
+          const batch = writeBatch(db);
+          MOCK_INITIAL.forEach(p => {
+            const docRef = doc(db, "portfolio", p.id);
+            batch.set(docRef, p);
+          });
+          await batch.commit();
+        } catch (err) {
+          console.error("Failed to migrate initial portfolio", err);
+        }
+      } else {
+        const loaded = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as Portfolio[];
+        setItems(loaded);
+      }
+    });
 
     // Register Divider Blot dynamically for ReactQuill
     import("react-quill-new").then((mod) => {
@@ -174,12 +201,9 @@ export default function PortofolioPage() {
         Quill.register(DividerBlot as any);
       }
     });
+    
+    return () => unsub();
   }, []);
-
-  function save(updated: Portfolio[]) {
-    setItems(updated);
-    localStorage.setItem("revtech_portfolio", JSON.stringify(updated));
-  }
 
   function handleEdit(item: Portfolio) {
     setForm({
@@ -199,95 +223,121 @@ export default function PortofolioPage() {
       message: "Proyek ini akan dihapus dari portofolio secara permanen.",
       confirmText: "Hapus",
       confirmVariant: "danger",
-      action: () => {
-        save(items.filter(i => i.id !== id));
-        setToast({ isVisible: true, message: "Proyek berhasil dihapus", type: "success" });
-        logActivity({ type: "portofolio_deleted", title: "Proyek Dihapus", description: `Proyek portofolio dengan ID ${id} dihapus.`, user: "Admin" });
+      action: async () => {
+        try {
+          await deleteDoc(doc(db, "portfolio", id));
+          setToast({ isVisible: true, message: "Proyek berhasil dihapus", type: "success" });
+          logActivity({ type: "portofolio_deleted", title: "Proyek Dihapus", description: `Proyek portofolio dengan ID ${id} dihapus.`, user: "Admin" });
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menghapus proyek", type: "error" });
+        }
       }
     });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
-    let updated = [...items];
+    
+    try {
+      if (editingId) {
+        const updated: Partial<Portfolio> = {
+          title: form.title, client: form.client, category: form.category,
+          url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned, status: form.status, content: form.content,
+          thumbnail: form.thumbnail, publishedAt: form.publishedAt || null
+        };
+        await updateDoc(doc(db, "portfolio", editingId), updated);
+      } else {
+        const newId = `PF-${Date.now().toString().slice(-5)}`;
+        const newItem: Portfolio = {
+          id: newId,
+          title: form.title, client: form.client, category: form.category,
+          url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
+          thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: form.publishedAt || null
+        };
+        await setDoc(doc(db, "portfolio", newId), newItem);
+      }
 
-    if (editingId) {
-      updated = items.map(i => i.id === editingId ? {
-        ...i, title: form.title, client: form.client, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned, status: form.status, content: form.content,
-        thumbnail: form.thumbnail, publishedAt: form.publishedAt || null
-      } : i);
-    } else {
-      const newId = `PF-${Date.now().toString().slice(-5)}`;
-      updated = [{
-        id: newId,
-        title: form.title, client: form.client, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
-        thumbnail: form.thumbnail, content: form.content, status: form.status, publishedAt: form.publishedAt || null
-      }, ...items];
-    }
-    save(updated);
-
-    // Sync to public page via API when publishing
-    if (form.status === "published") {
-      const slug = form.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-      fetch("/api/admin/portfolio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          title: form.title,
-          client: form.client,
-          category: form.category,
-          url: form.url || null,
-          projectDate: form.projectDate,
-          publishedAt: form.publishedAt || null,
-          description: form.description,
-          content: form.content,
-          thumbnail: form.thumbnail,
-          pinned: form.pinned,
-        }),
-      }).catch(console.error);
-    }
-
-    setView("list");
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
-    logActivity({ 
-      type: "portofolio_updated", 
-      title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
-      description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
-      user: "Admin" 
-    });
-  }
-
-  function confirmArchive(id: string, currentStatus: string) {
-    const isArchived = currentStatus === "archived";
-    save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
-    setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
-    logActivity({ type: "portofolio_updated", title: isArchived ? "Proyek Dipulihkan" : "Proyek Diarsipkan", description: `Proyek portofolio ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
-  }
-
-  function confirmPublish(id: string) {
-    save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
-    setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
-    logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
-  }
-
-  function togglePinned(id: string) {
-    save(items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
-    const item = items.find(i => i.id === id);
-    if (item) {
-      logActivity({ type: "portofolio_updated", title: !item.pinned ? "Proyek Disematkan" : "Pin Dilepas", description: `Status pin diperbarui untuk proyek ${item.title}.`, user: "Admin" });
-    }
-  }
+          // Sync to public page via API when publishing
+          if (form.status === "published") {
+            const slug = form.title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .trim()
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-');
+            fetch("/api/admin/portfolio", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                slug,
+                title: form.title,
+                client: form.client,
+                category: form.category,
+                url: form.url || null,
+                projectDate: form.projectDate,
+                publishedAt: form.publishedAt || null,
+                description: form.description,
+                content: form.content,
+                thumbnail: form.thumbnail,
+                pinned: form.pinned,
+              }),
+            }).catch(console.error);
+          }
+    
+          setView("list");
+          setEditingId(null);
+          setForm(EMPTY_FORM);
+          setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
+          logActivity({ 
+            type: "portofolio_updated", 
+            title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
+            description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
+            user: "Admin" 
+          });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
+        }
+      }
+    
+      async function confirmArchive(id: string, currentStatus: string) {
+        const isArchived = currentStatus === "archived";
+        try {
+          await updateDoc(doc(db, "portfolio", id), { status: isArchived ? "draft" : "archived" });
+          setToast({ isVisible: true, message: isArchived ? "Proyek dikembalikan ke Draft" : "Proyek berhasil diarsipkan", type: "success" });
+          logActivity({ type: "portofolio_updated", title: isArchived ? "Proyek Dipulihkan" : "Proyek Diarsipkan", description: `Proyek portofolio ID ${id} ${isArchived ? "dikembalikan ke draft" : "diarsipkan"}.`, user: "Admin" });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal merubah status", type: "error" });
+        }
+      }
+    
+      async function confirmPublish(id: string) {
+        try {
+          await updateDoc(doc(db, "portfolio", id), { status: "published" });
+          setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
+          logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menerbitkan", type: "error" });
+        }
+      }
+    
+      async function togglePinned(id: string) {
+        const item = items.find(i => i.id === id);
+        if (item) {
+          try {
+            await updateDoc(doc(db, "portfolio", id), { pinned: !item.pinned });
+            logActivity({ type: "portofolio_updated", title: !item.pinned ? "Proyek Disematkan" : "Pin Dilepas", description: `Status pin diperbarui untuk proyek ${item.title}.`, user: "Admin" });
+          } catch (err) {
+            console.error(err);
+            setToast({ isVisible: true, message: "Gagal menyematkan", type: "error" });
+          }
+        }
+      }
 
   const published = items.filter(i => (i.status || "published") === "published");
   const drafts = items.filter(i => i.status === "draft");
@@ -375,9 +425,11 @@ export default function PortofolioPage() {
             <button onClick={() => confirmArchive(item.id, item.status)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none" title={item.status === "archived" ? "Kembalikan dari Arsip" : "Arsip"}>
               <Archive size={14} strokeWidth={2} className={item.status === "archived" ? "text-amber-500" : ""} />
             </button>
-            <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
-              <Trash2 size={14} strokeWidth={2} />
-            </button>
+            {canDelete && (
+              <button onClick={() => confirmDelete(item.id)} className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-red-500 transition-colors focus:outline-none" title="Hapus">
+                <Trash2 size={14} strokeWidth={2} />
+              </button>
+            )}
           </div>
         </div>
       )

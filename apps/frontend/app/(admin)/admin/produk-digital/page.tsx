@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
 
 import "react-quill-new/dist/quill.snow.css";
 
@@ -125,9 +127,27 @@ export default function ProdukDigitalPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("revtech_produk_digital_v2");
-    setItems(saved ? JSON.parse(saved) : MOCK_INITIAL);
-    if (!saved) localStorage.setItem("revtech_produk_digital_v2", JSON.stringify(MOCK_INITIAL));
+    
+    const unsub = onSnapshot(collection(db, "digital_products"), async (snapshot) => {
+      if (snapshot.empty) {
+        try {
+          const batch = writeBatch(db);
+          MOCK_INITIAL.forEach(p => {
+            const docRef = doc(db, "digital_products", p.id);
+            batch.set(docRef, p);
+          });
+          await batch.commit();
+        } catch (err) {
+          console.error("Failed to migrate initial produk digital", err);
+        }
+      } else {
+        const loaded = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        })) as ProdukDigital[];
+        setItems(loaded);
+      }
+    });
 
     import("react-quill-new").then((mod) => {
       const Quill = mod.default.Quill;
@@ -140,12 +160,9 @@ export default function ProdukDigitalPage() {
         Quill.register(DividerBlot as any);
       }
     });
+    
+    return () => unsub();
   }, []);
-
-  function save(newItems: ProdukDigital[]) {
-    setItems(newItems);
-    localStorage.setItem("revtech_produk_digital_v2", JSON.stringify(newItems));
-  }
 
   function handleEdit(item: ProdukDigital) {
     setForm({
@@ -162,56 +179,81 @@ export default function ProdukDigitalPage() {
       isOpen: true, title: "Hapus Produk",
       message: "Produk digital ini akan dihapus secara permanen.",
       confirmText: "Hapus", confirmVariant: "danger",
-      action: () => {
-        save(items.filter(i => i.id !== id));
-        setToast({ isVisible: true, message: "Produk berhasil dihapus", type: "success" });
+      action: async () => {
+        try {
+          await deleteDoc(doc(db, "digital_products", id));
+          setToast({ isVisible: true, message: "Produk berhasil dihapus", type: "success" });
+        } catch (err) {
+          console.error(err);
+          setToast({ isVisible: true, message: "Gagal menghapus", type: "error" });
+        }
       }
     });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
-    let updated = [...items];
 
-    if (editingId) {
-      updated = items.map(i => i.id === editingId ? {
-        ...i, title: form.title, vendor: form.vendor, category: form.category,
-        url: form.url || null, description: form.description,
-        techStack: techArr, pinned: form.pinned, price: form.price, status: form.status,
-        content: form.content, thumbnail: form.thumbnail
-      } : i);
-    } else {
-      const newId = `PD-${Date.now().toString().slice(-5)}`;
-      updated = [{
-        id: newId,
-        title: form.title, vendor: form.vendor, category: form.category,
-        url: form.url || null, description: form.description,
-        techStack: techArr, pinned: form.pinned, price: form.price, thumbnail: form.thumbnail,
-        content: form.content, status: form.status
-      }, ...items];
+    try {
+      if (editingId) {
+        const updated: Partial<ProdukDigital> = {
+          title: form.title, vendor: form.vendor, category: form.category,
+          url: form.url || null, description: form.description,
+          techStack: techArr, pinned: form.pinned, price: form.price, status: form.status,
+          content: form.content, thumbnail: form.thumbnail
+        };
+        await updateDoc(doc(db, "digital_products", editingId), updated);
+      } else {
+        const newId = `PD-${Date.now().toString().slice(-5)}`;
+        const newItem: ProdukDigital = {
+          id: newId,
+          title: form.title, vendor: form.vendor, category: form.category,
+          url: form.url || null, description: form.description,
+          techStack: techArr, pinned: form.pinned, price: form.price, thumbnail: form.thumbnail,
+          content: form.content, status: form.status
+        };
+        await setDoc(doc(db, "digital_products", newId), newItem);
+      }
+
+      setView("list");
+      setEditingId(null);
+      setForm(EMPTY_FORM);
+      setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Produk berhasil dipublish", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
     }
-
-    save(updated);
-    setView("list");
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Produk berhasil dipublish", type: "success" });
   }
 
-  function confirmArchive(id: string, currentStatus: string) {
+  async function confirmArchive(id: string, currentStatus: string) {
     const isArchived = currentStatus === "archived";
-    save(items.map(i => i.id === id ? { ...i, status: isArchived ? "draft" : "archived" } : i));
-    setToast({ isVisible: true, message: isArchived ? "Produk dikembalikan ke Draft" : "Produk berhasil diarsipkan", type: "success" });
+    try {
+      await updateDoc(doc(db, "digital_products", id), { status: isArchived ? "draft" : "archived" });
+      setToast({ isVisible: true, message: isArchived ? "Produk dikembalikan ke Draft" : "Produk berhasil diarsipkan", type: "success" });
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  function confirmPublish(id: string) {
-    save(items.map(i => i.id === id ? { ...i, status: "published" } : i));
-    setToast({ isVisible: true, message: "Produk berhasil diterbitkan", type: "success" });
+  async function confirmPublish(id: string) {
+    try {
+      await updateDoc(doc(db, "digital_products", id), { status: "published" });
+      setToast({ isVisible: true, message: "Produk berhasil diterbitkan", type: "success" });
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-  function togglePinned(id: string) {
-    save(items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
+  async function togglePinned(id: string) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+      try {
+        await updateDoc(doc(db, "digital_products", id), { pinned: !item.pinned });
+      } catch (err) {
+        console.error(err);
+      }
+    }
   }
 
   const published = items.filter(i => (i.status || "published") === "published");

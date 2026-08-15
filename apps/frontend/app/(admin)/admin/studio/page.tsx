@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import JSZip from "jszip";
 import { AdminCard, AdminModal, AdminToast, AdminButton } from "@/components/admin/ui";
@@ -12,8 +12,10 @@ import {
   Lightbulb, Cpu, HelpCircle, Rocket, ArrowRight, ArrowLeft,
   Wand2, Wrench, Loader2, Copy, Check, FileText, FolderTree,
   ListChecks, TriangleAlert, Download, Package, Palette, Layout,
-  ServerCog, Bot, FileArchive, Search, Sparkles, BookMarked, RotateCcw, Save, Settings, CheckCircle2, Camera, Send, RefreshCw
+  ServerCog, Bot, FileArchive, Search, Sparkles, BookMarked, RotateCcw, Save, Settings, CheckCircle2, Camera, Send, RefreshCw, Archive, X, Trash2
 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy, getDocs } from "firebase/firestore";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -71,15 +73,15 @@ function buildStackLabel(stack: ManualStack) {
 
 // ── Mock docs builder ──────────────────────────────────────────────────────────
 
-function buildMockDocs(data: ProjectData, stackLabel: string): GeneratedDocs {
+async function buildMockDocs(data: ProjectData, stackLabel: string): Promise<GeneratedDocs> {
   return {
-    agents: buildAgentsContent({
+    agents: await buildAgentsContent({
       projectName: data.projectName || "Proyek Baru",
       idea: data.description,
       techStack: stackLabel,
     }),
 
-    engine: getEngineContent(),
+    engine: await getEngineContent(),
 
     prd: `# Product Requirement Document (PRD)
 
@@ -403,10 +405,16 @@ export default function StudioPage() {
   // ── SOP Manager state ────────────────────────────────────────────────────────
   const [isSopModalOpen, setIsSopModalOpen] = useState(false);
   const [sopTab, setSopTab] = useState<"engine" | "agents">("engine");
-  const [engineContent, setEngineContent] = useState(() => getEngineContent());
-  const [agentsTemplate, setAgentsTemplate] = useState(() => getAgentsTemplate());
+  const [engineContent, setEngineContent] = useState("");
+  const [agentsTemplate, setAgentsTemplate] = useState("");
   const [sopSaved, setSopSaved] = useState(false);
   const [isSopSaving, setIsSopSaving] = useState(false);
+
+  // Load from Firestore on mount
+  useEffect(() => {
+    getEngineContent().then(setEngineContent);
+    getAgentsTemplate().then(setAgentsTemplate);
+  }, []);
 
   // ── File Upload state ────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -436,21 +444,94 @@ export default function StudioPage() {
     }
   };
 
-  function saveSOP() {
+  // ── Drafts state ────────────────────────────────────────────────────────
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
+  useEffect(() => {
+    const qDrafts = query(collection(db, "studio_drafts"), orderBy("updatedAt", "desc"));
+    const unsubDrafts = onSnapshot(qDrafts, (snapshot) => {
+      const docs: any[] = [];
+      snapshot.forEach(doc => {
+        docs.push({ id: doc.id, ...doc.data() });
+      });
+      setDrafts(docs);
+    });
+    return () => unsubDrafts();
+  }, []);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleSaveDraft = async () => {
+    if (!projectData.projectName) {
+      showToast("Nama Proyek wajib diisi sebelum menyimpan draf", "error");
+      return;
+    }
+    
+    setIsSavingDraft(true);
+    try {
+      // Find if we already have a draft for this project name
+      const existingDraft = drafts.find(d => d.projectName.toLowerCase() === projectData.projectName.toLowerCase());
+      const draftId = existingDraft ? existingDraft.id : `DRF-${Date.now().toString().slice(-5)}`;
+      
+      await setDoc(doc(db, "studio_drafts", draftId), {
+        projectName: projectData.projectName,
+        projectData,
+        aiStack,
+        step,
+        updatedAt: new Date().toISOString()
+      });
+      showToast("Draf berhasil disimpan");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menyimpan draf", "error");
+    }
+    setIsSavingDraft(false);
+  };
+
+  const handleLoadDraft = (draft: any) => {
+    setProjectData(draft.projectData);
+    if (draft.aiStack) setAiStack(draft.aiStack);
+    if (draft.step) setStep(draft.step);
+    setIsDraftsModalOpen(false);
+    showToast(`Draf "${draft.projectName}" dimuat`);
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "studio_drafts", id));
+      showToast("Draf dihapus");
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menghapus draf", "error");
+    }
+  };
+
+
+  async function saveSOP() {
     setIsSopSaving(true);
-    setTimeout(() => {
-      if (sopTab === "engine") saveEngineContent(engineContent);
-      else saveAgentsTemplate(agentsTemplate);
+    try {
+      if (sopTab === "engine") await saveEngineContent(engineContent);
+      else await saveAgentsTemplate(agentsTemplate);
+      
       logActivity({
         type: "system",
         title: "Dokumen SOP",
         description: `${sopTab === "engine" ? "RevTech Engine" : "AGENTS Template"} diperbarui`,
         user: user.name,
       });
-      setIsSopSaving(false);
       setSopSaved(true);
-      setTimeout(() => setSopSaved(false), 2500);
-    }, 600);
+      setTimeout(() => setSopSaved(false), 3000);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSopSaving(false);
+    }
   }
 
   function resetSOP() {
@@ -529,8 +610,9 @@ export default function StudioPage() {
   async function generateDocs() {
     setLoading(true);
     setError("");
-    setTimeout(() => {
-      setDocs(buildMockDocs(projectData, effectiveStack));
+    try {
+      const generated = await buildMockDocs(projectData, effectiveStack);
+      setDocs(generated);
       setActiveDoc("agents");
       setStep(4);
       setLoading(false);
@@ -541,7 +623,10 @@ export default function StudioPage() {
         description: `AI berhasil merancang arsitektur dan membuat dokumen untuk proyek "${projectData.projectName || 'Baru'}"`,
         user: user.name,
       });
-    }, 2000);
+    } catch (err) {
+      setError("Gagal melakukan generate dokumen.");
+      setLoading(false);
+    }
   }
 
   // ── Download single .md ─────────────────────────────────────────────────────
@@ -662,14 +747,33 @@ export default function StudioPage() {
         </div>
 
         {/* Settings Button */}
-        <AdminButton
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsSopModalOpen(true)}
-          title="Pengaturan Rules"
-        >
-          <Settings size={20} />
-        </AdminButton>
+        <div className="flex items-center gap-2">
+          <AdminButton
+            variant="ghost"
+            onClick={() => setIsDraftsModalOpen(true)}
+            title="Draf Tersimpan"
+          >
+            <span className="font-semibold">Draf</span>
+          </AdminButton>
+          <AdminButton
+            onClick={handleSaveDraft}
+            disabled={isSavingDraft || !projectData.projectName}
+            title="Simpan Draf"
+            className={!projectData.projectName ? "" : "bg-[var(--adm-accent)] text-white border-transparent hover:bg-[var(--adm-accent)]/90"}
+          >
+            {isSavingDraft ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            <span className="hidden sm:inline">Simpan Draf</span>
+          </AdminButton>
+          <div className="w-px h-6 bg-[var(--adm-border)] mx-1" />
+          <AdminButton
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSopModalOpen(true)}
+            title="Pengaturan Rules"
+          >
+            <Settings size={20} className="text-[var(--adm-text-2)]" />
+          </AdminButton>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -1166,17 +1270,73 @@ export default function StudioPage() {
         <AnimatePresence>
           {sopSaved && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl shadow-lg text-sm font-semibold flex items-center gap-2 bg-[var(--adm-success)] text-white"
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className="absolute bottom-6 right-6 z-[100] bg-[var(--adm-card)] border border-[var(--adm-border)] shadow-xl rounded-2xl px-5 py-3 flex items-center gap-3"
             >
-              <CheckCircle2 size={16} />
-              Template berhasil disimpan
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--adm-success)]/20 text-[var(--adm-success)]">
+                <CheckCircle2 size={18} strokeWidth={2.5} />
+              </div>
+              <p className="text-[13px] font-bold text-[var(--adm-text)]">Template berhasil disimpan.</p>
             </motion.div>
           )}
         </AnimatePresence>
       </AdminModal>
+
+      {/* ── DRAFTS MODAL ──────────────────────────────────────────────────────── */}
+      <AdminModal isOpen={isDraftsModalOpen} onClose={() => setIsDraftsModalOpen(false)} maxWidth="max-w-2xl">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--adm-accent)]/10 text-[var(--adm-accent)] flex items-center justify-center">
+              <BookMarked size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-[var(--adm-text)]">Draf Tersimpan</h3>
+              <p className="text-sm font-medium text-[var(--adm-text-3)] mt-1">Muat ulang konfigurasi proyek yang pernah Anda simpan.</p>
+            </div>
+          </div>
+          <button onClick={() => setIsDraftsModalOpen(false)} className="p-2 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none">
+            <X size={20} strokeWidth={2.5} />
+          </button>
+        </div>
+        
+        {drafts.length === 0 ? (
+          <div className="text-center py-10">
+            <Archive size={40} className="mx-auto text-[var(--adm-text-3)] mb-4 opacity-50" />
+            <p className="text-[var(--adm-text-2)] font-medium">Belum ada draf yang disimpan.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {drafts.map(draft => (
+              <div key={draft.id} className="flex items-center justify-between p-4 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-card)] hover:border-[var(--adm-accent)]/50 transition-colors">
+                <div>
+                  <h4 className="font-bold text-[var(--adm-text)]">{draft.projectName}</h4>
+                  <p className="text-xs text-[var(--adm-text-3)] mt-1">Disimpan: {new Date(draft.updatedAt).toLocaleString("id-ID")}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <AdminButton size="sm" onClick={() => handleLoadDraft(draft)}>
+                    Load Draf
+                  </AdminButton>
+                  <AdminButton variant="danger" size="icon" onClick={() => handleDeleteDraft(draft.id)} title="Hapus Draf">
+                    <Trash2 size={16} className="text-red-500" />
+                  </AdminButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Global Toast */}
+      {toastMessage && (
+        <AdminToast
+          isVisible={true}
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 }

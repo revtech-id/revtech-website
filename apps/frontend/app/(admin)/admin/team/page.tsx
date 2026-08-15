@@ -1,180 +1,488 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { PageHeader } from "@/components/admin/ui";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AdminCard, AdminButton, AdminModal, AdminToast, AdminToolbar } from "@/components/admin/ui";
+import { AdminTable, AdminTableHeader, AdminTableHead, AdminTableBody, AdminTableRow, AdminTableCell } from "@/components/admin/AdminTable";
+import { Plus, Search, Edit2, Trash2, Shield, User, ShieldCheck, Mail, CheckCircle2, XCircle, RefreshCw, Copy, Loader2, Key } from "lucide-react";
+import { db, firebaseConfig } from "@/lib/firebase";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy, updateDoc } from "firebase/firestore";
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { logActivity } from "@/lib/activityLog";
+import { useUser } from "@/contexts/UserContext";
 
-// ── Org Chart Nodes ────────────────────────────────────────────────────────────
-
-function FounderNode() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
-      className="relative"
-    >
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 shadow-lg shadow-blue-200 text-white w-64 mx-auto">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-            <span className="text-2xl font-bold">R</span>
-          </div>
-          <div>
-            <p className="font-bold text-base">Founder & CEO</p>
-            <p className="text-blue-200 text-xs">RevTech</p>
-          </div>
-        </div>
-        <div className="bg-white/10 rounded-xl px-3 py-2">
-          <p className="text-xs text-blue-100 font-medium">Superadmin</p>
-          <p className="text-[10px] text-blue-200">hi-revtech.my.id</p>
-        </div>
-        <div className="mt-3 flex justify-center">
-          <span className="text-[10px] font-bold tracking-widest text-blue-200 uppercase">One-Person Enterprise</span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function AICopilotNode() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24, delay: 0.2 }}
-    >
-      <div className="bg-white rounded-2xl border border-indigo-200 p-4 shadow-sm w-52 hover:shadow-md hover:border-indigo-400 transition-all">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-            <span className="material-symbols-outlined text-indigo-600 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-800">AI Co-Pilot</p>
-            <p className="text-[10px] text-slate-400">RevTech Business AI</p>
-          </div>
-        </div>
-        <div className="space-y-1">
-          {["Business Insight", "Content Writer", "WA Drafter", "SEO Expert", "Doc Reviewer"].map((skill) => (
-            <div key={skill} className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-              <span className="text-[10px] text-slate-500">{skill}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] text-emerald-600 font-semibold">Online</span>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function AddMemberNode() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24, delay: 0.3 }}
-    >
-      <div className="w-52 rounded-2xl border-2 border-dashed border-slate-200 p-4 hover:border-blue-300 hover:bg-blue-50/40 transition-all cursor-pointer group">
-        <div className="flex flex-col items-center justify-center py-2 gap-2">
-          <div className="w-10 h-10 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center group-hover:border-blue-400 transition-colors">
-            <span className="material-symbols-outlined text-slate-300 text-[20px] group-hover:text-[var(--adm-text)] transition-colors">add</span>
-          </div>
-          <p className="text-xs font-semibold text-slate-400 group-hover:text-[var(--adm-text)] text-center transition-colors">Tambah Anggota Tim / Role Baru</p>
-          <p className="text-[10px] text-slate-300 text-center">Siap untuk ekspansi</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Org Chart ─────────────────────────────────────────────────────────────────
-
-function OrgChart() {
-  return (
-    <div className="flex flex-col items-center gap-0">
-      {/* Root */}
-      <FounderNode />
-
-      {/* Connector line */}
-      <div className="w-px h-8 bg-slate-200" />
-
-      {/* Branch lines */}
-      <div className="relative flex items-start gap-16">
-        {/* Left connector */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-slate-200" style={{ left: "25%", right: "25%" }} />
-
-        {/* Left child */}
-        <div className="flex flex-col items-center gap-0">
-          <div className="w-px h-8 bg-slate-200" />
-          <AICopilotNode />
-        </div>
-
-        {/* Right child */}
-        <div className="flex flex-col items-center gap-0">
-          <div className="w-px h-8 bg-slate-200" />
-          <AddMemberNode />
-        </div>
-      </div>
-    </div>
-  );
+interface Staff {
+  id: string;
+  name: string;
+  email: string;
+  role: "Superadmin" | "Project Manager" | "Developer" | "Content Writer";
+  status: "Aktif" | "Nonaktif";
+  createdAt: string;
 }
 
 export default function TeamPage() {
+  const { user: currentUser } = useUser();
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newPasswordResult, setNewPasswordResult] = useState<{name: string, password: string} | null>(null);
+  const [toastMessage, setToastMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState(false);
+  
+  // Form State
+  const [formData, setFormData] = useState<Partial<Staff> & { password?: string }>({
+    name: "",
+    email: "",
+    password: "",
+    role: "Content Writer",
+    status: "Aktif",
+  });
+
+  useEffect(() => {
+    const q = query(collection(db, "staff"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const docs: Staff[] = [];
+      snapshot.forEach(doc => {
+        docs.push({ id: doc.id, ...doc.data() } as Staff);
+      });
+      setStaffList(docs);
+    });
+    return () => unsub();
+  }, []);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormData({ name: "", email: "", password: "", role: "Content Writer", status: "Aktif" });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (staff: Staff) => {
+    setEditingId(staff.id);
+    setFormData({ name: staff.name, email: staff.email, role: staff.role, status: staff.status });
+    setIsModalOpen(true);
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!editingId) {
+      const firstName = val.split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (firstName) {
+        // Only regenerate if the email/password hasn't been manually heavily modified
+        // but for simplicity, we just auto-sync it while typing
+        const randomNum = Math.floor(1000 + Math.random() * 9000);
+        setFormData(prev => ({
+          ...prev,
+          name: val,
+          email: `${firstName}@revtech.com`,
+          password: `${firstName}${randomNum}`
+        }));
+        return;
+      }
+    }
+    setFormData(prev => ({ ...prev, name: val }));
+  };
+
+  const handleGenerateNewPassword = async () => {
+    if (!editingId || !formData.name) return;
+    setIsGeneratingPassword(true);
+    const firstName = formData.name.split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const newPassword = `${firstName}${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/admin/staff/password', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ uid: editingId, newPassword })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal memperbarui kata sandi");
+      }
+      
+      // Paksa karyawan untuk ganti sandi pada login berikutnya
+      await updateDoc(doc(db, "staff", editingId), {
+        requirePasswordChange: true
+      });
+
+      // Tampilkan popup modal agar mudah dicopy
+      setNewPasswordResult({ name: formData.name, password: newPassword });
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Gagal memperbarui kata sandi", "error");
+    } finally {
+      setIsGeneratingPassword(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email) {
+      showToast("Nama dan Email wajib diisi", "error");
+      return;
+    }
+    if (!editingId && (!formData.password || formData.password.length < 6)) {
+      showToast("Kata sandi wajib diisi (minimal 6 karakter) untuk akun baru", "error");
+      return;
+    }
+
+    try {
+      let id = editingId;
+      
+      // Jika membuat karyawan baru, buat akun Firebase Auth terlebih dahulu
+      if (!editingId) {
+        // Gunakan secondary app agar admin yang sedang login tidak ter-logout
+        const tempAppName = "TempStaffCreationApp";
+        const tempApp = getApps().find(a => a.name === tempAppName) || initializeApp(firebaseConfig, tempAppName);
+        const tempAuth = getAuth(tempApp);
+        
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, formData.email!, formData.password!);
+        id = userCredential.user.uid;
+        
+        await tempAuth.signOut();
+      }
+
+      // Simpan data di Firestore
+      const docId = id || `STF-${Date.now().toString().slice(-5)}`;
+      const { password, ...staffData } = formData;
+      await setDoc(doc(db, "staff", docId), {
+        ...staffData,
+        // Set flag wajib ganti sandi untuk akun baru
+        ...(!editingId ? { requirePasswordChange: true } : {}),
+        createdAt: editingId ? (staffList.find(s => s.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+      });
+      
+      setIsModalOpen(false);
+      showToast(`Karyawan berhasil ${editingId ? 'diperbarui' : 'ditambahkan'}`);
+      
+      logActivity({
+        type: "system",
+        title: editingId ? "Karyawan Diperbarui" : "Karyawan Baru Ditambahkan",
+        description: `${editingId ? 'Data karyawan' : 'Karyawan baru'} ${staffData.name} (${staffData.role}) telah disimpan.`,
+        user: currentUser?.name || "Admin",
+        notify: false
+      });
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
+        showToast("Email sudah terdaftar", "error");
+      } else {
+        showToast("Gagal menyimpan data", "error");
+      }
+    }
+  };
+
+  const confirmDelete = async (id: string) => {
+    try {
+      // Hapus dari Firestore
+      await deleteDoc(doc(db, "staff", id));
+      
+      // Hapus dari Firebase Auth via API
+      const idToken = await auth.currentUser?.getIdToken();
+      await fetch(`/api/admin/staff?uid=${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+
+      setDeletingId(null);
+      showToast("Karyawan dihapus secara permanen");
+      
+      const deletedStaff = staffList.find(s => s.id === id);
+      if (deletedStaff) {
+        logActivity({
+          type: "system",
+          title: "Karyawan Dihapus",
+          description: `Karyawan ${deletedStaff.name} telah dihapus dari sistem.`,
+          user: currentUser?.name || "Admin",
+          notify: false
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal menghapus", "error");
+    }
+  };
+
+  const filteredStaff = staffList.filter(s => 
+    s.name.toLowerCase().includes(search.toLowerCase()) || 
+    s.email.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div>
-      <div className="pt-2"></div>
+      <AdminToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari nama atau email..."
+        onAdd={openAddModal}
+        addLabel="Tambah Karyawan"
+        addIcon="add"
+      />
 
-      {/* Badge */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/60">
-          <span className="material-symbols-outlined text-blue-500 text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-          <span className="text-sm font-semibold text-blue-700">One-Person Enterprise Powered by AI</span>
-        </div>
-      </div>
+      <AdminCard className="p-0 overflow-hidden">
+        {filteredStaff.length === 0 ? (
+          <div className="text-center py-16">
+            <User size={48} className="mx-auto text-[var(--adm-text-3)] mb-4 opacity-50" />
+            <h3 className="text-lg font-bold text-[var(--adm-text)] mb-2">Belum ada data</h3>
+            <p className="text-sm text-[var(--adm-text-2)] max-w-md mx-auto">
+              Belum ada karyawan yang ditambahkan atau tidak ada yang cocok dengan pencarian Anda.
+            </p>
+          </div>
+        ) : (
+          <AdminTable>
+            <AdminTableHeader>
+              <AdminTableHead>Karyawan</AdminTableHead>
+              <AdminTableHead>Role</AdminTableHead>
+              <AdminTableHead>Status</AdminTableHead>
+              <AdminTableHead className="text-right">Aksi</AdminTableHead>
+            </AdminTableHeader>
+            <AdminTableBody>
+              {filteredStaff.map((staff) => (
+                <AdminTableRow key={staff.id}>
+                  <AdminTableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[var(--adm-accent)]/10 text-[var(--adm-accent)] flex items-center justify-center font-bold">
+                        {staff.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-[var(--adm-text)]">{staff.name}</div>
+                        <div className="text-xs text-[var(--adm-text-3)] mt-0.5 flex items-center gap-1">
+                          <Mail size={12} /> {staff.email}
+                        </div>
+                      </div>
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                      staff.role === 'Superadmin' 
+                        ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                        : staff.role === 'Project Manager'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : staff.role === 'Developer'
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                        : 'bg-orange-100 text-orange-700 border border-orange-200'
+                    }`}>
+                      {staff.role === 'Superadmin' || staff.role === 'Project Manager' ? <ShieldCheck size={12} /> : <Shield size={12} />}
+                      {staff.role}
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold ${
+                      staff.status === 'Aktif'
+                        ? 'bg-[var(--adm-success)]/10 text-[var(--adm-success)] border border-[var(--adm-success)]/20'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200'
+                    }`}>
+                      {staff.status === 'Aktif' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                      {staff.status}
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEditModal(staff); }}
+                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] transition-colors focus:outline-none"
+                        title="Edit"
+                      >
+                        <Edit2 size={14} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeletingId(staff.id); }}
+                        className="inline-flex items-center justify-center p-1.5 text-[var(--adm-text-3)] hover:text-[var(--adm-danger)] transition-colors focus:outline-none"
+                        title="Hapus"
+                      >
+                        <Trash2 size={14} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </AdminTableBody>
+          </AdminTable>
+        )}
+      </AdminCard>
 
-      {/* Org chart */}
-      <div className="flex justify-center py-4 overflow-x-auto">
-        <OrgChart />
-      </div>
-
-      {/* Info cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
-        {[
-          {
-            icon: "person",
-            title: "Solo Founder",
-            description: "Kamu adalah satu-satunya motor penggerak RevTech. Setiap keputusan strategis, kreatif, dan teknis ada di tanganmu.",
-            color: "from-blue-500 to-indigo-600",
-          },
-          {
-            icon: "psychology",
-            title: "AI Co-Pilot",
-            description: "RevTech AI Business Co-Pilot siap 24/7: insight bisnis, draft WhatsApp, review dokumen, dan generate konten SEO.",
-            color: "from-indigo-500 to-purple-600",
-          },
-          {
-            icon: "groups",
-            title: "Ekspansi Tim",
-            description: "Slot terbuka untuk freelancer, mitra, atau karyawan pertama saat bisnis tumbuh. Siapkan role sekarang.",
-            color: "from-slate-400 to-slate-500",
-          },
-        ].map((card, i) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 0.4 + i * 0.1, type: "spring", stiffness: 300, damping: 24 } }}
-            className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm"
-          >
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center mb-3`}>
-              <span className="material-symbols-outlined text-white text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>{card.icon}</span>
+      <AdminModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="max-w-md">
+        <h3 className="text-xl font-bold text-[var(--adm-text)] mb-6">
+          {editingId ? "Edit Karyawan" : "Tambah Karyawan Baru"}
+        </h3>
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">Nama Lengkap</label>
+            <input 
+              type="text"
+              required
+              value={formData.name}
+              onChange={handleNameChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all"
+              placeholder="Masukan Nama Lengkap..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">Email</label>
+            <input 
+              type="email"
+              required
+              value={formData.email}
+              onChange={e => setFormData({...formData, email: e.target.value})}
+              disabled={!!editingId}
+              className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-border)] bg-transparent text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all disabled:opacity-50"
+              placeholder="Masukan Alamat Email..."
+            />
+            {!!editingId && <p className="text-[10px] mt-1 text-[var(--adm-text-3)]">Email tidak dapat diubah setelah dibuat.</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">
+              Kata Sandi
+            </label>
+            {!editingId ? (
+              <div className="flex gap-2">
+                <input 
+                  type="text"
+                  readOnly
+                  value={formData.password || ""}
+                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] text-sm font-bold focus:outline-none"
+                  title="Dibuat otomatis."
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`Akses Dashboard RevTech\nEmail: ${formData.email}\nSandi: ${formData.password}`);
+                    showToast("Email & Sandi berhasil disalin!");
+                  }}
+                  className="flex-none px-4 flex items-center justify-center rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text-2)] hover:bg-[var(--adm-border)]/50 hover:text-[var(--adm-text)] transition-all"
+                  title="Salin Akses (Email & Sandi)"
+                >
+                  <Copy size={18} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGenerateNewPassword}
+                disabled={isGeneratingPassword}
+                className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-accent)]/30 bg-[var(--adm-accent)]/10 text-[var(--adm-accent)] text-sm font-bold hover:bg-[var(--adm-accent)]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingPassword ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Key size={16} />
+                )}
+                {isGeneratingPassword ? "Memproses..." : "Perbarui Sandi Otomatis"}
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">Role</label>
+              <select
+                value={formData.role}
+                onChange={e => setFormData({...formData, role: e.target.value as "Superadmin" | "Project Manager" | "Developer" | "Content Writer"})}
+                className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all"
+              >
+                {formData.role === "Superadmin" && <option value="Superadmin">Superadmin</option>}
+                <option value="Project Manager">Project Manager</option>
+                <option value="Developer">Developer</option>
+                <option value="Content Writer">Content Writer</option>
+              </select>
             </div>
-            <h3 className="text-sm font-bold text-slate-800 mb-1">{card.title}</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">{card.description}</p>
-          </motion.div>
-        ))}
-      </div>
+            <div>
+              <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-1.5">Status</label>
+              <select
+                value={formData.status}
+                onChange={e => setFormData({...formData, status: e.target.value as "Aktif" | "Nonaktif"})}
+                className="w-full px-4 py-2.5 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all"
+              >
+                <option value="Aktif">Aktif</option>
+                <option value="Nonaktif">Nonaktif</option>
+              </select>
+            </div>
+          </div>
+          <div className="pt-4 flex justify-end gap-2 border-t border-[var(--adm-border)] mt-6">
+            <AdminButton variant="ghost" type="button" onClick={() => setIsModalOpen(false)}>Batal</AdminButton>
+            <AdminButton type="submit">
+              Simpan Data
+            </AdminButton>
+          </div>
+        </form>
+      </AdminModal>
+
+      {/* Modal Hapus */}
+      <AdminModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} maxWidth="max-w-sm">
+        <div className="text-center pt-2">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-5 text-red-600">
+            <Trash2 size={28} />
+          </div>
+          <h3 className="text-lg font-bold text-[var(--adm-text)] mb-2">Hapus Karyawan?</h3>
+          <p className="text-sm text-[var(--adm-text-3)] mb-8">
+            Karyawan yang dihapus tidak akan dapat mengakses sistem lagi. Tindakan ini tidak bisa dibatalkan.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <AdminButton variant="ghost" onClick={() => setDeletingId(null)}>
+              Batal
+            </AdminButton>
+            <AdminButton variant="danger" onClick={() => deletingId && confirmDelete(deletingId)}>
+              Ya, Hapus
+            </AdminButton>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Modal Sukses Ganti Password */}
+      <AdminModal isOpen={!!newPasswordResult} onClose={() => setNewPasswordResult(null)} maxWidth="max-w-sm">
+        <div className="text-center pt-2">
+          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5 text-green-600">
+            <CheckCircle2 size={28} />
+          </div>
+          <h3 className="text-lg font-bold text-[var(--adm-text)] mb-2">Sandi Diperbarui!</h3>
+          <p className="text-sm text-[var(--adm-text-3)] mb-4">
+            Kata sandi untuk <strong>{newPasswordResult?.name}</strong> telah diperbarui. Silakan salin sandi di bawah ini:
+          </p>
+          <div className="bg-[var(--adm-bg)] border border-[var(--adm-border)] rounded-xl p-4 mb-6">
+            <p className="text-2xl font-mono font-bold tracking-wider text-[var(--adm-text)]">
+              {newPasswordResult?.password}
+            </p>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <AdminButton variant="primary" onClick={() => {
+              if (newPasswordResult) {
+                navigator.clipboard.writeText(newPasswordResult.password);
+                logActivity({
+                  type: "system",
+                  title: "Sandi Karyawan Diperbarui",
+                  description: `Kata sandi untuk karyawan ${newPasswordResult.name} telah direset otomatis.`,
+                  user: currentUser?.name || "Admin",
+                  notify: false
+                });
+              }
+              setNewPasswordResult(null);
+              showToast("Sandi berhasil disalin!");
+            }} className="w-full">
+              Salin & Tutup
+            </AdminButton>
+          </div>
+        </div>
+      </AdminModal>
+
+      {toastMessage && (
+        <AdminToast
+          isVisible={true}
+          message={toastMessage.text}
+          type={toastMessage.type}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 }

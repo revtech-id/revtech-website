@@ -1,12 +1,11 @@
 /**
- * SOP Store — persists revtech-engine and AGENTS template to localStorage.
+ * SOP Store — persists revtech-engine and AGENTS template to Firestore.
  * Studio reads from here; Settings writes here.
  */
 
 import { REVTECH_ENGINE_DEFAULT } from "./revtechEngineDefault";
-
-const KEY_ENGINE = "revtech_sop_engine";
-const KEY_AGENTS = "revtech_sop_agents_template";
+import { db } from "./firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export const AGENTS_TEMPLATE_DEFAULT = `# AGENTS.md — {{projectName}}
 
@@ -32,31 +31,58 @@ export const AGENTS_TEMPLATE_DEFAULT = `# AGENTS.md — {{projectName}}
 
 Setelah membaca semua dokumen di atas, konfirmasi pemahamanmu lalu buka \`docs/manifest.md\` dan kerjakan dari atas ke bawah.`;
 
-export function getEngineContent(): string {
-  if (typeof window === "undefined") return REVTECH_ENGINE_DEFAULT;
-  return localStorage.getItem(KEY_ENGINE) ?? REVTECH_ENGINE_DEFAULT;
+export async function getEngineContent(): Promise<string> {
+  try {
+    const docRef = doc(db, "settings", "sop");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().engine) {
+      return docSnap.data().engine;
+    }
+  } catch (err) {
+    console.error("Failed to fetch engine content from Firestore:", err);
+  }
+  return REVTECH_ENGINE_DEFAULT;
 }
 
-export function saveEngineContent(content: string): void {
-  localStorage.setItem(KEY_ENGINE, content);
+export async function saveEngineContent(content: string): Promise<void> {
+  try {
+    const docRef = doc(db, "settings", "sop");
+    await setDoc(docRef, { engine: content }, { merge: true });
+  } catch (err) {
+    console.error("Failed to save engine content to Firestore:", err);
+  }
 }
 
-export function getAgentsTemplate(): string {
-  if (typeof window === "undefined") return AGENTS_TEMPLATE_DEFAULT;
-  return localStorage.getItem(KEY_AGENTS) ?? AGENTS_TEMPLATE_DEFAULT;
+export async function getAgentsTemplate(): Promise<string> {
+  try {
+    const docRef = doc(db, "settings", "sop");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().agents) {
+      return docSnap.data().agents;
+    }
+  } catch (err) {
+    console.error("Failed to fetch agents template from Firestore:", err);
+  }
+  return AGENTS_TEMPLATE_DEFAULT;
 }
 
-export function saveAgentsTemplate(content: string): void {
-  localStorage.setItem(KEY_AGENTS, content);
+export async function saveAgentsTemplate(content: string): Promise<void> {
+  try {
+    const docRef = doc(db, "settings", "sop");
+    await setDoc(docRef, { agents: content }, { merge: true });
+  } catch (err) {
+    console.error("Failed to save agents template to Firestore:", err);
+  }
 }
 
 /** Interpolate {{placeholders}} in AGENTS template */
-export function buildAgentsContent(params: {
+export async function buildAgentsContent(params: {
   projectName: string;
   idea: string;
   techStack: string;
-}): string {
-  return getAgentsTemplate()
+}): Promise<string> {
+  const template = await getAgentsTemplate();
+  return template
     .replace(/\{\{projectName\}\}/g, params.projectName)
     .replace(/\{\{idea\}\}/g, params.idea)
     .replace(/\{\{techStack\}\}/g, params.techStack);
