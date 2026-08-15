@@ -32,20 +32,20 @@ const fadeUp = (i: number) => ({
 export default function ProfilePage() {
   const { user, setUser } = useUser();
   const [profile, setProfile] = useState({
-    name: user.name,
-    role: user.role,
-    email: user.email,
-    phone: user.phone,
-    bio: user.bio,
-    location: user.location,
-    website: user.website,
+    name: user?.name || "",
+    role: user?.role || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    bio: user?.bio || "",
+    location: user?.location || "",
+    website: user?.website || "",
   });
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
 
   // Password states removed for Google Login integration
 
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
   const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
