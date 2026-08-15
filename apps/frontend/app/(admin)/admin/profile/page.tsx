@@ -106,8 +106,8 @@ export default function ProfilePage() {
         logActivity({
           type: "profile_updated",
           title: "Profil Diperbarui",
-          description: `Data profil berhasil diperbarui oleh ${user.name}`,
-          user: user.name,
+          description: `Data profil berhasil diperbarui oleh ${user?.name || 'Admin'}`,
+          user: user?.name || 'Admin',
         });
 
       } else {
