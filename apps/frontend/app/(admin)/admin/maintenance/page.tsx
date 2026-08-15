@@ -381,37 +381,45 @@ export default function MaintenancePage() {
 
   async function confirmUseMod() {
     if (!usingModId) return;
-    const clientName = clients.find(c => c.id === usingModId)?.name || "Klien";
-    
-    save(clients.map(c => {
-      if (c.id === usingModId) {
-        return { ...c, modificationsQuota: Math.max(0, (c.modificationsQuota || 0) - 1) };
-      }
-      return c;
-    }));
-    
-    // Auto Create Order for tracking in Firestore
     const clientData = clients.find(c => c.id === usingModId);
+    if (!clientData) return;
     
-    const newOrder = {
-      id: `ORD-${Date.now().toString().slice(-5)}`,
-      client: clientName,
-      company: clientData?.name || "",
-      service: "Jasa Modifikasi",
-      status: "antrean",
-      dp: 0,
-      total: 0,
-      phone: clientData?.phone || "",
-      createdAt: new Date().toISOString(),
-      deadline: modDeadline || null,
-      handover: clientData?.website || clientData?.domain || "",
-      notes: modNotes || "Menggunakan kuota revisi maintenance."
-    };
+    const clientName = clientData.name || "Klien";
+    const newQuota = Math.max(0, (clientData.modificationsQuota || 0) - 1);
     
     try {
+      // 1. Update Firestore for Maintenance Quota
+      await updateDoc(doc(db, "maintenance", usingModId), {
+        modificationsQuota: newQuota
+      });
+      
+      // 2. Update Local State
+      setClients(prev => prev.map(c => 
+        c.id === usingModId ? { ...c, modificationsQuota: newQuota } : c
+      ));
+
+      // 3. Auto Create Order for tracking in Firestore
+      const newOrder = {
+        id: `ORD-${Date.now().toString().slice(-5)}`,
+        client: clientName,
+        company: clientData.name || "",
+        service: "Jasa Modifikasi",
+        status: "antrean",
+        dp: 0,
+        total: 0,
+        phone: clientData.phone || "",
+        createdAt: new Date().toISOString(),
+        deadline: modDeadline || null,
+        handover: clientData.website || clientData.domain || "",
+        notes: modNotes || "Menggunakan kuota revisi maintenance."
+      };
+      
       await setDoc(doc(db, "orders", newOrder.id), newOrder);
+      
     } catch (err) {
-      console.error("Failed to create order in Firestore", err);
+      console.error("Failed to process mod use", err);
+      showToast("Gagal memproses klaim revisi", "error");
+      return;
     }
     
     setUsingModId(null);
