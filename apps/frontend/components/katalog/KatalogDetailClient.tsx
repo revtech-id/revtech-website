@@ -111,7 +111,7 @@ export default function KatalogDetailClient({ id }: { id: string }) {
                 )}
             </div>
             <div>
-                {product.url && (
+                {product.url && product.url.trim() !== "" && product.url !== "#" && (
                     <a href={product.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-slate-900 text-white text-[13px] sm:text-base font-bold px-6 py-3.5 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95">
                         Lihat Live Demo <span className="material-symbols-outlined text-[18px]">launch</span>
                     </a>

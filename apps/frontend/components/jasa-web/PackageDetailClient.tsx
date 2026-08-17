@@ -198,28 +198,24 @@ export default function PackageDetailClient({ plan: initialPlan }: PackageDetail
                 </section>
 
                 {/* DEMO SECTION - Ditaruh Paling Bawah */}
-                <section>
-                    <div className="bg-[#f8f9fa] border border-gray-100 rounded-2xl p-6 md:px-10 md:py-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
-                            <div className="flex flex-col w-full text-left">
-                                <span className="text-[13px] font-semibold text-gray-500 mb-1">Live Preview {plan.name}</span>
-                                <span className="text-base md:text-lg font-bold text-gray-900">
-                                    Ingin tahu gambaran website-nya seperti apa?
-                                </span>
-                            </div>
-                        <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
-                            {plan.demoLink ? (
+                {plan.demoLink && plan.demoLink.trim() !== "" && plan.demoLink !== "#" && (
+                    <section>
+                        <div className="bg-[#f8f9fa] border border-gray-100 rounded-2xl p-6 md:px-10 md:py-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+                                <div className="flex flex-col w-full text-left">
+                                    <span className="text-[13px] font-semibold text-gray-500 mb-1">Live Preview {plan.name}</span>
+                                    <span className="text-base md:text-lg font-bold text-gray-900">
+                                        Ingin tahu gambaran website-nya seperti apa?
+                                    </span>
+                                </div>
+                            <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
                                 <Link href={plan.demoLink} target="_blank" className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm ">
                                     Lihat Live Demo 
                                     <ExternalLink className="w-4 h-4" />
                                 </Link>
-                            ) : (
-                                <button className="w-full md:w-auto bg-[#0f172a] hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-[13px] sm:text-sm  cursor-not-allowed opacity-50" disabled>
-                                    Demo Belum Tersedia
-                                </button>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                )}
                 
             </div>
         </div>

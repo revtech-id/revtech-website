@@ -76,7 +76,7 @@ export default async function PortfolioCaseStudy({ params }: { params: Promise<{
                 )}
             </div>
             <div>
-                {portfolioData.liveUrl && (
+                {portfolioData.liveUrl && portfolioData.liveUrl.trim() !== "" && portfolioData.liveUrl !== "#" && (
                     <a href={portfolioData.liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-slate-900 text-white text-[13px] sm:text-base font-bold px-6 py-3.5 rounded-xl hover:bg-slate-800 transition-colors shadow-lg active:scale-95">
                         Lihat Live Demo <span className="material-symbols-outlined text-[18px]">launch</span>
                     </a>
