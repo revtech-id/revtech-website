@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FileUp, Save, Monitor, Tablet, Smartphone } from "lucide-react";
 import { AdminToast, AdminButton } from "@/components/admin/ui";
+import { uploadImageToStorage } from "@/lib/upload";
 
 type DeviceKey = "desktop" | "tablet" | "mobile";
 type MediaSlot = { bgMedia: string; bgType: "image" | "video" };
@@ -38,6 +39,7 @@ export default function HeroBannerPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef    = useRef<HTMLIFrameElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleIframeLoad = () => {
     try {
@@ -96,12 +98,16 @@ export default function HeroBannerPage() {
     setToast({ isVisible: true, message: "Dikembalikan ke pengaturan default", type: "success" });
   };
 
-  const handleFile = useCallback((device: DeviceKey, file: File | undefined) => {
+  const handleFile = useCallback(async (device: DeviceKey, file: File | undefined) => {
     if (!file) return;
     const isVideo = file.type.startsWith("video/");
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const newSlot = { bgMedia: reader.result as string, bgType: isVideo ? "video" : "image" } as const;
+    
+    setIsUploading(true);
+    setToast({ isVisible: true, message: `Mengompresi & mengunggah ${isVideo ? "video" : "gambar"}...`, type: "success" });
+    
+    try {
+      const url = await uploadImageToStorage(file, "hero");
+      const newSlot = { bgMedia: url, bgType: isVideo ? "video" : "image" } as const;
       setSettings((prev) => {
         const next = { ...prev, [device]: newSlot };
         localStorage.setItem("revtech_hero_settings", JSON.stringify(next));
@@ -113,8 +119,12 @@ export default function HeroBannerPage() {
         message: `${isVideo ? "Video" : "Gambar"} ${DEVICES.find(d => d.key === device)?.label} berhasil diunggah`,
         type: "success",
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal mengunggah file", type: "error" });
+    } finally {
+      setIsUploading(false);
+    }
   }, []);
 
   const activeDeviceCfg = DEVICES.find(d => d.key === activeDevice)!;
@@ -152,15 +162,15 @@ export default function HeroBannerPage() {
                   )}
                 </button>
                 <label
-                  className="p-1 text-[var(--adm-text-3)] transition-colors cursor-not-allowed opacity-50"
-                  title="Fitur dinonaktifkan"
+                  className="p-1 text-[var(--adm-text-3)] transition-colors cursor-pointer hover:text-[var(--adm-text)]"
+                  title="Ganti background"
                 >
                   <FileUp size={11} />
                   <input
                     type="file"
                     accept="image/*,video/*"
                     className="hidden"
-                    disabled
+                    disabled={isUploading}
                     onChange={(e) => handleFile(d.key, e.target.files?.[0])}
                   />
                 </label>

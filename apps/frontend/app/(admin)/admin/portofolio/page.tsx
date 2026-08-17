@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton, SEOPanel } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X, Loader2 } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 import { useUser } from "@/contexts/UserContext";
+import { uploadImageToStorage } from "@/lib/upload";
 
 import "react-quill-new/dist/quill.snow.css";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { 
   ssr: false, 
   loading: () => <div className="h-[450px] w-full flex items-center justify-center bg-[var(--adm-bg)] text-[var(--adm-text-3)] animate-pulse rounded-xl">Memuat Editor...</div> 
-});
+}) as any;
 
 const QUILL_MODULES = {
   toolbar: [
@@ -149,20 +150,76 @@ export default function PortofolioPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
+  const [isUploading, setIsUploading] = useState(false);
+  const quillRef = useRef<any>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ],
+      handlers: {
+        image: () => {
+          const input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/*');
+          input.click();
+
+          input.onchange = async () => {
+            const file = input.files ? input.files[0] : null;
+            if (!file) return;
+
+            setToast({ isVisible: true, message: "Mengunggah gambar konten...", type: "success" });
+            
+            try {
+              const url = await uploadImageToStorage(file, "portfolio");
+              const quill = quillRef.current?.getEditor();
+              if (quill) {
+                const range = quill.getSelection(true);
+                quill.insertEmbed(range.index, 'image', url);
+                quill.setSelection(range.index + 1);
+                setToast({ isVisible: true, message: "Gambar berhasil disisipkan", type: "success" });
+              }
+            } catch (err) {
+              console.error(err);
+              setToast({ isVisible: true, message: "Gagal mengunggah gambar konten", type: "error" });
+            }
+          };
+        }
+      }
+    },
+    keyboard: QUILL_MODULES.keyboard
+  }), []);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm(prev => ({ ...prev, thumbnail: reader.result as string }));
-      setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-    };
-    reader.readAsDataURL(file);
+    
+    setIsUploading(true);
+    
+    try {
+      const url = await uploadImageToStorage(file, "portfolio");
+      setForm(prev => ({ ...prev, thumbnail: url }));
+      setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const onDropRejected = useCallback(() => {
+    setToast({ isVisible: true, message: "File ditolak. Pastikan format gambar sesuai.", type: "error" });
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: { 'image/*': [] },
     maxFiles: 1,
   });
@@ -582,12 +639,13 @@ export default function PortofolioPage() {
                       .ql-snow .ql-tooltip a.ql-action::before { color: var(--adm-accent) !important; }
                       .ql-snow .ql-tooltip a.ql-remove::before { color: #ef4444 !important; }
                     `}</style>
-                    <ReactQuill
-                      theme="snow"
-                      value={form.content}
-                      onChange={(value) => setForm({ ...form, content: value })}
-                      modules={QUILL_MODULES}
-                      placeholder="Mulai menulis deskripsi atau studi kasus proyek..."
+                    <ReactQuill 
+                      ref={quillRef}
+                      theme="snow" 
+                      value={form.content} 
+                      onChange={(value: string) => setForm({ ...form, content: value })}
+                      modules={modules}
+                      placeholder="Mulai menulis detail project portofolio Anda di sini..."
                     />
                   </div>
                 </div>
@@ -609,15 +667,19 @@ export default function PortofolioPage() {
                       <div className="absolute top-3 right-3 flex items-center gap-2">
                         <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti">
                           <Pencil size={14} />
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setForm({ ...form, thumbnail: reader.result as string });
-                              setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-                            };
-                            reader.readAsDataURL(file);
+                            setIsUploading(true);
+                            try {
+                              const url = await uploadImageToStorage(file, "portfolio");
+                              setForm({ ...form, thumbnail: url });
+                              setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
+                            } catch (error) {
+                              setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+                            } finally {
+                              setIsUploading(false);
+                            }
                           }} />
                         </label>
                         <button type="button" onClick={() => setForm({ ...form, thumbnail: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
@@ -625,11 +687,13 @@ export default function PortofolioPage() {
                         </button>
                       </div>
                     </div>
+                  ) : isUploading ? (
+                    <div className="w-full py-8 px-4 border-2 border-dashed border-[var(--adm-accent)]/50 rounded-xl flex flex-col items-center justify-center gap-3">
+                      <Loader2 size={28} className="text-[var(--adm-accent)] animate-spin" />
+                      <p className="text-xs text-[var(--adm-text-3)]">Mengunggah gambar...</p>
+                    </div>
                   ) : (
-                    <div
-                      {...getRootProps()}
-                      className={`w-full py-6 px-4 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${isDragActive ? "border-[var(--adm-accent)] bg-[var(--adm-accent)]/10" : "border-[var(--adm-border)] hover:border-[var(--adm-accent)] hover:bg-[var(--adm-bg)]"}`}
-                    >
+                    <div {...getRootProps()} className={`w-full py-6 px-4 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${isDragActive ? "border-[var(--adm-accent)] bg-[var(--adm-accent)]/10" : "border-[var(--adm-border)] hover:border-[var(--adm-accent)] hover:bg-[var(--adm-bg)]"}`}>
                       <input {...getInputProps()} />
                       <div className="p-3 bg-[var(--adm-bg)] rounded-full">
                         <UploadCloud size={24} className={isDragActive ? "text-[var(--adm-accent)]" : "text-[var(--adm-text-3)]"} />

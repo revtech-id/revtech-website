@@ -11,6 +11,9 @@ import ImageCropper from "@/components/ui/ImageCropper";
 import { CheckCircle2, Mail, Phone, MapPin, Globe, ShieldCheck, Camera, AlertTriangle } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
+import { uploadBase64ToStorage } from "@/lib/upload";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 
 const inputCls =
   "w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] text-sm text-[var(--adm-text)] bg-transparent placeholder:text-[var(--adm-text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors";
@@ -98,10 +101,42 @@ export default function ProfilePage() {
     setIsSaving(true);
     
     try {
-      const res = await updateProfile({ profile });
+      let finalAvatarUrl = avatarPreview;
+      
+      // If avatar is a new base64 string, upload it first
+      if (finalAvatarUrl && finalAvatarUrl.startsWith('data:')) {
+        showToast("Sedang mengunggah foto profil...", "success");
+        try {
+          finalAvatarUrl = await uploadBase64ToStorage(finalAvatarUrl, "users");
+          setAvatarPreview(finalAvatarUrl);
+        } catch (uploadErr) {
+          console.error("Gagal mengunggah avatar:", uploadErr);
+          showToast("Gagal mengunggah foto profil, profil akan tetap disimpan", "error");
+        }
+      }
+
+      const res = await updateProfile({ ...profile, avatar: finalAvatarUrl });
+      
+      // Update Firestore directly
+      if (user && user.email && user._collection) {
+        const q = query(collection(db, user._collection), where("email", "==", user.email));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const docRef = snap.docs[0].ref;
+          await updateDoc(docRef, {
+            name: profile.name,
+            phone: profile.phone,
+            bio: profile.bio,
+            location: profile.location,
+            website: profile.website,
+            avatar: finalAvatarUrl
+          });
+        }
+      }
+
       if (res.success) {
-        showToast("Perubahan profil berhasil disimpan.");
-        setUser({ ...user, ...profile, avatar: avatarPreview });
+        showToast("Perubahan profil berhasil disimpan.", "success");
+        setUser({ ...user, ...profile, avatar: finalAvatarUrl } as any);
         
         logActivity({
           type: "profile_updated",

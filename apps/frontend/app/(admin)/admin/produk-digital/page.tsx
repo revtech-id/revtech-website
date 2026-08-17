@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { uploadImageToStorage } from "@/lib/upload";
 
 import "react-quill-new/dist/quill.snow.css";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), {
   ssr: false,
   loading: () => <div className="h-[450px] w-full flex items-center justify-center bg-[var(--adm-bg)] text-[var(--adm-text-3)] animate-pulse rounded-xl">Memuat Editor...</div>
-});
+}) as any;
 
 const QUILL_MODULES = {
   toolbar: [
@@ -110,16 +111,66 @@ export default function ProdukDigitalPage() {
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm(prev => ({ ...prev, thumbnail: reader.result as string }));
-      setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-    };
-    reader.readAsDataURL(file);
+
+    setIsUploading(true);
+
+    try {
+      const url = await uploadImageToStorage(file, "produk-digital");
+      setForm(prev => ({ ...prev, thumbnail: url }));
+      setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+    } finally {
+      setIsUploading(false);
+    }
   }, []);
+
+  const quillRef = useRef<any>(null);
+
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ],
+      handlers: {
+        image: () => {
+          const input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/*');
+          input.click();
+          input.onchange = async () => {
+            const file = input.files ? input.files[0] : null;
+            if (!file) return;
+            setToast({ isVisible: true, message: "Mengunggah gambar konten...", type: "success" });
+            try {
+              const url = await uploadImageToStorage(file, "produk-digital");
+              const quill = quillRef.current?.getEditor();
+              if (quill) {
+                const range = quill.getSelection(true);
+                quill.insertEmbed(range.index, 'image', url);
+                quill.setSelection(range.index + 1);
+                setToast({ isVisible: true, message: "Gambar berhasil disisipkan", type: "success" });
+              }
+            } catch (err) {
+              console.error(err);
+              setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+            }
+          };
+        }
+      }
+    },
+    keyboard: QUILL_MODULES.keyboard
+  }), []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop, accept: { 'image/*': [] }, maxFiles: 1,
@@ -456,11 +507,13 @@ export default function ProdukDigitalPage() {
                       .ql-snow.ql-toolbar button:hover .ql-stroke, .ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: var(--adm-text) !important; }
                       .ql-snow .ql-picker-options { background-color: var(--adm-card) !important; border: none !important; border-radius: 0.75rem; padding: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
                     `}</style>
+                    {/* @ts-ignore */}
                     <ReactQuill
+                      ref={quillRef}
                       theme="snow"
                       value={form.content}
-                      onChange={(value) => setForm({ ...form, content: value })}
-                      modules={QUILL_MODULES}
+                      onChange={(value: string) => setForm({ ...form, content: value })}
+                      modules={modules}
                       placeholder="Tulis deskripsi lengkap, fitur, atau detail produk digital..."
                     />
                   </div>
@@ -482,18 +535,30 @@ export default function ProdukDigitalPage() {
                       <div className="absolute top-3 right-3 flex items-center gap-2">
                         <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti">
                           <Pencil size={14} />
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            const reader = new FileReader();
-                            reader.onloadend = () => { setForm({ ...form, thumbnail: reader.result as string }); };
-                            reader.readAsDataURL(file);
+                            setIsUploading(true);
+                            try {
+                              const url = await uploadImageToStorage(file, "produk-digital");
+                              setForm({ ...form, thumbnail: url });
+                              setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
+                            } catch (error) {
+                              setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+                            } finally {
+                              setIsUploading(false);
+                            }
                           }} />
                         </label>
                         <button type="button" onClick={() => setForm({ ...form, thumbnail: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
                           <Trash2 size={14} />
                         </button>
                       </div>
+                    </div>
+                  ) : isUploading ? (
+                    <div className="w-full py-8 px-4 border-2 border-dashed border-[var(--adm-accent)]/50 rounded-xl flex flex-col items-center justify-center gap-3">
+                      <Loader2 size={28} className="text-[var(--adm-accent)] animate-spin" />
+                      <p className="text-xs text-[var(--adm-text-3)]">Mengunggah gambar...</p>
                     </div>
                   ) : (
                     <div

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const { stats, date } = body;
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       prompt: `Kamu adalah RevTech AI Business Co-Pilot, asisten bisnis cerdas untuk seorang solo founder agensi digital bernama RevTech.
 
 Hari ini adalah ${date}.

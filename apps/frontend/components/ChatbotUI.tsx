@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { marked } from 'marked';
 
 import { useChat } from 'ai/react';
 interface Message {
@@ -82,6 +83,9 @@ export default function ChatbotUI() {
           {/* Header */}
           <div className="bg-white p-5 flex justify-between items-center border-b border-gray-100 z-10">
             <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
+                <img src="/images/icon-robot.webp" alt="AI Icon" className="w-[80%] h-[80%] object-contain drop-shadow-sm" />
+              </div>
               <div>
                 <h3 className="font-bold text-gray-900 text-[15px] sm:text-base">RevTech Assistant</h3>
               </div>
@@ -102,7 +106,14 @@ export default function ChatbotUI() {
               <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end items-center group' : 'justify-start'}`}>
                 {/* Icons removed per user request */}
                 <div className={`max-w-[80%] rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-[14px] sm:text-[15px] leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}`}>
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === 'user' ? (
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  ) : (
+                    <div 
+                      className="prose prose-sm max-w-none prose-p:leading-relaxed prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-gray-900 text-gray-800"
+                      dangerouslySetInnerHTML={{ __html: marked.parse(msg.content, { async: false }) as string }} 
+                    />
+                  )}
                 </div>
               </div>
             ))}

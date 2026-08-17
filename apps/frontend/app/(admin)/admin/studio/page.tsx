@@ -12,10 +12,11 @@ import {
   Lightbulb, Cpu, HelpCircle, Rocket, ArrowRight, ArrowLeft,
   Wand2, Wrench, Loader2, Copy, Check, FileText, FolderTree,
   ListChecks, TriangleAlert, Download, Package, Palette, Layout,
-  ServerCog, Bot, FileArchive, Search, Sparkles, BookMarked, RotateCcw, Save, Settings, CheckCircle2, Camera, Send, RefreshCw, Archive, X, Trash2
+  ServerCog, Bot, FileArchive, Search, Sparkles, BookMarked, RotateCcw, Save, Settings, CheckCircle2, Camera, Send, RefreshCw, Archive, X, Trash2, Undo2, Redo2
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { uploadImageToStorage } from "@/lib/upload";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -73,12 +74,12 @@ function buildStackLabel(stack: ManualStack) {
 
 // ── Mock docs builder ──────────────────────────────────────────────────────────
 
-async function generateDocWithAI(data: ProjectData, stackLabel: string, docType: string): Promise<string> {
+async function generateDocWithAI(data: ProjectData, stackLabel: string, docType: string, answers: Record<string, string> = {}): Promise<string> {
   try {
     const res = await fetch('/api/admin/studio-generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data, stackLabel, docType })
+      body: JSON.stringify({ data, stackLabel, docType, answers })
     });
     const json = await res.json();
     return json.text || `Gagal membuat dokumen ${docType}`;
@@ -88,11 +89,13 @@ async function generateDocWithAI(data: ProjectData, stackLabel: string, docType:
   }
 }
 
-async function buildMockDocs(data: ProjectData, stackLabel: string): Promise<GeneratedDocs> {
-  const [prd, brand, design] = await Promise.all([
-    generateDocWithAI(data, stackLabel, 'prd'),
-    generateDocWithAI(data, stackLabel, 'brand'),
-    generateDocWithAI(data, stackLabel, 'design')
+async function buildProjectDocs(data: ProjectData, stackLabel: string, answers: Record<string, string> = {}): Promise<GeneratedDocs> {
+  const [prd, brand, design, architecture, manifest] = await Promise.all([
+    generateDocWithAI(data, stackLabel, 'prd', answers),
+    generateDocWithAI(data, stackLabel, 'brand', answers),
+    generateDocWithAI(data, stackLabel, 'design', answers),
+    generateDocWithAI(data, stackLabel, 'architecture', answers),
+    generateDocWithAI(data, stackLabel, 'manifest', answers)
   ]);
 
   return {
@@ -105,8 +108,8 @@ async function buildMockDocs(data: ProjectData, stackLabel: string): Promise<Gen
     prd,
     brand,
     design,
-    architecture: `# Architecture\n(Otomatis dibuat oleh AI berdasarkan PRD dan Stack)`,
-    manifest: `# Manifest\n(Otomatis dibuat oleh AI berdasarkan PRD)`
+    architecture,
+    manifest
   };
 }
 
@@ -129,6 +132,8 @@ export default function StudioPage() {
   const [chatInput, setChatInput] = useState("");
   const [isChatting, setIsChatting] = useState(false);
   const [aiStack, setAiStack]         = useState<(ManualStack & { reason: string }) | null>(null);
+  const [aiStackHistory, setAiStackHistory] = useState<(ManualStack & { reason: string })[]>([]);
+  const [aiStackRedo, setAiStackRedo] = useState<(ManualStack & { reason: string })[]>([]);
   const [questions, setQuestions]     = useState<Question[]>([]);
   const [answers, setAnswers]         = useState<Record<string, string>>({});
   const [docs, setDocs]               = useState<GeneratedDocs | null>(null);
@@ -137,6 +142,32 @@ export default function StudioPage() {
   const [activeDoc, setActiveDoc]     = useState<DocKey>("agents");
   const [copied, setCopied]           = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  function handleUndoStack() {
+    if (aiStackHistory.length === 0 || !aiStack) return;
+    const previousStack = aiStackHistory[aiStackHistory.length - 1];
+    setAiStackHistory(prev => prev.slice(0, -1));
+    setAiStackRedo(prev => [...prev, aiStack]);
+    setAiStack(previousStack);
+    
+    setChatHistory(prev => [...prev, {
+      sender: 'ai',
+      text: "Baik, saya telah memulihkan rekomendasi tech stack ke versi sebelumnya (Undo)."
+    }]);
+  }
+
+  function handleRedoStack() {
+    if (aiStackRedo.length === 0 || !aiStack) return;
+    const nextStack = aiStackRedo[aiStackRedo.length - 1];
+    setAiStackRedo(prev => prev.slice(0, -1));
+    setAiStackHistory(prev => [...prev, aiStack]);
+    setAiStack(nextStack);
+    
+    setChatHistory(prev => [...prev, {
+      sender: 'ai',
+      text: "Baik, saya telah mengembalikan rekomendasi tech stack ke versi selanjutnya (Redo)."
+    }]);
+  }
 
   const { user } = useUser();
 
@@ -157,28 +188,42 @@ export default function StudioPage() {
   // ── File Upload state ────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingRef, setIsUploadingRef] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProjectData({...projectData, logo: reader.result as string, stylePreference: "Auto-adapt dari Logo"});
+      setIsUploadingLogo(true);
+      showToast("Mengompresi & mengunggah logo...", "success");
+      try {
+        const url = await uploadImageToStorage(file, "studio");
+        setProjectData({...projectData, logo: url, stylePreference: "Auto-adapt dari Logo"});
         if (fileInputRef.current) fileInputRef.current.value = "";
-      };
-      reader.readAsDataURL(file);
+        showToast("Logo berhasil diunggah", "success");
+      } catch (error) {
+        showToast("Gagal mengunggah logo", "error");
+      } finally {
+        setIsUploadingLogo(false);
+      }
     }
   };
 
-  const handleRefFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProjectData({...projectData, referenceImage: reader.result as string});
+      setIsUploadingRef(true);
+      showToast("Mengompresi & mengunggah referensi...", "success");
+      try {
+        const url = await uploadImageToStorage(file, "studio");
+        setProjectData({...projectData, referenceImage: url});
         if (refFileInputRef.current) refFileInputRef.current.value = "";
-      };
-      reader.readAsDataURL(file);
+        showToast("Gambar referensi berhasil diunggah", "success");
+      } catch (error) {
+        showToast("Gagal mengunggah referensi", "error");
+      } finally {
+        setIsUploadingRef(false);
+      }
     }
   };
 
@@ -279,77 +324,137 @@ export default function StudioPage() {
 
   const effectiveStack = aiStack ? buildStackLabel(aiStack) : "";
 
-  // ── Step 2 AI recommendation (MOCKED) ──────────────────────────────────────
+  // ── Step 2 AI recommendation (REAL) ──────────────────────────────────────
 
   async function getAIStack() {
     setLoading(true);
     setError("");
-    setTimeout(() => {
-      setAiStack({
-        language: "TypeScript",
-        styling: "Tailwind CSS",
-        frontend: "Next.js (React)",
-        backend: "Node.js (Express/NestJS)",
-        database: "PostgreSQL",
-        deployment: "Vercel / Netlify",
-        reason: "Kombinasi modern ini sangat optimal untuk MVP cepat dengan performa tinggi dan skalabilitas yang baik.",
+    try {
+      const res = await fetch('/api/admin/studio-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          mode: 'ai-stack', 
+          idea: projectData.description || projectData.projectName 
+        })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memproses data AI.");
+      
+      
+      if (data.stack) {
+        setAiStack({
+          language: data.stack.language || "TypeScript",
+          styling: data.stack.styling || "Tailwind CSS",
+          frontend: data.stack.frontend || "Next.js",
+          backend: data.stack.backend || "Node.js",
+          database: data.stack.database || "PostgreSQL",
+          deployment: data.stack.deployment || "Vercel",
+          reason: data.stack.reason || "",
+        });
+      }
       setChatHistory([
         { sender: 'ai', text: "Ini rekomendasi awal tech stack berdasarkan ide proyek Anda. Apakah ada preferensi khusus? (Misalnya: 'Tolong gunakan PHP' atau 'Saya butuh stack yang paling hemat biaya')." }
       ]);
+    } catch (err) {
+      console.error(err);
+      setError("Gagal menghubungi AI untuk tech stack.");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   }
 
   async function sendChatMessage() {
     if (!chatInput.trim()) return;
     
     const newMessage = { sender: 'user' as const, text: chatInput };
-    setChatHistory(prev => [...prev, newMessage]);
+    const updatedHistory = [...chatHistory, newMessage];
+    setChatHistory(updatedHistory);
     setChatInput("");
     setIsChatting(true);
 
-    setTimeout(() => {
-      setAiStack(prev => prev ? {
-        ...prev,
-        backend: chatInput.toLowerCase().includes('php') || chatInput.toLowerCase().includes('laravel') ? "Laravel (PHP)" : prev.backend,
-        database: chatInput.toLowerCase().includes('mysql') ? "MySQL" : prev.database,
-        reason: "Telah disesuaikan berdasarkan permintaan spesifik Anda."
-      } : prev);
+    try {
+      const res = await fetch('/api/admin/studio-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          mode: 'ai-stack', 
+          idea: projectData.description || projectData.projectName,
+          chatHistory: updatedHistory
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memproses pesan AI.");
       
+      if (data.stack) {
+        if (aiStack) setAiStackHistory(prev => [...prev, aiStack]);
+        setAiStackRedo([]); // Clear redo timeline on new stack generation
+        setAiStack({
+          language: data.stack.language || "TypeScript",
+          styling: data.stack.styling || "Tailwind CSS",
+          frontend: data.stack.frontend || "Next.js",
+          backend: data.stack.backend || "Node.js",
+          database: data.stack.database || "PostgreSQL",
+          deployment: data.stack.deployment || "Vercel",
+          reason: data.stack.reason || "",
+        });
+      }
       setChatHistory(prev => [...prev, {
         sender: 'ai',
-        text: "Baik, saya telah menyesuaikan tech stack sesuai permintaan Anda. Silakan tinjau kembali, apakah sudah pas?"
+        text: data.stack?.message || "Baik, saya telah menyesuaikan tech stack sesuai permintaan Anda. Silakan tinjau kembali, apakah sudah pas?"
       }]);
+    } catch (err) {
+      console.error(err);
+      setChatHistory(prev => [...prev, {
+        sender: 'ai',
+        text: "Maaf, terjadi kesalahan saat menghubungi AI."
+      }]);
+    } finally {
       setIsChatting(false);
-    }, 2000);
+    }
   }
 
-  // ── Step 3 generate questions (MOCKED) ─────────────────────────────────────
+  // ── Step 3 generate questions (REAL) ─────────────────────────────────────
 
   async function getQuestions() {
     setLoading(true);
     setError("");
     setQuestions([]);
     setAnswers({});
-    setTimeout(() => {
-      setQuestions([
-        { id: "q1", question: "Apakah butuh integrasi printer thermal Bluetooth?", hint: "Contoh: Ya, untuk cetak struk dapur dan pelanggan." },
-        { id: "q2", question: "Ada berapa role user dalam sistem ini?", hint: "Contoh: Admin, Kasir, Dapur, Pelanggan." },
-        { id: "q3", question: "Apakah diperlukan fitur laporan penjualan bulanan dalam bentuk grafik?", hint: "Contoh: Ya, penting untuk pantau omset." },
-      ]);
-      setStep(3);
+    try {
+      const res = await fetch('/api/admin/studio-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          mode: 'questions', 
+          idea: projectData.description || projectData.projectName, 
+          techStack: effectiveStack 
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memproses data AI.");
+      
+      if (data.questions) {
+        setQuestions(data.questions);
+        setStep(3);
+      } else {
+        setError("Gagal generate pertanyaan klarifikasi dari AI.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Gagal menghubungi AI untuk pertanyaan.");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   }
 
-  // ── Step 4 generate docs (MOCKED) ──────────────────────────────────────────
+  // ── Step 4 generate docs (REAL) ──────────────────────────────────────────
 
   async function generateDocs() {
     setLoading(true);
     setError("");
     try {
-      const generated = await buildMockDocs(projectData, effectiveStack);
+      const generated = await buildProjectDocs(projectData, effectiveStack, answers);
       setDocs(generated);
       setActiveDoc("agents");
       setStep(4);
@@ -499,7 +604,7 @@ export default function StudioPage() {
             title="Simpan Draf"
             className={!projectData.projectName ? "" : "bg-[var(--adm-accent)] text-white border-transparent hover:bg-[var(--adm-accent)]/90"}
           >
-            {isSavingDraft ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSavingDraft ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             <span className="hidden sm:inline">Simpan Draf</span>
           </AdminButton>
           <div className="w-px h-6 bg-[var(--adm-border)] mx-1" />
@@ -509,7 +614,7 @@ export default function StudioPage() {
             onClick={() => setIsSopModalOpen(true)}
             title="Pengaturan Rules"
           >
-            <Settings size={20} className="text-[var(--adm-text-2)]" />
+            <Settings size={20} className="text-inherit" />
           </AdminButton>
         </div>
       </div>
@@ -573,12 +678,17 @@ export default function StudioPage() {
                         <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-2">Upload Logo Bisnis</label>
                         <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start bg-transparent border border-[var(--adm-border)] rounded-2xl p-5">
                           <div className={`shrink-0 ${projectData.logo ? 'w-auto max-w-[200px] h-28' : 'w-28 h-28'}`}>
-                            <input type="file" ref={fileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} />
+                            <input type="file" ref={fileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} disabled={isUploadingLogo} />
                             <div 
-                              onClick={() => fileInputRef.current?.click()}
-                              className="w-full h-full min-w-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2"
+                              onClick={() => !isUploadingLogo && fileInputRef.current?.click()}
+                              className={`w-full h-full min-w-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2 ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              {projectData.logo ? (
+                              {isUploadingLogo ? (
+                                <div className="flex flex-col items-center gap-2">
+                                  <Loader2 size={24} className="text-[var(--adm-accent)] animate-spin" />
+                                  <span className="text-[11px] font-bold">Mengunggah...</span>
+                                </div>
+                              ) : projectData.logo ? (
                                 <img src={projectData.logo} alt="Logo" className="w-full h-full object-contain" />
                               ) : (
                                 <>
@@ -648,12 +758,17 @@ export default function StudioPage() {
                     <label className="block text-xs font-bold text-[var(--adm-text-2)] mb-2">Upload Gambar Referensi</label>
                     <div className="flex flex-col sm:flex-row gap-5 items-center sm:items-start bg-transparent border border-[var(--adm-border)] rounded-2xl p-5">
                       <div className={`shrink-0 ${projectData.referenceImage ? 'w-full sm:w-1/3 max-w-[300px]' : 'w-28 h-28'}`}>
-                        <input type="file" ref={refFileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleRefFileChange} />
+                        <input type="file" ref={refFileInputRef} hidden accept="image/jpeg,image/png,image/webp" onChange={handleRefFileChange} disabled={isUploadingRef} />
                         <div 
-                          onClick={() => refFileInputRef.current?.click()}
-                          className="w-full h-full min-h-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2"
+                          onClick={() => !isUploadingRef && refFileInputRef.current?.click()}
+                          className={`w-full h-full min-h-[7rem] rounded-2xl flex flex-col gap-1 items-center justify-center bg-transparent border-2 border-dashed border-[var(--adm-border)] hover:border-[var(--adm-accent)]/50 hover:bg-[var(--adm-accent)]/5 text-[var(--adm-text-3)] hover:text-[var(--adm-text)] cursor-pointer transition-all overflow-hidden relative group p-2 ${isUploadingRef ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          {projectData.referenceImage ? (
+                          {isUploadingRef ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Loader2 size={24} className="text-[var(--adm-accent)] animate-spin" />
+                              <span className="text-[11px] font-bold">Mengunggah...</span>
+                            </div>
+                          ) : projectData.referenceImage ? (
                             <img src={projectData.referenceImage} alt="Referensi" className="w-full h-auto max-h-[160px] object-contain" />
                           ) : (
                             <>
@@ -734,6 +849,21 @@ export default function StudioPage() {
 
                 {!loading && aiStack && (
                   <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <h3 className="text-sm font-bold text-[var(--adm-text)]">Rekomendasi Terkini</h3>
+                      <div className="flex items-center gap-2">
+                        {aiStackHistory.length > 0 && (
+                          <AdminButton variant="outline" size="sm" onClick={handleUndoStack}>
+                            <Undo2 size={16} className="mr-1.5" /> <span className="hidden sm:inline">Pulihkan</span> ke Belakang
+                          </AdminButton>
+                        )}
+                        {aiStackRedo.length > 0 && (
+                          <AdminButton variant="outline" size="sm" onClick={handleRedoStack}>
+                            <span className="hidden sm:inline">Pulihkan</span> ke Depan <Redo2 size={16} className="ml-1.5" />
+                          </AdminButton>
+                        )}
+                      </div>
+                    </div>
                     {/* Stack Cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {(["language","styling","frontend","backend","database","deployment"] as const).map(k => (
@@ -870,10 +1000,10 @@ export default function StudioPage() {
                     <button
                       key={key}
                       onClick={() => setActiveDoc(key)}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left w-auto xl:w-full outline-none focus:outline-none focus:ring-0 ${
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold transition-all text-left w-auto xl:w-full outline-none focus:outline-none focus:ring-0 text-[var(--adm-text)] ${
                         isActive
-                          ? "bg-[var(--adm-accent)]/10 text-[var(--adm-text)]"
-                          : "bg-transparent text-[var(--adm-text-2)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-bg)]"
+                          ? "bg-[var(--adm-card-hover)]"
+                          : "hover:bg-[var(--adm-card-hover)]"
                       }`}
                     >
                       <div className="min-w-0">
@@ -949,15 +1079,15 @@ export default function StudioPage() {
             <h3 className="text-lg font-bold text-[var(--adm-text)]">Pengaturan Rules</h3>
             <p className="text-xs font-medium text-[var(--adm-text-3)] mt-0.5">Aturan dan instruksi default untuk AI Agent</p>
           </div>
-          <div className="flex items-center gap-1 bg-[var(--adm-bg)] border border-[var(--adm-border)] p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-[var(--adm-bg)] border border-[var(--adm-border)] p-1.5 rounded-xl">
             {(["engine", "agents"] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setSopTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   sopTab === t
-                    ? "bg-[var(--adm-accent)] text-white shadow"
-                    : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)]"
+                    ? "bg-[var(--adm-card)] shadow-sm text-[var(--adm-text)]"
+                    : "text-[var(--adm-text-3)] hover:text-[var(--adm-text)] hover:bg-[var(--adm-card)]/40"
                 }`}
               >
                 {t === "engine" ? "revtech-engine.md" : "AGENTS.md"}
@@ -973,7 +1103,7 @@ export default function StudioPage() {
                 value={sopTab === "engine" ? engineContent : agentsTemplate}
                 onChange={e => sopTab === "engine" ? setEngineContent(e.target.value) : setAgentsTemplate(e.target.value)}
                 spellCheck={false}
-                className="w-full h-full min-h-[400px] px-4 py-4 font-mono text-xs leading-relaxed rounded-xl border border-[var(--adm-border)] bg-[#0d1117] text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className="w-full h-full min-h-[400px] px-4 py-4 font-mono text-xs leading-relaxed rounded-xl border border-[var(--adm-border)] bg-[var(--adm-bg)] text-[var(--adm-text)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-all resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               />
             </motion.div>
           </AnimatePresence>
@@ -1057,7 +1187,7 @@ export default function StudioPage() {
                     Load Draf
                   </AdminButton>
                   <AdminButton variant="danger" size="icon" onClick={() => handleDeleteDraft(draft.id)} title="Hapus Draf">
-                    <Trash2 size={16} className="text-red-500" />
+                    <Trash2 size={16} className="text-white" />
                   </AdminButton>
                 </div>
               </div>

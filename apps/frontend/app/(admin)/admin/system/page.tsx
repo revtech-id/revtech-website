@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AdminCard, SaveButton, AdminToast, AdminButton } from "@/components/admin/ui";
 import { CheckCircle2, Globe, Mail, Phone, ShieldCheck, Camera, Server, User } from "lucide-react";
@@ -9,6 +9,9 @@ import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
+import { uploadBase64ToStorage } from "@/lib/upload";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const inputCls = "w-full px-3 py-2.5 rounded-xl border border-[var(--adm-border)] text-sm text-[var(--adm-text)] bg-transparent placeholder:text-[var(--adm-text-3)] focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/30 focus:border-[var(--adm-accent)] transition-colors";
 
@@ -45,6 +48,7 @@ export default function SystemPage() {
   
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
@@ -52,6 +56,36 @@ export default function SystemPage() {
   const [isPhotoMenuOpen, setIsPhotoMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [countryPribadi, setCountryPribadi] = useState(COUNTRIES[0]);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const docRef = doc(db, "settings", "system");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setForm({
+            businessName: data.businessName || DEFAULTS.businessName,
+            primaryDomain: data.primaryDomain || DEFAULTS.primaryDomain,
+            waPribadi: data.waPribadi || DEFAULTS.waPribadi,
+            marketingEmail: data.marketingEmail || DEFAULTS.marketingEmail,
+            coreEmail: data.coreEmail || DEFAULTS.coreEmail,
+            marketingPass: data.marketingPass || "",
+            corePass: data.corePass || "",
+            founderName: data.founderName || user?.name || "",
+          });
+          if (data.logo) {
+            setLogoPreview(data.logo);
+          }
+        }
+      } catch (error) {
+        console.error("Gagal mengambil data pengaturan:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadSettings();
+  }, [user?.name]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,11 +116,28 @@ export default function SystemPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function save(e?: React.FormEvent) {
+  async function save(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setIsSaving(true);
     
-    setTimeout(() => {
+    try {
+      let finalLogoUrl = logoPreview;
+      
+      if (finalLogoUrl && finalLogoUrl.startsWith('data:')) {
+        try {
+          finalLogoUrl = await uploadBase64ToStorage(finalLogoUrl, "system");
+          setLogoPreview(finalLogoUrl);
+        } catch (uploadErr) {
+          console.error("Gagal mengunggah logo:", uploadErr);
+        }
+      }
+
+      const docRef = doc(db, "settings", "system");
+      await setDoc(docRef, {
+        ...form,
+        logo: finalLogoUrl
+      }, { merge: true });
+
       if (user && form.founderName !== user.name) {
         setUser({ ...user, name: form.founderName } as any);
       }
@@ -101,7 +152,11 @@ export default function SystemPage() {
       setIsSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    }, 800);
+      
+    } catch (err) {
+      setIsSaving(false);
+      console.error(err);
+    }
   }
 
   return (

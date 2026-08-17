@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import { PageHeader, StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton, SEOPanel, Field } from "@/components/admin/ui";
-import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin } from "lucide-react";
+import { ExternalLink, Pencil, Archive, Trash2, Send, SlidersHorizontal, Image as ImageIcon, UploadCloud, X, Eye, ArrowLeft, Pin, Loader2 } from "lucide-react";
 import { logActivity } from "@/lib/activityLog";
 import { useUser } from "@/contexts/UserContext";
 
@@ -14,7 +14,7 @@ import "react-quill-new/dist/quill.snow.css";
 const ReactQuill = dynamic(() => import("react-quill-new"), { 
   ssr: false, 
   loading: () => <div className="h-[450px] w-full flex items-center justify-center bg-[var(--adm-bg)] text-[var(--adm-text-3)] animate-pulse rounded-xl">Memuat Editor...</div> 
-});
+}) as any;
 
 const QUILL_MODULES = {
   toolbar: [
@@ -98,6 +98,7 @@ const QUILL_MODULES = {
 
 import { db } from "@/lib/firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, updateDoc, writeBatch } from "firebase/firestore";
+import { uploadImageToStorage } from "@/lib/upload";
 
 interface BlogPost {
   id: string;
@@ -162,20 +163,76 @@ export default function BlogPage() {
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
   const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "", pinned: false, publishedAt: "" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const quillRef = useRef<any>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'image'],
+        ['clean']
+      ],
+      handlers: {
+        image: () => {
+          const input = document.createElement('input');
+          input.setAttribute('type', 'file');
+          input.setAttribute('accept', 'image/*');
+          input.click();
+
+          input.onchange = async () => {
+            const file = input.files ? input.files[0] : null;
+            if (!file) return;
+
+            setToast({ isVisible: true, message: "Mengunggah gambar artikel...", type: "success" });
+            
+            try {
+              const url = await uploadImageToStorage(file, "blog");
+              const quill = quillRef.current?.getEditor();
+              if (quill) {
+                const range = quill.getSelection(true);
+                quill.insertEmbed(range.index, 'image', url);
+                quill.setSelection(range.index + 1);
+                setToast({ isVisible: true, message: "Gambar berhasil disisipkan", type: "success" });
+              }
+            } catch (err) {
+              console.error(err);
+              setToast({ isVisible: true, message: "Gagal mengunggah gambar artikel", type: "error" });
+            }
+          };
+        }
+      }
+    },
+    keyboard: QUILL_MODULES.keyboard
+  }), []);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setContentForm(prev => ({ ...prev, coverImage: reader.result as string }));
-      setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-    };
-    reader.readAsDataURL(file);
+    
+    setIsUploading(true);
+    
+    try {
+      const url = await uploadImageToStorage(file, "blog");
+      setContentForm(prev => ({ ...prev, coverImage: url }));
+      setToast({ isVisible: true, message: "Gambar sampul berhasil diunggah ✓", type: "success" });
+    } catch (err) {
+      console.error("Upload error:", err);
+      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
+  const onDropRejected = useCallback(() => {
+    setToast({ isVisible: true, message: "File ditolak. Pastikan format gambar sesuai.", type: "error" });
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: { 'image/*': [] },
     maxFiles: 1,
   });
@@ -679,10 +736,11 @@ export default function BlogPage() {
                   }
                 `}</style>
                 <ReactQuill 
+                  ref={quillRef}
                   theme="snow" 
                   value={contentForm.content} 
-                  onChange={(value) => setContentForm({ ...contentForm, content: value })}
-                  modules={QUILL_MODULES}
+                  onChange={(value: string) => setContentForm({ ...contentForm, content: value })}
+                  modules={modules}
                   placeholder="Mulai menulis konten artikel Anda di sini..."
                 />
                 </div>
@@ -704,21 +762,26 @@ export default function BlogPage() {
                     <img src={contentForm.coverImage} alt="Cover" className="w-full h-40 object-cover cursor-pointer hover:opacity-90 transition-opacity" />
                   </button>
                   <div className="absolute top-3 right-3 flex items-center gap-2">
-                    <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti Gambar">
+                    <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti Cover">
                       <Pencil size={14} />
                       <input 
                         type="file" 
                         accept="image/*"
                         className="hidden" 
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setContentForm({ ...contentForm, coverImage: reader.result as string });
+                          setIsUploading(true);
+                          setToast({ isVisible: true, message: "Mengompresi & mengunggah gambar...", type: "success" });
+                          try {
+                            const url = await uploadImageToStorage(file, "blog");
+                            setContentForm({ ...contentForm, coverImage: url });
                             setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-                          };
-                          reader.readAsDataURL(file);
+                          } catch (error) {
+                            setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
+                          } finally {
+                            setIsUploading(false);
+                          }
                         }}
                       />
                     </label>
@@ -726,6 +789,11 @@ export default function BlogPage() {
                       <Trash2 size={14} />
                     </button>
                   </div>
+                </div>
+              ) : isUploading ? (
+                <div className="w-full py-8 px-4 border-2 border-dashed border-[var(--adm-accent)]/50 rounded-xl flex flex-col items-center justify-center gap-3">
+                  <Loader2 size={28} className="text-[var(--adm-accent)] animate-spin" />
+                  <p className="text-xs text-[var(--adm-text-3)]">Mengunggah gambar...</p>
                 </div>
               ) : (
                 <div 

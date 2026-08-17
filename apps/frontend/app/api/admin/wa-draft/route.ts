@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     };
 
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       prompt: `Kamu adalah asisten RevTech yang membantu membuat pesan WhatsApp follow-up profesional namun hangat kepada klien.
 
 Detail klien:
