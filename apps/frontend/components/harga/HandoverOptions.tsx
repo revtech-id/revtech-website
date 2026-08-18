@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { HandoverOption as ApiHandoverOption } from '@/lib/jasa-web';
 
 interface HandoverSimulation {
     label: string;
@@ -56,8 +57,6 @@ const DEFAULT_OPTIONS: HandoverOption[] = [
         border: 'border-gray-200 shadow-sm'
     }
 ];
-
-import { HandoverOption as ApiHandoverOption } from '@/lib/jasa-web';
 
 export default function HandoverOptions({ initialHandovers }: { initialHandovers?: ApiHandoverOption[] }) {
     const mergedOptions = initialHandovers && initialHandovers.length > 0
