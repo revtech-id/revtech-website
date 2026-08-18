@@ -57,24 +57,14 @@ const DEFAULT_OPTIONS: HandoverOption[] = [
     }
 ];
 
-export default function HandoverOptions() {
-    const [options, setOptions] = useState<HandoverOption[]>(DEFAULT_OPTIONS);
+import { HandoverOption as ApiHandoverOption } from '@/lib/jasa-web';
 
-    useEffect(() => {
-        const load = () => {
-            const saved = localStorage.getItem('revtech_jasa_web_handovers');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved) as Array<{ title: string; desc: string; simulations: HandoverSimulation[]; simNote: string }>;
-                    // Merge with default border style
-                    setOptions(parsed.map(o => ({ ...o, border: 'border-gray-200 shadow-sm' })));
-                } catch (e) {}
-            }
-        };
-        load();
-        window.addEventListener('jasa-web-updated', load);
-        return () => window.removeEventListener('jasa-web-updated', load);
-    }, []);
+export default function HandoverOptions({ initialHandovers }: { initialHandovers?: ApiHandoverOption[] }) {
+    const mergedOptions = initialHandovers && initialHandovers.length > 0
+        ? initialHandovers.map(o => ({ ...o, border: 'border-gray-200 shadow-sm' } as HandoverOption))
+        : DEFAULT_OPTIONS;
+
+    const [options, setOptions] = useState<HandoverOption[]>(mergedOptions);
 
 
     return (

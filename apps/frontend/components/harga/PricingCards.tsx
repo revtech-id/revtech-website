@@ -10,39 +10,16 @@ import { fadeUpVariant, staggerContainerVariant, defaultViewport } from '@/lib/a
 import { calculateDiscount } from '@/lib/utils';
 
 
-export default function PricingCards() {
+export default function PricingCards({ initialPlans }: { initialPlans?: PricingPlan[] }) {
     const [showEksklusifToast, setShowEksklusifToast] = useState(false);
-    const [plans, setPlans] = useState<PricingPlan[]>(defaultPlans);
+    
+    const mergedPlans = defaultPlans.map(dp => {
+        if (!initialPlans) return dp;
+        const matching = initialPlans.find(p => p.id === dp.id);
+        return matching ? { ...dp, ...matching } : dp;
+    });
 
-    useEffect(() => {
-        const load = () => {
-            const saved = localStorage.getItem('revtech_jasa_web_plans');
-            if (saved) {
-                try { 
-                    const parsed = JSON.parse(saved) as PricingPlan[];
-                    const merged = defaultPlans.map(dp => {
-                        const matching = parsed.find(p => p.id === dp.id);
-                        return matching ? { ...dp, ...matching } : dp;
-                    });
-                    setPlans(merged); 
-                } catch (e) {}
-            }
-        };
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'revtech_jasa_web_plans') load();
-        };
-        
-        load();
-        window.addEventListener('jasa-web-updated', load);
-        window.addEventListener('storage', handleStorage);
-        return () => {
-            window.removeEventListener('jasa-web-updated', load);
-            window.removeEventListener('storage', handleStorage);
-        };
-    }, []);
-
-    // Dummy trigger for demonstration - if you ever want to show it.
-    // useEffect(() => {
+    const [plans, setPlans] = useState<PricingPlan[]>(mergedPlans);
     //     setShowEksklusifToast(true);
     // }, []);
 

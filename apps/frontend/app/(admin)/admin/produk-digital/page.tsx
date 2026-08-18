@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDropzone } from "react-dropzone";
-import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton } from "@/components/admin/ui";
+import { StatusBadge, EmptyState, AdminToolbar, AdminTabs, AdminConfirmModal, AdminToast, AdminTable, AdminButton, SEOPanel } from "@/components/admin/ui";
 import { ExternalLink, Pencil, Archive, Trash2, Pin, ChevronDown, Send, SlidersHorizontal, UploadCloud, X, Loader2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch } from "firebase/firestore";
@@ -60,40 +60,19 @@ interface ProdukDigital {
   pinned: boolean;
   price: string;
   status: "published" | "draft" | "archived";
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string;
 }
 
-const MOCK_INITIAL: ProdukDigital[] = [
-  {
-    id: "PD-1", title: "Template Website E-Commerce Pro", vendor: "RevTech Studio", category: "Template Website",
-    thumbnail: "https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p>Template <strong>E-Commerce Pro</strong> adalah solusi terbaik untuk membangun toko online Anda dalam hitungan hari, bukan bulan.</p><h3>Fitur Utama</h3><ul><li>Desain Responsif 100%</li><li>SEO Optimized (Skor Lighthouse 90+)</li><li>Sistem Keranjang & Checkout Siap Pakai</li><li>Integrasi Mode Gelap/Terang</li></ul><p>Dibuat menggunakan teknologi terkini yaitu Next.js 14 App Router, TypeScript, dan Tailwind CSS. Template ini sangat mudah disesuaikan dengan panduan dokumentasi yang komprehensif.</p>", 
-    url: "https://demo.revtech.id/ecommerce-pro",
-    description: "Template Next.js super cepat untuk toko online dengan integrasi payment gateway dan desain konversi tinggi.", techStack: ["Next.js", "Tailwind CSS", "TypeScript"],
-    pinned: true, price: "Rp 250.000", status: "published"
-  },
-  {
-    id: "PD-2", title: "RevAdmin - UI Kit Dashboard", vendor: "RevTech Studio", category: "UI Kit",
-    thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p><strong>RevAdmin</strong> mempercepat proses development aplikasi internal atau SaaS Anda hingga 50%. UI Kit komprehensif ini dirancang khusus untuk React dan Figma.</p><h3>Komponen Tersedia</h3><ul><li>Tabel Data Lanjutan dengan Sorting & Filtering</li><li>Chart & Statistik Interaktif (Recharts)</li><li>Form Multi-step dengan Validasi Zod</li><li>Autentikasi UI (Login, Register, Lupa Password)</li></ul><p>Setiap komponen dibuat dengan fokus pada aksesibilitas (a11y) dan pengalaman pengguna yang premium.</p>", 
-    url: "https://figma.com/community/revadmin",
-    description: "Dashboard UI Kit komprehensif untuk React dan Figma dengan 100+ komponen premium.", techStack: ["Figma", "React", "Framer Motion"],
-    pinned: false, price: "Gratis", status: "published"
-  },
-  {
-    id: "PD-3", title: "Sistem Kasir & POS Cloud", vendor: "RevTech Studio", category: "Script / Tools",
-    thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p>Aplikasi Point of Sale (POS) lengkap berbasis web yang siap dideploy untuk bisnis retail atau F&B Anda. Sistem ini mendukung pelacakan stok real-time melintasi berbagai cabang.</p><h3>Fitur Sistem</h3><ul><li>Manajemen Inventori & Peringatan Stok Menipis</li><li>Laporan Penjualan Harian, Mingguan, Bulanan</li><li>Dukungan Scanner Barcode & Printer Thermal</li><li>Manajemen Hak Akses Karyawan</li></ul><p>Tersedia beserta <em>source code</em> lengkap dan panduan instalasi di server VPS atau shared hosting Anda.</p>", 
-    url: "#",
-    description: "Aplikasi kasir Point of Sale lengkap dengan manajemen inventori dan laporan multi-cabang.", techStack: ["Laravel 11", "Vue 3", "MySQL"],
-    pinned: true, price: "Mulai dari Rp 1.500.000", status: "published"
-  }
-];
 
 const EMPTY_FORM: {
   title: string; vendor: string; category: string; url: string; description: string; techStack: string; pinned: boolean; price: string; status: ProdukDigital["status"]; content: string; thumbnail: string;
+  metaTitle: string; metaDescription: string; keywords: string;
 } = {
   title: "", vendor: "", category: "",
-  url: "", description: "", techStack: "", pinned: false, price: "", status: "published", content: "", thumbnail: ""
+  url: "", description: "", techStack: "", pinned: false, price: "", status: "published", content: "", thumbnail: "",
+  metaTitle: "", metaDescription: "", keywords: ""
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -105,31 +84,50 @@ export default function ProdukDigitalPage() {
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const statusRef = useRef<"draft" | "published">("published");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: "success" | "error" }>({ isVisible: false, message: "", type: "success" });
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; action: () => void; title: string; message: string; confirmText: string; confirmVariant: "danger" | "primary" | "warning" }>({ isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const [isUploading, setIsUploading] = useState(false);
+  const [seoLoading, setSeoLoading] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
-    setIsUploading(true);
-
-    try {
-      const url = await uploadImageToStorage(file, "produk-digital");
-      setForm(prev => ({ ...prev, thumbnail: url }));
-      setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
-    } catch (err) {
-      console.error(err);
-      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-    } finally {
-      setIsUploading(false);
-    }
+    const url = URL.createObjectURL(file);
+    setForm(prev => ({ ...prev, thumbnail: url }));
+    setSelectedFile(file);
+    setToast({ isVisible: true, message: "Pratinjau lokal siap", type: "success" });
   }, []);
+
+  const handlePriceChange = (val: string) => {
+    if (val === "" || val.toLowerCase() === "gratis") {
+      setForm({ ...form, price: val });
+      return;
+    }
+    const numberString = val.replace(/[^,\d]/g, '').toString();
+    if (numberString) {
+      const split = numberString.split(',');
+      const sisa = split[0].length % 3;
+      let rupiah = split[0].substr(0, sisa);
+      const ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+      
+      if (ribuan) {
+        const separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+      }
+      
+      rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+      setForm({ ...form, price: 'Rp ' + rupiah });
+    } else {
+      setForm({ ...form, price: val });
+    }
+  };
 
   const quillRef = useRef<any>(null);
 
@@ -206,9 +204,11 @@ export default function ProdukDigitalPage() {
     setForm({
       title: item.title, vendor: item.vendor, category: item.category,
       url: item.url || "", description: item.description || "", techStack: item.techStack.join(", "),
-      pinned: item.pinned, price: item.price || "", status: item.status, content: item.content || "", thumbnail: item.thumbnail || ""
+      pinned: item.pinned, price: item.price || "", status: item.status, content: item.content || "", thumbnail: item.thumbnail || "",
+      metaTitle: item.metaTitle || "", metaDescription: item.metaDescription || "", keywords: item.keywords || ""
     });
     setEditingId(item.id);
+    setSelectedFile(null);
     setView("form");
   }
 
@@ -233,13 +233,23 @@ export default function ProdukDigitalPage() {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
 
+    setIsSubmitting(true);
+    const targetStatus = statusRef.current;
+    setToast({ isVisible: true, message: "Menyimpan produk...", type: "success" });
+
     try {
+      let finalThumbnail = form.thumbnail;
+      if (selectedFile) {
+        setToast({ isVisible: true, message: "Mengunggah thumbnail...", type: "success" });
+        finalThumbnail = await uploadImageToStorage(selectedFile, "produk-digital");
+      }
       if (editingId) {
         const updated: Partial<ProdukDigital> = {
           title: form.title, vendor: form.vendor, category: form.category,
           url: form.url || null, description: form.description,
-          techStack: techArr, pinned: form.pinned, price: form.price, status: form.status,
-          content: form.content, thumbnail: form.thumbnail
+          techStack: techArr, pinned: form.pinned, price: form.price, status: targetStatus,
+          content: form.content, thumbnail: finalThumbnail,
+          metaTitle: form.metaTitle, metaDescription: form.metaDescription, keywords: form.keywords
         };
         await updateDoc(doc(db, "digital_products", editingId), updated);
       } else {
@@ -248,8 +258,9 @@ export default function ProdukDigitalPage() {
           id: newId,
           title: form.title, vendor: form.vendor, category: form.category,
           url: form.url || null, description: form.description,
-          techStack: techArr, pinned: form.pinned, price: form.price, thumbnail: form.thumbnail,
-          content: form.content, status: form.status
+          techStack: techArr, pinned: form.pinned, price: form.price, thumbnail: finalThumbnail,
+          content: form.content, status: targetStatus,
+          metaTitle: form.metaTitle, metaDescription: form.metaDescription, keywords: form.keywords
         };
         await setDoc(doc(db, "digital_products", newId), newItem);
       }
@@ -257,10 +268,36 @@ export default function ProdukDigitalPage() {
       setView("list");
       setEditingId(null);
       setForm(EMPTY_FORM);
-      setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Produk berhasil dipublish", type: "success" });
+      setSelectedFile(null);
+      setToast({ isVisible: true, message: targetStatus === "draft" ? "Draft berhasil disimpan" : "Produk berhasil dipublish", type: "success" });
     } catch (err) {
       console.error(err);
-      setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
+      setToast({ isVisible: true, message: "Gagal menyimpan produk", type: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function generateSEO() {
+    if (!form.title.trim()) {
+      setToast({ isVisible: true, message: "Isi nama produk terlebih dahulu", type: "error" });
+      return;
+    }
+    setSeoLoading(true);
+    try {
+      const res = await fetch("/api/admin/seo-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, coverImage: form.thumbnail, content: form.content, metaTitle: form.metaTitle }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { metaTitle: string; metaDescription: string; keywords: string };
+      setForm(prev => ({ ...prev, ...data }));
+      setToast({ isVisible: true, message: "SEO berhasil di-generate", type: "success" });
+    } catch {
+      setToast({ isVisible: true, message: "Gagal men-generate SEO", type: "error" });
+    } finally {
+      setSeoLoading(false);
     }
   }
 
@@ -410,7 +447,7 @@ export default function ProdukDigitalPage() {
             </div>
           </div>
         }
-        onAdd={() => { setEditingId(null); setForm(EMPTY_FORM); setView("form"); }}
+        onAdd={() => { setEditingId(null); setForm(EMPTY_FORM); setSelectedFile(null); setView("form"); }}
         addLabel="Tambah Produk"
       />
 
@@ -457,15 +494,17 @@ export default function ProdukDigitalPage() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <div className="flex items-center justify-end gap-3">
             <button
-              type="button"
-              onClick={() => { setForm(prev => ({ ...prev, status: "draft" })); document.getElementById("produk-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              type="submit"
+              form="pd-form"
+              onClick={() => { statusRef.current = "draft"; }}
               className="px-4 py-2.5 text-sm font-bold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors"
             >
               Simpan Draft
             </button>
             <button
-              type="button"
-              onClick={() => { setForm(prev => ({ ...prev, status: "published" })); document.getElementById("produk-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              type="submit"
+              form="pd-form"
+              onClick={() => { statusRef.current = "published"; }}
               className="px-5 py-2.5 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:brightness-110 transition-all flex items-center gap-2 shadow-sm"
             >
               <Send size={16} strokeWidth={2.5} /> Publish
@@ -521,9 +560,17 @@ export default function ProdukDigitalPage() {
               </div>
             </div>
 
-            {/* Right Column: Thumbnail + Details */}
+            {/* Kolom Kanan: Thumbnail + Detail */}
             <div className="lg:col-span-1 h-full">
-              <form id="produk-form" onSubmit={handleSubmit} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-sm flex flex-col overflow-hidden h-full">
+              <form id="pd-form" onSubmit={handleSubmit} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-sm flex flex-col overflow-hidden h-full">
+                {isSubmitting && (
+                  <div className="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center rounded-2xl">
+                    <div className="flex flex-col items-center gap-3 bg-[var(--adm-card)] p-6 rounded-xl shadow-xl">
+                      <Loader2 size={32} className="animate-spin text-[var(--adm-accent)]" />
+                      <p className="text-sm font-bold text-[var(--adm-text)]">Menyimpan & Mengunggah...</p>
+                    </div>
+                  </div>
+                )}
                 {/* Thumbnail */}
                 <div className="p-5 border-b border-[var(--adm-border)] space-y-3">
                   <h3 className="text-sm font-bold text-[var(--adm-text)] border-b border-[var(--adm-border)] pb-3 mb-3">Gambar Produk</h3>
@@ -535,30 +582,19 @@ export default function ProdukDigitalPage() {
                       <div className="absolute top-3 right-3 flex items-center gap-2">
                         <label className="p-2 rounded-lg bg-black/50 hover:bg-black/80 text-white cursor-pointer transition-colors backdrop-blur-md border border-white/10" title="Ganti">
                           <Pencil size={14} />
-                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            setIsUploading(true);
-                            try {
-                              const url = await uploadImageToStorage(file, "produk-digital");
-                              setForm({ ...form, thumbnail: url });
-                              setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
-                            } catch (error) {
-                              setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-                            } finally {
-                              setIsUploading(false);
-                            }
+                            const url = URL.createObjectURL(file);
+                            setForm(prev => ({ ...prev, thumbnail: url }));
+                            setSelectedFile(file);
+                            setToast({ isVisible: true, message: "Pratinjau lokal siap", type: "success" });
                           }} />
                         </label>
-                        <button type="button" onClick={() => setForm({ ...form, thumbnail: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
+                        <button type="button" onClick={() => { setForm({ ...form, thumbnail: "" }); setSelectedFile(null); }} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
                           <Trash2 size={14} />
                         </button>
                       </div>
-                    </div>
-                  ) : isUploading ? (
-                    <div className="w-full py-8 px-4 border-2 border-dashed border-[var(--adm-accent)]/50 rounded-xl flex flex-col items-center justify-center gap-3">
-                      <Loader2 size={28} className="text-[var(--adm-accent)] animate-spin" />
-                      <p className="text-xs text-[var(--adm-text-3)]">Mengunggah gambar...</p>
                     </div>
                   ) : (
                     <div
@@ -597,7 +633,7 @@ export default function ProdukDigitalPage() {
 
                   <div>
                     <label className="text-xs font-bold text-[var(--adm-text-2)] mb-1.5 block">Harga</label>
-                    <input type="text" value={form.price || ""} onChange={e => setForm({ ...form, price: e.target.value })}
+                    <input type="text" value={form.price || ""} onChange={e => handlePriceChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-[var(--adm-border)] bg-transparent text-[var(--adm-text)] placeholder:text-[var(--adm-text-3)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--adm-accent)]/20 focus:border-[var(--adm-accent)]"
                       placeholder="Contoh: Rp 50.000 atau Gratis" />
                   </div>
@@ -622,6 +658,12 @@ export default function ProdukDigitalPage() {
                         <span className="text-xs font-bold text-[var(--adm-text-2)]">Sematkan Produk (Tampil Lebih Awal)</span>
                       </label>
                     </div>
+                  </div>
+
+                  {/* SEO Panel */}
+                  <div className="mt-4">
+                    {/* @ts-ignore */}
+                    <SEOPanel form={form} setForm={setForm} loading={seoLoading} onGenerate={generateSEO} />
                   </div>
 
                 </div>

@@ -9,7 +9,7 @@ import { CountrySelector } from "@/components/ui/CountrySelector";
 import { countries as COUNTRIES } from "@/lib/countries";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
-import { uploadBase64ToStorage } from "@/lib/upload";
+import { uploadImageToStorage } from "@/lib/upload";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -123,9 +123,12 @@ export default function SystemPage() {
     try {
       let finalLogoUrl = logoPreview;
       
-      if (finalLogoUrl && finalLogoUrl.startsWith('data:')) {
+      if (finalLogoUrl && finalLogoUrl.startsWith('blob:')) {
         try {
-          finalLogoUrl = await uploadBase64ToStorage(finalLogoUrl, "system");
+          const resBlob = await fetch(finalLogoUrl);
+          const blob = await resBlob.blob();
+          const file = new File([blob], "logo.webp", { type: "image/webp" });
+          finalLogoUrl = await uploadImageToStorage(file, "system");
           setLogoPreview(finalLogoUrl);
         } catch (uploadErr) {
           console.error("Gagal mengunggah logo:", uploadErr);

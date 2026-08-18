@@ -17,31 +17,7 @@ interface PackageDetailClientProps {
 export default function PackageDetailClient({ plan: initialPlan }: PackageDetailClientProps) {
     const [plan, setPlan] = useState(initialPlan);
 
-    useEffect(() => {
-        const load = () => {
-            const saved = localStorage.getItem('revtech_jasa_web_plans');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved) as PricingPlan[];
-                    const matchingPlan = parsed.find(p => p.id === initialPlan.id);
-                    if (matchingPlan) {
-                        setPlan({ ...initialPlan, ...matchingPlan });
-                    }
-                } catch (e) {}
-            }
-        };
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'revtech_jasa_web_plans') load();
-        };
 
-        load();
-        window.addEventListener('jasa-web-updated', load);
-        window.addEventListener('storage', handleStorage);
-        return () => {
-            window.removeEventListener('jasa-web-updated', load);
-            window.removeEventListener('storage', handleStorage);
-        };
-    }, [initialPlan.id]);
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">

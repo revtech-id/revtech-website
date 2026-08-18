@@ -2,40 +2,42 @@
 > frontend@0.1.0 build
 > next build
 
-⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
- We detected multiple lockfiles and selected the directory of C:\Users\revan\.gemini\antigravity\scratch\package-lock.json as the root directory.
- To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
-   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
- Detected additional lockfiles: 
-   * C:\Users\revan\.gemini\antigravity\scratch\revtech-website\package-lock.json
-
 ▲ Next.js 16.2.6 (Turbopack)
 - Environments: .env.local
 
   Creating an optimized production build ...
-✓ Compiled successfully in 60s
+✓ Compiled successfully in 33.5s
   Running TypeScript ...
-  Finished TypeScript in 26.3s ...
+  Finished TypeScript in 30.9s ...
   Collecting page data using 7 workers ...
-  Generating static pages using 7 workers (0/44) ...
-  Generating static pages using 7 workers (11/44) 
-  Generating static pages using 7 workers (22/44) 
-  Generating static pages using 7 workers (33/44) 
-✓ Generating static pages using 7 workers (44/44) in 4.1s
+Firebase Admin initialized successfully.
+Firebase Admin initialized successfully.
+  Generating static pages using 7 workers (0/55) ...
+Firebase Admin initialized successfully.
+Firebase Admin initialized successfully.
+  Generating static pages using 7 workers (13/55) 
+  Generating static pages using 7 workers (27/55) 
+  Generating static pages using 7 workers (41/55) 
+✓ Generating static pages using 7 workers (55/55) in 8.2s
   Finalizing page optimization ...
 
 Route (app)
 ┌ ○ /
 ├ ○ /_not-found
 ├ ○ /admin
+├ ○ /admin-revtech
 ├ ○ /admin/blog
+├ ○ /admin/change-password
 ├ ○ /admin/dashboard
-├ ○ /admin/inbox
+├ ○ /admin/hero
 ├ ○ /admin/invoice
+├ ○ /admin/jasa-web
+├ ○ /admin/leads
 ├ ○ /admin/maintenance
-├ ○ /admin/pesanan
 ├ ○ /admin/portofolio
+├ ○ /admin/produk-digital
 ├ ○ /admin/profile
+├ ○ /admin/projects
 ├ ○ /admin/studio
 ├ ○ /admin/studio/export
 ├ ○ /admin/studio/review
@@ -44,18 +46,23 @@ Route (app)
 ├ ○ /admin/system/pengaturan
 ├ ○ /admin/team
 ├ ○ /admin/team/activity
+├ ○ /admin/testimoni
 ├ ○ /admin/trash
 ├ ƒ /api/admin/insight
 ├ ƒ /api/admin/seo-generate
+├ ƒ /api/admin/staff
+├ ƒ /api/admin/staff/password
+├ ƒ /api/admin/studio-generate
 ├ ƒ /api/admin/studio-review
 ├ ƒ /api/admin/wa-draft
 ├ ƒ /api/chat
 ├ ○ /apple-icon.png
-├ ○ /blog
+├ ƒ /blog
 ├ ● /blog/[slug]
 │ ├ /blog/pentingnya-website-profesional-2026
 │ ├ /blog/keuntungan-sistem-jadi-vs-membangun-dari-nol
 │ └ /blog/cara-membuat-katalog-digital-whatsapp
+├ ○ /founder-revtech
 ├ ○ /icon.png
 ├ ○ /jasa-web
 ├ ● /jasa-web/[id]
@@ -63,15 +70,21 @@ Route (app)
 │ ├ /jasa-web/profesional
 │ └ /jasa-web/eksklusif
 ├ ○ /katalog
+├ ƒ /katalog/[id]
 ├ ○ /kontak
 ├ ○ /layanan
-├ ○ /portofolio
+├ ƒ /portofolio
 ├ ● /portofolio/[slug]
+│ ├ /portofolio/dapurku-website-kuliner
+│ ├ /portofolio/minara-seafood-katalog
+│ └ /portofolio/validata-ai-landing-page
 ├ ○ /privacy
 ├ ○ /robots.txt
 ├ ○ /sitemap.xml
 └ ○ /terms
 
+
+ƒ Proxy (Middleware)
 
 ○  (Static)   prerendered as static content
 ●  (SSG)      prerendered as static HTML (uses generateStaticParams)

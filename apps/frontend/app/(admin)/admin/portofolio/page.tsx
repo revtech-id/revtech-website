@@ -102,6 +102,7 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, writeBatch }
 
 interface Portfolio {
   id: string;
+  slug?: string;
   title: string;
   client: string;
   category: string;
@@ -119,11 +120,7 @@ interface Portfolio {
   keywords: string;
 }
 
-const MOCK_INITIAL: Portfolio[] = [
-  { id: "1", title: "Website Toko Online Maju Jaya", client: "Toko Maju Jaya", category: "Jasa Web", thumbnail: "", content: "", url: "https://majujaya.com", projectDate: "2026-04", description: "Toko online lengkap dengan sistem pembayaran.", techStack: ["Next.js", "Tailwind CSS", "Stripe"], pinned: true, status: "published", publishedAt: "2026-04-15", metaTitle: "", metaDescription: "", keywords: "" },
-  { id: "2", title: "Company Profile Bintang Nusantara", client: "CV Bintang Nusantara", category: "Jasa Web", thumbnail: "", content: "", url: "https://bintangnusantara.co.id", projectDate: "2026-06", description: "Website profil perusahaan profesional.", techStack: ["Next.js", "Framer Motion"], pinned: false, status: "published", publishedAt: "2026-06-01", metaTitle: "", metaDescription: "", keywords: "" },
-  { id: "3", title: "Menu Digital QR Rumah Makan Sederhana", client: "Rumah Makan Sederhana", category: "Produk Digital", thumbnail: "", content: "", url: "https://rmsederhana.id", projectDate: "2026-06", description: "Sistem pesanan digital menggunakan kode QR.", techStack: ["HTML", "CSS", "JS"], pinned: true, status: "published", publishedAt: "2026-06-30", metaTitle: "", metaDescription: "", keywords: "" },
-];
+
 
 const EMPTY_FORM = {
   title: "", client: "", category: "Jasa Web",
@@ -142,6 +139,9 @@ export default function PortofolioPage() {
   const [view, setView] = useState<"list" | "form">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const statusRef = useRef<"draft" | "published">("published");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
@@ -199,18 +199,10 @@ export default function PortofolioPage() {
     const file = acceptedFiles[0];
     if (!file) return;
     
-    setIsUploading(true);
-    
-    try {
-      const url = await uploadImageToStorage(file, "portfolio");
-      setForm(prev => ({ ...prev, thumbnail: url }));
-      setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
-    } catch (err) {
-      console.error(err);
-      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-    } finally {
-      setIsUploading(false);
-    }
+    const url = URL.createObjectURL(file);
+    setForm(prev => ({ ...prev, thumbnail: url }));
+    setSelectedFile(file);
+    setToast({ isVisible: true, message: "Pratinjau gambar dimuat secara lokal", type: "success" });
   }, []);
 
   const onDropRejected = useCallback(() => {
@@ -266,6 +258,7 @@ export default function PortofolioPage() {
       keywords: item.keywords || ""
     });
     setEditingId(item.id);
+    setSelectedFile(null);
     setView("form");
   }
 
@@ -294,37 +287,62 @@ export default function PortofolioPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const techArr = form.techStack.split(",").map(s => s.trim()).filter(Boolean);
+    const targetStatus = statusRef.current;
+    
+    setIsSubmitting(true);
+    setToast({ isVisible: true, message: "Menyimpan data...", type: "success" });
     
     try {
-      const isDraft = form.status === "draft";
-      const docRef = editingId ? doc(db, "portfolio", editingId) : doc(db, "portfolio", `PF-${Date.now().toString().slice(-5)}`);
+      let finalThumbnailUrl = form.thumbnail;
       
-      const dataToSave: Portfolio = {
-        id: docRef.id,
-        title: form.title, client: form.client, category: form.category,
-        url: form.url || null, projectDate: form.projectDate, description: form.description, techStack: techArr, pinned: form.pinned,
-        thumbnail: form.thumbnail, content: form.content, status: form.status,
-        publishedAt: isDraft ? (editingId ? (items.find(i => i.id === editingId)?.publishedAt || null) : null) : (form.publishedAt || new Date().toISOString()),
-        metaTitle: seoForm.metaTitle,
-        metaDescription: seoForm.metaDescription,
-        keywords: seoForm.keywords
-      };
+      // Upload local file to Cloudinary if it exists
+      if (selectedFile) {
+        setToast({ isVisible: true, message: "Mengunggah thumbnail...", type: "success" });
+        finalThumbnailUrl = await uploadImageToStorage(selectedFile, "portofolio");
+      }
 
-      await setDoc(docRef, dataToSave, { merge: true });
+      if (editingId) {
+        const updated: Partial<Portfolio> = {
+          title: form.title, client: form.client, category: form.category,
+          url: form.url || null, description: form.description,
+          techStack: techArr, pinned: form.pinned, status: targetStatus,
+          content: form.content, thumbnail: finalThumbnailUrl,
+          metaTitle: seoForm.metaTitle, metaDescription: seoForm.metaDescription, keywords: seoForm.keywords,
+          publishedAt: targetStatus === "published" ? (items.find(i => i.id === editingId)?.publishedAt || new Date().toISOString()) : null
+        };
+        await updateDoc(doc(db, "portfolio", editingId), updated);
+      } else {
+        const newId = `PRJ-${Date.now().toString().slice(-5)}`;
+        const slug = form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        const newItem: Portfolio = {
+          id: newId,
+          slug,
+          title: form.title, client: form.client, category: form.category,
+          url: form.url || null, projectDate: form.projectDate, description: form.description,
+          techStack: techArr, pinned: form.pinned, thumbnail: finalThumbnailUrl,
+          content: form.content, status: targetStatus,
+          publishedAt: targetStatus === "published" ? new Date().toISOString() : null,
+          metaTitle: seoForm.metaTitle, metaDescription: seoForm.metaDescription, keywords: seoForm.keywords
+        };
+        await setDoc(doc(db, "portfolio", newId), newItem);
+      }
 
       setView("list");
       setEditingId(null);
       setForm(EMPTY_FORM);
-      setToast({ isVisible: true, message: form.status === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
+      setSelectedFile(null);
+      setToast({ isVisible: true, message: targetStatus === "draft" ? "Draft berhasil disimpan" : "Proyek berhasil dipublish", type: "success" });
       logActivity({ 
         type: "portofolio_updated", 
-        title: form.status === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
-        description: `Proyek "${form.title}" untuk klien ${form.client} ${form.status === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
+        title: targetStatus === "draft" ? "Draft Proyek Disimpan" : (editingId ? "Proyek Diperbarui" : "Proyek Baru Diterbitkan"), 
+        description: `Proyek "${form.title}" untuk klien ${form.client} ${targetStatus === "draft" ? "disimpan sebagai draft" : "dipublish"}.`, 
         user: "Admin" 
       });
         } catch (err) {
           console.error(err);
           setToast({ isVisible: true, message: "Gagal menyimpan data", type: "error" });
+        } finally {
+          setIsSubmitting(false);
         }
       }
     
@@ -559,15 +577,17 @@ export default function PortofolioPage() {
           {/* Toolbar Atas */}
           <div className="flex items-center justify-end gap-3">
             <button
-              type="button"
-              onClick={() => { setForm(prev => ({ ...prev, status: "draft" })); document.getElementById("porto-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              type="submit"
+              form="porto-form"
+              onClick={() => { statusRef.current = "draft"; }}
               className="px-4 py-2.5 text-sm font-bold text-[var(--adm-text-2)] hover:text-[var(--adm-text)] transition-colors"
             >
               Simpan Draft
             </button>
             <button
-              type="button"
-              onClick={() => { setForm(prev => ({ ...prev, status: "published" })); document.getElementById("porto-form")?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }}
+              type="submit"
+              form="porto-form"
+              onClick={() => { statusRef.current = "published"; }}
               className="px-5 py-2.5 rounded-xl bg-[var(--adm-accent)] text-white text-sm font-bold hover:brightness-110 transition-all flex items-center gap-2 shadow-sm"
             >
               <Send size={16} strokeWidth={2.5} /> Publish
@@ -655,6 +675,14 @@ export default function PortofolioPage() {
             {/* Kolom Kanan: Thumbnail + Detail */}
             <div className="lg:col-span-1 h-full">
               <form id="porto-form" onSubmit={handleSubmit} className="bg-[var(--adm-card)] rounded-2xl border border-[var(--adm-border)] shadow-sm flex flex-col overflow-hidden h-full">
+                {isSubmitting && (
+                  <div className="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center rounded-2xl">
+                    <div className="flex flex-col items-center gap-3 bg-[var(--adm-card)] p-6 rounded-xl shadow-xl">
+                      <Loader2 size={32} className="animate-spin text-[var(--adm-accent)]" />
+                      <p className="text-sm font-bold text-[var(--adm-text)]">Menyimpan & Mengunggah...</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Thumbnail */}
                 <div className="p-5 border-b border-[var(--adm-border)] space-y-3">
@@ -670,19 +698,13 @@ export default function PortofolioPage() {
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            setIsUploading(true);
-                            try {
-                              const url = await uploadImageToStorage(file, "portfolio");
-                              setForm({ ...form, thumbnail: url });
-                              setToast({ isVisible: true, message: "Gambar berhasil diunggah ✓", type: "success" });
-                            } catch (error) {
-                              setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-                            } finally {
-                              setIsUploading(false);
-                            }
+                            const url = URL.createObjectURL(file);
+                            setForm(prev => ({ ...prev, thumbnail: url }));
+                            setSelectedFile(file);
+                            setToast({ isVisible: true, message: "Pratinjau lokal siap", type: "success" });
                           }} />
                         </label>
-                        <button type="button" onClick={() => setForm({ ...form, thumbnail: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
+                        <button type="button" onClick={() => { setForm({ ...form, thumbnail: "" }); setSelectedFile(null); }} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus">
                           <Trash2 size={14} />
                         </button>
                       </div>

@@ -1,16 +1,18 @@
-"use client";
-
 import PricingCards from '@/components/harga/PricingCards';
-
 import WorkflowSteps from '@/components/harga/WorkflowSteps';
 import HandoverOptions from '@/components/harga/HandoverOptions';
-
 import AfterSalesSupport from '@/components/harga/AfterSalesSupport';
 import AICtaBanner from '@/components/harga/AICtaBanner';
+import { getJasaWebSettings } from '@/lib/jasa-web';
 
-import { motion } from 'framer-motion';
+export const revalidate = 0;
 
-export default function Harga() {
+export default async function Harga() {
+    const settings = await getJasaWebSettings();
+    const plans = settings?.plans || undefined;
+    const handovers = settings?.handovers || undefined;
+    const mods = settings?.mods || undefined;
+
     return (
         <div className="pt-24 lg:pt-32 bg-gray-50/50 relative overflow-hidden">
             {/* Halaman Jasa Web tanpa dekorasi glow khusus agar seragam dengan halaman lain */}
@@ -23,17 +25,17 @@ export default function Harga() {
                     </h1>
                     <p className="text-sm sm:text-base md:text-lg text-gray-600 font-medium">Temukan solusi digital yang paling tepat untuk kebutuhan Anda. Fitur lengkap, harga transparan.</p>
                 </div>
-                <PricingCards />
+                <PricingCards initialPlans={plans} />
             </div>
 
             {/* 2. Opsi Serah Terima Sistem */}
-            <HandoverOptions />
+            <HandoverOptions initialHandovers={handovers} />
 
             {/* 5. Cara Kerja & Pembayaran */}
             <WorkflowSteps />
 
             {/* 6. Dukungan Pasca-Rilis (Biaya Modifikasi) */}
-            <AfterSalesSupport />
+            <AfterSalesSupport initialMods={mods} />
 
             {/* 7. Banner CTA Chatbot AI Pengganti FAQ */}
             <AICtaBanner />

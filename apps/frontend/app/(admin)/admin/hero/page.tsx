@@ -102,29 +102,21 @@ export default function HeroBannerPage() {
     if (!file) return;
     const isVideo = file.type.startsWith("video/");
     
-    setIsUploading(true);
-    setToast({ isVisible: true, message: `Mengompresi & mengunggah ${isVideo ? "video" : "gambar"}...`, type: "success" });
+    const url = URL.createObjectURL(file);
+    const newSlot = { bgMedia: url, bgType: isVideo ? "video" : "image" } as const;
+    setSettings((prev) => {
+      const next = { ...prev, [device]: newSlot };
+      // Note: Object URLs don't persist across reloads, but this is fine for local preview mockup
+      localStorage.setItem("revtech_hero_settings", JSON.stringify(next));
+      return next;
+    });
     
-    try {
-      const url = await uploadImageToStorage(file, "hero");
-      const newSlot = { bgMedia: url, bgType: isVideo ? "video" : "image" } as const;
-      setSettings((prev) => {
-        const next = { ...prev, [device]: newSlot };
-        localStorage.setItem("revtech_hero_settings", JSON.stringify(next));
-        return next;
-      });
-      if (iframeRef.current) iframeRef.current.src = "/";
-      setToast({
-        isVisible: true,
-        message: `${isVideo ? "Video" : "Gambar"} ${DEVICES.find(d => d.key === device)?.label} berhasil diunggah`,
-        type: "success",
-      });
-    } catch (err) {
-      console.error(err);
-      setToast({ isVisible: true, message: "Gagal mengunggah file", type: "error" });
-    } finally {
-      setIsUploading(false);
-    }
+    if (iframeRef.current) iframeRef.current.src = "/";
+    setToast({
+      isVisible: true,
+      message: `Pratinjau lokal ${isVideo ? "video" : "gambar"} ${DEVICES.find(d => d.key === device)?.label} siap`,
+      type: "success",
+    });
   }, []);
 
   const activeDeviceCfg = DEVICES.find(d => d.key === activeDevice)!;

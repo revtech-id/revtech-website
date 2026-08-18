@@ -3,22 +3,13 @@
 import { useState, useEffect } from 'react';
 import { modificationMenu as defaultMods } from '@/data/pricing';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModCategory } from '@/lib/jasa-web';
 
-export default function AfterSalesSupport() {
+export default function AfterSalesSupport({ initialMods }: { initialMods?: ModCategory[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [modMenu, setModMenu] = useState(defaultMods);
+  const [modMenu, setModMenu] = useState(initialMods && initialMods.length > 0 ? initialMods : defaultMods);
 
-  useEffect(() => {
-    const load = () => {
-      const saved = localStorage.getItem('revtech_modifications');
-      if (saved) {
-        try { setModMenu(JSON.parse(saved)); } catch (e) {}
-      }
-    };
-    load();
-    window.addEventListener('jasa-web-updated', load);
-    return () => window.removeEventListener('jasa-web-updated', load);
-  }, []);
+  // Removed localStorage
 
   // Kunci scroll halaman saat modal terbuka
   useEffect(() => {

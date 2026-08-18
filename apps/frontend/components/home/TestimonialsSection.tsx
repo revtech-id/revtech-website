@@ -10,31 +10,8 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem("revtech_testimonials");
-      if (saved) {
-        try {
-          const parsed: Testimonial[] = JSON.parse(saved);
-          const published = parsed
-            .filter(t => t.status === 'published')
-            .sort((a, b) => {
-              if (a.starred && !b.starred) return -1;
-              if (!a.starred && b.starred) return 1;
-              return 0;
-            });
-          
-          setTestimonials(published);
-          return;
-        } catch (e) {}
-      }
-    };
-    handleStorageChange();
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("testimonials-updated", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("testimonials-updated", handleStorageChange);
-    };
+    // If we need any client-side specific setup, it goes here.
+    // We now rely purely on the initialTestimonials passed from the server.
   }, []);
 
   const [activeId, setActiveId] = useState<number | string>(testimonials[0]?.id || 1);

@@ -2,7 +2,9 @@ import { Metadata } from 'next';
 import HomeClient from '@/components/HomeClient';
 import { getSortedPostsData } from '@/lib/blog';
 import { getSortedPortfoliosData } from '@/lib/portfolio';
-import { testimonialsData } from '@/data/testimonials';
+import { getTestimonialsData } from '@/lib/testimonials';
+
+export const revalidate = 0;
 
 export const metadata: Metadata = {
     title: "RevTech - Wadah Solusi Digital",
@@ -12,8 +14,9 @@ export const metadata: Metadata = {
 export default async function Home() {
     const latestPosts = (await getSortedPostsData()).slice(0, 3);
     const latestPortfolios = (await getSortedPortfoliosData()).slice(0, 4);
+    const testimonials = await getTestimonialsData();
     
     return (
-        <HomeClient recentPosts={latestPosts} portfolios={latestPortfolios} testimonials={testimonialsData} />
+        <HomeClient recentPosts={latestPosts} portfolios={latestPortfolios} testimonials={testimonials} />
     );
 }

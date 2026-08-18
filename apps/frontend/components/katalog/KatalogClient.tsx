@@ -23,46 +23,9 @@ interface ProdukDigital {
 
 const PRODUK_CATEGORIES = ["Semua", "Template Website", "Plugin / Extension", "UI Kit", "Script / Tools", "Template Dokumen", "Lainnya"];
 
-const MOCK_DATA: ProdukDigital[] = [
-  {
-    id: "PD-1", title: "Template Website E-Commerce Pro", vendor: "RevTech Studio", category: "Template Website",
-    thumbnail: "https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p>Template <strong>E-Commerce Pro</strong> adalah solusi terbaik untuk membangun toko online Anda dalam hitungan hari, bukan bulan.</p><h3>Fitur Utama</h3><ul><li>Desain Responsif 100%</li><li>SEO Optimized (Skor Lighthouse 90+)</li><li>Sistem Keranjang & Checkout Siap Pakai</li><li>Integrasi Mode Gelap/Terang</li></ul><p>Dibuat menggunakan teknologi terkini yaitu Next.js 14 App Router, TypeScript, dan Tailwind CSS. Template ini sangat mudah disesuaikan dengan panduan dokumentasi yang komprehensif.</p>", 
-    url: "https://demo.revtech.id/ecommerce-pro",
-    description: "Template Next.js super cepat untuk toko online dengan integrasi payment gateway dan desain konversi tinggi.", techStack: ["Next.js", "Tailwind CSS", "TypeScript"],
-    pinned: true, price: "Rp 250.000", status: "published"
-  },
-  {
-    id: "PD-2", title: "RevAdmin - UI Kit Dashboard", vendor: "RevTech Studio", category: "UI Kit",
-    thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p><strong>RevAdmin</strong> mempercepat proses development aplikasi internal atau SaaS Anda hingga 50%. UI Kit komprehensif ini dirancang khusus untuk React dan Figma.</p><h3>Komponen Tersedia</h3><ul><li>Tabel Data Lanjutan dengan Sorting & Filtering</li><li>Chart & Statistik Interaktif (Recharts)</li><li>Form Multi-step dengan Validasi Zod</li><li>Autentikasi UI (Login, Register, Lupa Password)</li></ul><p>Setiap komponen dibuat dengan fokus pada aksesibilitas (a11y) dan pengalaman pengguna yang premium.</p>", 
-    url: "https://figma.com/community/revadmin",
-    description: "Dashboard UI Kit komprehensif untuk React dan Figma dengan 100+ komponen premium.", techStack: ["Figma", "React", "Framer Motion"],
-    pinned: false, price: "Gratis", status: "published"
-  },
-  {
-    id: "PD-3", title: "Sistem Kasir & POS Cloud", vendor: "RevTech Studio", category: "Script / Tools",
-    thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", 
-    content: "<p>Aplikasi Point of Sale (POS) lengkap berbasis web yang siap dideploy untuk bisnis retail atau F&B Anda. Sistem ini mendukung pelacakan stok real-time melintasi berbagai cabang.</p><h3>Fitur Sistem</h3><ul><li>Manajemen Inventori & Peringatan Stok Menipis</li><li>Laporan Penjualan Harian, Mingguan, Bulanan</li><li>Dukungan Scanner Barcode & Printer Thermal</li><li>Manajemen Hak Akses Karyawan</li></ul><p>Tersedia beserta <em>source code</em> lengkap dan panduan instalasi di server VPS atau shared hosting Anda.</p>", 
-    url: "#",
-    description: "Aplikasi kasir Point of Sale lengkap dengan manajemen inventori dan laporan multi-cabang.", techStack: ["Laravel 11", "Vue 3", "MySQL"],
-    pinned: true, price: "Mulai dari Rp 1.500.000", status: "published"
-  }
-];
-
-export default function KatalogClient() {
-  const [items, setItems] = useState<ProdukDigital[]>(MOCK_DATA);
+export default function KatalogClient({ initialData = [] }: { initialData?: ProdukDigital[] }) {
+  const [items, setItems] = useState<ProdukDigital[]>(initialData);
   const [activeCategory, setActiveCategory] = useState("Semua");
-
-  useEffect(() => {
-    // Nanti akan dihubungkan dengan localStorage atau API di akhir (koneksi)
-    const saved = localStorage.getItem("revtech_produk_digital_v2");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Hanya tampilkan yang published
-      setItems(parsed.filter((p: ProdukDigital) => p.status === "published"));
-    }
-  }, []);
 
   const filteredItems = items.filter(item => {
     return activeCategory === "Semua" || item.category === activeCategory;

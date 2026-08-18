@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader, AdminCard, StatusBadge, SaveButton, AdminToast, AdminButton } from "@/components/admin/ui";
 
@@ -11,7 +11,7 @@ import ImageCropper from "@/components/ui/ImageCropper";
 import { CheckCircle2, Mail, Phone, MapPin, Globe, ShieldCheck, Camera, AlertTriangle } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { logActivity } from "@/lib/activityLog";
-import { uploadBase64ToStorage } from "@/lib/upload";
+import { uploadImageToStorage } from "@/lib/upload";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 
@@ -43,6 +43,21 @@ export default function ProfilePage() {
     location: user?.location || "",
     website: user?.website || "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || "",
+        role: user.role || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        bio: user.bio || "",
+        location: user.location || "",
+        website: user.website || "",
+      });
+      setAvatarPreview(user.avatar || null);
+    }
+  }, [user]);
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
 
@@ -103,11 +118,14 @@ export default function ProfilePage() {
     try {
       let finalAvatarUrl = avatarPreview;
       
-      // If avatar is a new base64 string, upload it first
-      if (finalAvatarUrl && finalAvatarUrl.startsWith('data:')) {
+      // Jika avatar adalah blob URL lokal (hasil crop), unggah dulu
+      if (finalAvatarUrl && finalAvatarUrl.startsWith('blob:')) {
         showToast("Sedang mengunggah foto profil...", "success");
         try {
-          finalAvatarUrl = await uploadBase64ToStorage(finalAvatarUrl, "users");
+          const resBlob = await fetch(finalAvatarUrl);
+          const blob = await resBlob.blob();
+          const file = new File([blob], "avatar.webp", { type: "image/webp" });
+          finalAvatarUrl = await uploadImageToStorage(file, "users");
           setAvatarPreview(finalAvatarUrl);
         } catch (uploadErr) {
           console.error("Gagal mengunggah avatar:", uploadErr);

@@ -114,35 +114,6 @@ interface BlogPost {
   content?: string;
 }
 
-// TODO: replace with API call — currently using static mock for initial seed
-const MOCK_POSTS: BlogPost[] = [
-  {
-    id: "1",
-    title: "5 Alasan Bisnis Anda Butuh Website di 2026",
-    slug: "alasan-bisnis-butuh-website-2026",
-    status: "published",
-    coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop",
-    publishedAt: "2026-01-15T09:00:00Z",
-    metaTitle: "5 Alasan Utama Bisnis Anda Membutuhkan Website di Tahun 2026 | RevTech",
-    metaDescription: "Pelajari mengapa kehadiran online melalui website profesional krusial untuk pertumbuhan bisnis Anda di era digital 2026.",
-    keywords: "website bisnis, pentingnya website, digital marketing",
-    pinned: true,
-    content: "<h2>Pentingnya Website di 2026</h2><p>Di era ini, website bukan lagi opsional, melainkan fondasi bisnis.</p>",
-  },
-  {
-    id: "2",
-    title: "Panduan Memilih Tech Stack untuk Website UMKM",
-    slug: "katalog-digital-whatsapp",
-    status: "draft",
-    coverImage: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1974&auto=format&fit=crop",
-    publishedAt: null,
-    metaTitle: "Cara Membuat Katalog Digital WhatsApp untuk Pemula",
-    metaDescription: "",
-    keywords: "",
-    pinned: false,
-    content: "<p>Memilih tech stack yang tepat dapat menghemat biaya server dan mempermudah scaling UMKM Anda.</p>",
-  },
-];
 
 
 
@@ -162,6 +133,8 @@ export default function BlogPage() {
   const [seoLoading, setSeoLoading] = useState(false);
   const [seoForm, setSeoForm] = useState({ metaTitle: "", metaDescription: "", keywords: "" });
   const [contentForm, setContentForm] = useState({ title: "", coverImage: "", content: "", pinned: false, publishedAt: "" });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const quillRef = useRef<any>(null);
@@ -212,18 +185,10 @@ export default function BlogPage() {
     const file = acceptedFiles[0];
     if (!file) return;
     
-    setIsUploading(true);
-    
-    try {
-      const url = await uploadImageToStorage(file, "blog");
-      setContentForm(prev => ({ ...prev, coverImage: url }));
-      setToast({ isVisible: true, message: "Gambar sampul berhasil diunggah ✓", type: "success" });
-    } catch (err) {
-      console.error("Upload error:", err);
-      setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-    } finally {
-      setIsUploading(false);
-    }
+    const url = URL.createObjectURL(file);
+    setContentForm(prev => ({ ...prev, coverImage: url }));
+    setSelectedFile(file);
+    setToast({ isVisible: true, message: "Pratinjau lokal siap", type: "success" });
   }, []);
 
   const onDropRejected = useCallback(() => {
@@ -327,6 +292,7 @@ export default function BlogPage() {
     setEditPost(null);
     setContentForm({ title: "", coverImage: "", content: "", pinned: false, publishedAt: "" });
     setSeoForm({ metaTitle: "", metaDescription: "", keywords: "" });
+    setSelectedFile(null);
     setView("editor");
   }
 
@@ -340,6 +306,7 @@ export default function BlogPage() {
       publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : ""
     });
     setEditPost(post);
+    setSelectedFile(null);
     setView("editor");
   }
 
@@ -366,12 +333,22 @@ export default function BlogPage() {
   async function savePost(asDraft: boolean) {
     let slug = editPost?.slug || '';
     
+    setIsSubmitting(true);
+    setToast({ isVisible: true, message: "Menyimpan artikel...", type: "success" });
+
     try {
+      let finalCoverImage = contentForm.coverImage;
+      
+      if (selectedFile) {
+        setToast({ isVisible: true, message: "Mengunggah gambar sampul...", type: "success" });
+        finalCoverImage = await uploadImageToStorage(selectedFile, "blog");
+      }
+
       if (editPost) {
         const updated: BlogPost = {
           ...editPost,
           title: contentForm.title,
-          coverImage: contentForm.coverImage,
+          coverImage: finalCoverImage,
           content: contentForm.content,
           status: asDraft ? "draft" : "published",
           metaTitle: seoForm.metaTitle,
@@ -389,7 +366,7 @@ export default function BlogPage() {
           title: contentForm.title,
           slug,
           status: asDraft ? "draft" : "published",
-          coverImage: contentForm.coverImage,
+          coverImage: finalCoverImage,
           content: contentForm.content,
           publishedAt: asDraft ? null : new Date().toISOString(),
           metaTitle: seoForm.metaTitle,
@@ -411,6 +388,8 @@ export default function BlogPage() {
     } catch (err) {
       console.error(err);
       setToast({ isVisible: true, message: "Gagal menyimpan artikel", type: "error" });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -768,24 +747,17 @@ export default function BlogPage() {
                         type="file" 
                         accept="image/*"
                         className="hidden" 
-                        onChange={async (e) => {
+                        onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          setIsUploading(true);
-                          setToast({ isVisible: true, message: "Mengompresi & mengunggah gambar...", type: "success" });
-                          try {
-                            const url = await uploadImageToStorage(file, "blog");
-                            setContentForm({ ...contentForm, coverImage: url });
-                            setToast({ isVisible: true, message: "Gambar berhasil diunggah", type: "success" });
-                          } catch (error) {
-                            setToast({ isVisible: true, message: "Gagal mengunggah gambar", type: "error" });
-                          } finally {
-                            setIsUploading(false);
-                          }
+                          const url = URL.createObjectURL(file);
+                          setContentForm(prev => ({ ...prev, coverImage: url }));
+                          setSelectedFile(file);
+                          setToast({ isVisible: true, message: "Pratinjau lokal siap", type: "success" });
                         }}
                       />
                     </label>
-                    <button onClick={() => setContentForm({ ...contentForm, coverImage: "" })} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus Gambar">
+                    <button type="button" onClick={() => { setContentForm({ ...contentForm, coverImage: "" }); setSelectedFile(null); }} className="p-2 rounded-lg bg-black/50 hover:bg-red-500/90 text-white transition-colors backdrop-blur-md border border-white/10" title="Hapus Gambar">
                       <Trash2 size={14} />
                     </button>
                   </div>
