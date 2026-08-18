@@ -48,7 +48,21 @@ function initAdmin() {
     if (!serviceAccountJson) {
       throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not defined in environment variables. Mohon restart npm run dev.");
     }
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    let jsonStr = serviceAccountJson.trim();
+    // Vercel kadang menyertakan tanda kutip tunggal dari copy-paste
+    if (jsonStr.startsWith("'") && jsonStr.endsWith("'")) {
+      jsonStr = jsonStr.slice(1, -1);
+    } else if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+      jsonStr = jsonStr.slice(1, -1);
+    }
+    
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(jsonStr);
+    } catch (err) {
+      console.error("GAGAL MEMBACA JSON FIREBASE KUNCI: ", err, "String awal:", jsonStr.substring(0, 50));
+      throw new Error("Format FIREBASE_SERVICE_ACCOUNT_KEY rusak atau bukan JSON valid. " + err);
+    }
     
     // Fix untuk Next.js env parsing yang terkadang membuat newline menjadi literal string
     if (serviceAccount.private_key) {
