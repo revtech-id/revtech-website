@@ -21,6 +21,12 @@
     "turbo": "^2.10.5"
   },
   "overrides": {
+    "firebase-admin": {
+      "jose": "4.15.9"
+    },
+    "jwks-rsa": {
+      "jose": "4.15.9"
+    },
     "jose": "4.15.9"
   }
 }
