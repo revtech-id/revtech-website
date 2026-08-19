@@ -44,7 +44,7 @@ export default function LoginPage() {
       document.cookie = `_auth_token=1; path=/; SameSite=Strict`;
       router.push("/admin/dashboard");
     } catch (error: any) {
-      alert(`ERROR: ${error.message}\n\nINFO DEBUG: Project ID yang sedang terhubung ke Vercel ini adalah [ ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID} ]. Pastikan ini SAMA dengan project ID di Firebase Console Anda.`);
+      alert(error.message || "Gagal masuk dengan Google");
       setLoadingType(null);
     }
   };
