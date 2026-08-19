@@ -9,6 +9,7 @@ import MaterialSymbols from '@/components/MaterialSymbols';
 const fontMain = DM_Sans({
   variable: "--font-main",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
