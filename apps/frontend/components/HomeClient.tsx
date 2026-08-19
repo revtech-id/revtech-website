@@ -2,12 +2,12 @@
 
 import dynamic from 'next/dynamic';
 
-// Above-the-fold: eager imports (rendered immediately)
+// Above-the-fold: only HeroSection is eager (it's the LCP element)
 import HeroSection from '@/components/home/HeroSection';
-import ServicesSection from '@/components/home/ServicesSection';
-import TrustSection from '@/components/home/TrustSection';
 
-// Below-the-fold: lazy-loaded to reduce initial bundle
+// Below-the-fold: all other sections lazy-loaded to reduce initial JS bundle
+const ServicesSection = dynamic(() => import('@/components/home/ServicesSection'), { ssr: false });
+const TrustSection = dynamic(() => import('@/components/home/TrustSection'), { ssr: false });
 const TestimonialsSection = dynamic(() => import('@/components/home/TestimonialsSection'), { ssr: false });
 const PortfolioSection = dynamic(() => import('@/components/home/PortfolioSection'), { ssr: false });
 const BlogSection = dynamic(() => import('@/components/home/BlogSection'), { ssr: false });
