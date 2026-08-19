@@ -2,14 +2,16 @@
 
 import dynamic from 'next/dynamic';
 
-// Modular Sections
+// Above-the-fold: eager imports (rendered immediately)
 import HeroSection from '@/components/home/HeroSection';
 import ServicesSection from '@/components/home/ServicesSection';
 import TrustSection from '@/components/home/TrustSection';
-import TestimonialsSection from '@/components/home/TestimonialsSection';
-import PortfolioSection from '@/components/home/PortfolioSection';
-import BlogSection from '@/components/home/BlogSection';
-import CtaSection from '@/components/home/CtaSection';
+
+// Below-the-fold: lazy-loaded to reduce initial bundle
+const TestimonialsSection = dynamic(() => import('@/components/home/TestimonialsSection'), { ssr: false });
+const PortfolioSection = dynamic(() => import('@/components/home/PortfolioSection'), { ssr: false });
+const BlogSection = dynamic(() => import('@/components/home/BlogSection'), { ssr: false });
+const CtaSection = dynamic(() => import('@/components/home/CtaSection'), { ssr: false });
 
 import type { BlogPostData } from '@/lib/blog';
 import type { PortfolioCaseStudyData } from '@/lib/portfolio';
