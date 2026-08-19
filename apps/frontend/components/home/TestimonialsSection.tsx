@@ -104,10 +104,11 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
                 </div>
                 <div>
                   <h4 className="font-medium text-[16px] text-gray-900 leading-tight">{activeChat?.name || 'Belum ada obrolan'}</h4>
-                  <p className="text-[13px] text-gray-500 truncate">
-                    terakhir dilihat {formatLastSeen(activeChat?.lastSeen || '')}
-                    {activeChat?.date && ` • ${new Date(activeChat.date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
-                  </p>
+                  {activeChat?.lastSeen && (
+                    <p className="text-[13px] text-gray-500 truncate">
+                      terakhir dilihat {formatLastSeen(activeChat.lastSeen)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-4 text-gray-500">

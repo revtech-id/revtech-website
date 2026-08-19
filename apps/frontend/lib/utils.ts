@@ -17,7 +17,7 @@ export function calculateDiscount(basicPrice: string, originalPrice?: string): s
 }
 
 export function formatLastSeen(dateStr: string): string {
-  if (!dateStr) return '-';
+  if (!dateStr) return '';
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;

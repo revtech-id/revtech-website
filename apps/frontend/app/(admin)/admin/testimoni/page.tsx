@@ -206,7 +206,7 @@ export default function TestimonialWhatsAppAdmin() {
       initials: "KB",
       service: "Jasa Web",
       avatarBg: "bg-gray-100 text-gray-600",
-      lastSeen: new Date().toISOString(),
+      lastSeen: "",
       status: "draft",
       messages: [],
       pinned: false
@@ -602,7 +602,9 @@ export default function TestimonialWhatsAppAdmin() {
                   <h4 className={`font-semibold text-[15px] leading-tight flex items-center gap-2 ${dark ? 'text-[#e9edef]' : 'text-[#111b21]'}`}>
                     {activeItem.name} <Edit3 size={12} className="text-gray-400" />
                   </h4>
-                  <p className={`text-[12px] truncate ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>terakhir dilihat {formatLastSeen(activeItem.lastSeen)}</p>
+                  {activeItem.lastSeen && (
+                    <p className={`text-[12px] truncate ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>terakhir dilihat {formatLastSeen(activeItem.lastSeen)}</p>
+                  )}
                 </div>
               </div>
               
