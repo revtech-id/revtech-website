@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatLastSeen } from "@/lib/utils";
 
 import type { Testimonial, TestimonialMessage } from "@/data/testimonials";
 
@@ -106,7 +105,7 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
                   <h4 className="font-medium text-[16px] text-gray-900 leading-tight">{activeChat?.name || 'Belum ada obrolan'}</h4>
                   {activeChat?.lastSeen && (
                     <p className="text-[13px] text-gray-500 truncate">
-                      terakhir dilihat {formatLastSeen(activeChat.lastSeen)}
+                      {activeChat.lastSeen}
                     </p>
                   )}
                 </div>

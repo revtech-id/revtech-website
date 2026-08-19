@@ -8,7 +8,6 @@ import {
   Search, MoreVertical, Paperclip, Mic, Smile,
   Plus, CheckCheck, Trash2, X, Settings, User, Save, Edit3, Pin, Check, Archive, ChevronDown
 } from "lucide-react";
-import { formatLastSeen } from '@/lib/utils';
 import { AdminToast, AdminConfirmModal, AdminModal, AdminButton } from "@/components/admin/ui";
 import { logActivity } from "@/lib/activityLog";
 import { db } from "@/lib/firebase";
@@ -603,7 +602,7 @@ export default function TestimonialWhatsAppAdmin() {
                     {activeItem.name} <Edit3 size={12} className="text-gray-400" />
                   </h4>
                   {activeItem.lastSeen && (
-                    <p className={`text-[12px] truncate ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>terakhir dilihat {formatLastSeen(activeItem.lastSeen)}</p>
+                    <p className={`text-[12px] truncate ${dark ? 'text-[#8696a0]' : 'text-[#667781]'}`}>{activeItem.lastSeen}</p>
                   )}
                 </div>
               </div>
