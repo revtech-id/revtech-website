@@ -165,9 +165,9 @@ export default function TestimonialWhatsAppAdmin() {
       
       // Urutkan berdasarkan tanggal terbaru ke terlama
       loaded.sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
+        const timeA = a.date ? new Date(a.date).getTime() : (a.lastSeen && !isNaN(new Date(a.lastSeen).getTime()) ? new Date(a.lastSeen).getTime() : Number(a.id) || 0);
+        const timeB = b.date ? new Date(b.date).getTime() : (b.lastSeen && !isNaN(new Date(b.lastSeen).getTime()) ? new Date(b.lastSeen).getTime() : Number(b.id) || 0);
+        return timeB - timeA;
       });
 
       setItems(loaded);

@@ -51,9 +51,9 @@ export async function getTestimonialsData(): Promise<Testimonial[]> {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
         // Jika status pinned sama, urutkan berdasarkan tanggal (terbaru di atas)
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
+        const timeA = a.date ? new Date(a.date).getTime() : (a.lastSeen && !isNaN(new Date(a.lastSeen).getTime()) ? new Date(a.lastSeen).getTime() : Number(a.id) || 0);
+        const timeB = b.date ? new Date(b.date).getTime() : (b.lastSeen && !isNaN(new Date(b.lastSeen).getTime()) ? new Date(b.lastSeen).getTime() : Number(b.id) || 0);
+        return timeB - timeA;
       });
   } catch (err) {
     console.error('[testimonials] getTestimonialsData failed:', err);
