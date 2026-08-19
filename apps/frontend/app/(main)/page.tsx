@@ -12,9 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-    const latestPosts = (await getSortedPostsData()).slice(0, 3);
-    const latestPortfolios = (await getSortedPortfoliosData()).slice(0, 4);
-    const testimonials = await getTestimonialsData();
+    let latestPosts: Awaited<ReturnType<typeof getSortedPostsData>> = [];
+    let latestPortfolios: Awaited<ReturnType<typeof getSortedPortfoliosData>> = [];
+    let testimonials: Awaited<ReturnType<typeof getTestimonialsData>> = [];
+
+    try {
+        latestPosts = (await getSortedPostsData()).slice(0, 3);
+        latestPortfolios = (await getSortedPortfoliosData()).slice(0, 4);
+        testimonials = await getTestimonialsData();
+    } catch (err) {
+        console.error('[Home] Failed to fetch data from Firebase:', err);
+    }
     
     return (
         <HomeClient recentPosts={latestPosts} portfolios={latestPortfolios} testimonials={testimonials} />
