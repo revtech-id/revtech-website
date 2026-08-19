@@ -200,10 +200,10 @@ export default function TestimonialWhatsAppAdmin() {
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const newTestimonial: Testimonial = {
       id: Date.now().toString(),
-      name: "Klien Baru",
-      role: "Perusahaan",
-      initials: "KB",
-      service: "Jasa Web",
+      name: "",
+      role: "",
+      initials: "",
+      service: "",
       avatarBg: "bg-gray-100 text-gray-600",
       lastSeen: "",
       status: "draft",
@@ -894,7 +894,7 @@ export default function TestimonialWhatsAppAdmin() {
                     type="text" 
                     value={draftClient.lastSeen || ""} 
                     onChange={e => handleUpdateDraft({ lastSeen: e.target.value })}
-                    placeholder="Contoh: hari ini pukul 14:00"
+                    placeholder="Masukkan..."
                     className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
                   />
                 </div>
