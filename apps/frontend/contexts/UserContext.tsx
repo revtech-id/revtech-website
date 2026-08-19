@@ -128,8 +128,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const logout = async (currentUser?: UserProfile | null) => {
     const resolvedUser = currentUser ?? user;
-    const isSuperadmin = resolvedUser?._collection === "admins" && resolvedUser?.role === "Superadmin";
-    const loginPage = isSuperadmin ? "/founder-revtech" : "/admin-revtech";
+    // Superadmin selalu ada di koleksi "admins", staff biasa di "staff"
+    const loginPage = resolvedUser?._collection === "admins" ? "/founder-revtech" : "/admin-revtech";
     setLoading(true);
     await firebaseSignOut(auth);
     setUser(null);
