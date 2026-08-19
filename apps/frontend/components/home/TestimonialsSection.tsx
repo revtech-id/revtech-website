@@ -121,11 +121,6 @@ export default function TestimonialsSection({ testimonials: initialTestimonials 
 
             {/* Chat Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-3 md:space-y-4 relative z-10 scrollbar-thin scrollbar-thumb-gray-300">
-              <div className="flex justify-center mb-6">
-                <span className="bg-[#e1f3fb] px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 shadow-sm">
-                  HARI INI
-                </span>
-              </div>
 
               <AnimatePresence mode="wait">
                 {activeChat ? (

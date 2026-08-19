@@ -708,11 +708,6 @@ export default function TestimonialWhatsAppAdmin() {
 
             {/* Area Chat Bubbles */}
             <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-10 scrollbar-thin scrollbar-thumb-[#cfd1d2] scrollbar-track-transparent">
-              <div className="flex justify-center mb-6">
-                <span className={`px-3 py-1.5 rounded-lg text-[12px] font-medium shadow-sm uppercase ${dark ? 'bg-[#182229] text-[#8696a0]' : 'bg-[#e1f3fb] text-[#54656f]'}`}>
-                  HARI INI
-                </span>
-              </div>
 
               <AnimatePresence>
                 <div className="space-y-2 lg:space-y-4 max-w-4xl mx-auto">
@@ -891,15 +886,6 @@ export default function TestimonialWhatsAppAdmin() {
                   />
                 </div>
                 
-                <div className="w-full mt-5">
-                  <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>TANGGAL TESTIMONI (OPSIONAL)</label>
-                  <input 
-                    type="date" 
-                    value={draftClient.date || ""} 
-                    onChange={e => handleUpdateDraft({ date: e.target.value })}
-                    className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
-                  />
-                </div>
 
                 <div className="w-full mt-5">
                   <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>TERAKHIR DILIHAT</label>
