@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import ScrollToTop from '@/components/ScrollToTop';
+import MaterialSymbols from '@/components/MaterialSymbols';
 
 const fontMain = DM_Sans({
   variable: "--font-main",
@@ -52,11 +53,11 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body
         className={`${fontMain.variable} font-sans antialiased selection:bg-primary/20 selection:text-primary min-h-[100svh] bg-[#F8FAFC]`}
       >
+        <MaterialSymbols />
         <ScrollToTop />
         {children}
         <Analytics />
