@@ -34,7 +34,7 @@ export default function LoginPage() {
       }
       
       const adminData = querySnapshot.docs[0].data();
-      if (adminData.role !== "superadmin") {
+      if (adminData.role?.toLowerCase() !== "superadmin") {
          await auth.signOut();
          alert("Akses Ditolak: Portal ini khusus untuk Superadmin.");
          return;
