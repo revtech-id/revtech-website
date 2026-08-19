@@ -22,11 +22,11 @@ const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Initialize App Check (anti-bot layer) — only on client side
-// if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
-//   initializeAppCheck(app, {
-//     provider: new ReCaptchaV3Provider(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
-//     isTokenAutoRefreshEnabled: true,
-//   });
-// }
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 
 export { app, auth, db, storage, googleProvider, firebaseConfig };
