@@ -51,7 +51,7 @@ export const NAV_ITEMS = [
 export function SidebarProfileSection() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const pathname = usePathname();
 
   if (!user) return null;
@@ -174,17 +174,7 @@ export function SidebarProfileSection() {
             variant="danger"
             onClick={async () => {
               logActivity({ type: "system", title: "Logout", description: "Admin telah keluar dari dashboard.", user: "Admin" });
-              if (user?.role === "Superadmin") {
-                sessionStorage.setItem('logout_redirect', '/founder-revtech');
-              } else {
-                sessionStorage.setItem('logout_redirect', '/admin-revtech');
-              }
-              try {
-                await signOut(auth);
-              } catch (e) {
-                console.error("Logout error", e);
-              }
-              // Pengalihan akan ditangani oleh UserContext.tsx via sessionStorage
+              await logout(user);
             }}
           >
             Ya, Keluar
