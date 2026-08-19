@@ -23,7 +23,7 @@ interface UserContextValue {
   user: UserProfile | null;
   setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   loading: boolean;
-  logout: () => Promise<void>;
+  logout: (currentUser?: UserProfile | null) => Promise<void>;
 }
 
 const defaultUser: UserProfile = {
@@ -102,9 +102,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setUser(null);
             await firebaseSignOut(auth);
             if (pathname.startsWith("/admin")) {
-              const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
-              sessionStorage.removeItem('logout_redirect');
-              setTimeout(() => router.push(redirectUrl), 0);
+              setTimeout(() => router.push("/admin-revtech"), 0);
             }
           }
         } catch (error) {
@@ -128,13 +126,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [pathname, router]);
 
-  const logout = async () => {
+  const logout = async (currentUser?: UserProfile | null) => {
+    const resolvedUser = currentUser ?? user;
+    const isSuperadmin = resolvedUser?._collection === "admins" && resolvedUser?.role === "Superadmin";
+    const loginPage = isSuperadmin ? "/founder-revtech" : "/admin-revtech";
     setLoading(true);
     await firebaseSignOut(auth);
     setUser(null);
-    const redirectUrl = sessionStorage.getItem('logout_redirect') || "/admin-revtech";
-    sessionStorage.removeItem('logout_redirect');
-    setTimeout(() => router.push(redirectUrl), 0);
+    setTimeout(() => router.push(loginPage), 0);
   };
 
   return (
