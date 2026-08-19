@@ -890,13 +890,10 @@ export default function TestimonialWhatsAppAdmin() {
                 <div className="w-full mt-5">
                   <label className={`text-[12px] font-bold mb-1 block ${dark ? 'text-[#00a884]' : 'text-[#008069]'}`}>TERAKHIR DILIHAT</label>
                   <input 
-                    type="datetime-local" 
-                    value={draftClient.lastSeen && !isNaN(new Date(draftClient.lastSeen).getTime()) ? new Date(new Date(draftClient.lastSeen).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""} 
-                    onChange={e => {
-                      if (e.target.value) {
-                        handleUpdateDraft({ lastSeen: new Date(e.target.value).toISOString() });
-                      }
-                    }}
+                    type="text" 
+                    value={draftClient.lastSeen || ""} 
+                    onChange={e => handleUpdateDraft({ lastSeen: e.target.value })}
+                    placeholder="Contoh: hari ini pukul 14:00"
                     className={`w-full border-b-2 py-1 text-base bg-transparent outline-none transition-colors ${dark ? 'border-[#222e35] focus:border-[#00a884] text-[#e9edef]' : 'border-gray-200 focus:border-[#008069] text-[#111b21]'}`} 
                   />
                 </div>
