@@ -162,6 +162,14 @@ export default function TestimonialWhatsAppAdmin() {
         ...doc.data(),
         id: doc.id
       })) as Testimonial[];
+      
+      // Urutkan berdasarkan tanggal terbaru ke terlama
+      loaded.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
+
       setItems(loaded);
       
       // Auto-select first item if none selected and items exist

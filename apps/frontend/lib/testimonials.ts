@@ -50,7 +50,10 @@ export async function getTestimonialsData(): Promise<Testimonial[]> {
       .sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
-        return 0;
+        // Jika status pinned sama, urutkan berdasarkan tanggal (terbaru di atas)
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
       });
   } catch (err) {
     console.error('[testimonials] getTestimonialsData failed:', err);
