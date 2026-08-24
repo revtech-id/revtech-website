@@ -213,10 +213,13 @@ export default function JasaWebAdminPage() {
     return () => unsub();
   }, []);
 
+  // Firestore rejects `undefined` values — strip them via JSON round-trip
+  const sanitize = <T>(data: T): T => JSON.parse(JSON.stringify(data));
+
   const savePlans = async (newPlans: PricingPlan[]) => {
     setPlans(newPlans);
     try {
-      await setDoc(doc(db, "settings", "jasa-web"), { plans: newPlans }, { merge: true });
+      await setDoc(doc(db, "settings", "jasa-web"), { plans: sanitize(newPlans) }, { merge: true });
       setToast({ isVisible: true, message: "Harga paket berhasil disimpan", type: "success" });
       setEditingPlanId(null);
     } catch (err) {
@@ -228,7 +231,7 @@ export default function JasaWebAdminPage() {
   const saveHandovers = async (newHandovers: HandoverOption[]) => {
     setHandovers(newHandovers);
     try {
-      await setDoc(doc(db, "settings", "jasa-web"), { handovers: newHandovers }, { merge: true });
+      await setDoc(doc(db, "settings", "jasa-web"), { handovers: sanitize(newHandovers) }, { merge: true });
       setToast({ isVisible: true, message: "Opsi serah terima disimpan", type: "success" });
       setEditingHandoverIdx(null);
     } catch (err) {
@@ -240,7 +243,7 @@ export default function JasaWebAdminPage() {
   const saveMods = async (newMods: ModCategory[]) => {
     setMods(newMods);
     try {
-      await setDoc(doc(db, "settings", "jasa-web"), { mods: newMods }, { merge: true });
+      await setDoc(doc(db, "settings", "jasa-web"), { mods: sanitize(newMods) }, { merge: true });
       setToast({ isVisible: true, message: "Katalog modifikasi disimpan", type: "success" });
     } catch (err) {
       console.error(err);
