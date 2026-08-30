@@ -141,7 +141,7 @@ export default function KontakForm() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Pesanan Berhasil Diterima!</h2>
                 <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-md mb-8">
-                    Tim kami sedang meninjau pesanan Anda. Butuh respons lebih cepat? Silakan konfirmasi manual via tombol WhatsApp di bawah.
+                    Data pesanan Anda telah tersimpan di sistem. Agar pesanan dapat segera diproses, <b>Anda wajib melakukan konfirmasi via WhatsApp</b> dengan menekan tombol di bawah ini.
                 </p>
 
                 {/* Kartu Resi / Bukti Pesanan */}
@@ -150,7 +150,7 @@ export default function KontakForm() {
                         <span className="text-gray-500 font-medium text-sm">Status Pesanan</span>
                         <span className="bg-amber-50 text-amber-600 font-medium px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
-                            Menunggu Tinjauan
+                            Menunggu Konfirmasi WA
                         </span>
                     </div>
                     <div className="space-y-3">
