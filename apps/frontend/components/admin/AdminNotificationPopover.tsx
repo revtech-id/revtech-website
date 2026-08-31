@@ -37,6 +37,8 @@ export function AdminNotificationPopover() {
   const { user } = useUser();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  const userRef = { current: user };
+  userRef.current = user;
 
   const isManager = user?.role === "Superadmin" || user?.role === "Project Manager";
 
@@ -44,6 +46,7 @@ export function AdminNotificationPopover() {
     const q = query(collection(db, "activity_logs"), orderBy("timestamp", "desc"), limit(50));
     
     const unsub = onSnapshot(q, (snapshot) => {
+      const currentUser = userRef.current;
       const dbLogs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -57,10 +60,10 @@ export function AdminNotificationPopover() {
         entry.notify === true && !dismissedIds.includes(entry.id)
       );
       
-      if (user?.role === "Content Writer") {
+      if (currentUser?.role === "Content Writer") {
         const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
         filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
-      } else if (user?.role === "Developer") {
+      } else if (currentUser?.role === "Developer") {
         const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full"];
         filteredLog = filteredLog.filter(entry => !hiddenTypes.includes(entry.type));
       }
@@ -88,21 +91,16 @@ export function AdminNotificationPopover() {
       }));
 
       setNotifs(dynamicNotifs);
+    }, (error) => {
+      console.error("[AdminNotificationPopover] onSnapshot error:", error.code, error.message);
     });
 
-    const handleStorage = (e: StorageEvent) => {
-      // Still need this for "mark all as read" sync across tabs if we want, or inbox
-      if (e.key === "revtech_inbox") {
-        // inbox handling not implemented here currently
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
     return () => {
       unsub();
-      window.removeEventListener("storage", handleStorage);
     };
-  }, [isManager, user]);
+    // Hanya subscribe sekali — user diakses via ref di dalam callback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unreadCount = notifs.filter((n) => n.unread).length;
 
