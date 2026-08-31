@@ -4,7 +4,7 @@ import { getSortedPostsData } from '@/lib/blog';
 import { getSortedPortfoliosData } from '@/lib/portfolio';
 import { getTestimonialsData } from '@/lib/testimonials';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
     title: "RevTech - Wadah Solusi Digital",

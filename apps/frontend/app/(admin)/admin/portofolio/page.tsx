@@ -360,7 +360,10 @@ export default function PortofolioPage() {
     
       async function confirmPublish(id: string) {
         try {
-          await updateDoc(doc(db, "portfolio", id), { status: "published" });
+          await updateDoc(doc(db, "portfolio", id), {
+            status: "published",
+            publishedAt: new Date().toISOString(),
+          });
           setToast({ isVisible: true, message: "Proyek berhasil diterbitkan", type: "success" });
           logActivity({ type: "portofolio_updated", title: "Proyek Diterbitkan", description: `Proyek portofolio ID ${id} dipublish.`, user: "Admin" });
         } catch (err) {

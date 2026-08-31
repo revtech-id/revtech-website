@@ -345,9 +345,14 @@ export default function BlogPage() {
       }
 
       if (editPost) {
+        const titleChanged = contentForm.title !== editPost.title;
+        const newSlug = titleChanged
+          ? contentForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+          : editPost.slug;
         const updated: BlogPost = {
           ...editPost,
           title: contentForm.title,
+          slug: newSlug,
           coverImage: finalCoverImage,
           content: contentForm.content,
           status: asDraft ? "draft" : "published",

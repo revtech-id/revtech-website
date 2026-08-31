@@ -50,7 +50,12 @@ export function AdminNotificationPopover() {
       })) as any[];
 
       const readIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_read") || "[]");
-      let filteredLog = dbLogs.filter(entry => entry.notify === true);
+      // ID yang sudah dihapus/bersihkan — tidak boleh muncul lagi
+      const dismissedIds: string[] = JSON.parse(localStorage.getItem("revtech_notif_dismissed") || "[]");
+
+      let filteredLog = dbLogs.filter(entry =>
+        entry.notify === true && !dismissedIds.includes(entry.id)
+      );
       
       if (user?.role === "Content Writer") {
         const hiddenTypes = ["payment", "lead_created", "lead_added", "lead_deal", "invoice_paid", "order_lunas", "lead_paid_full", "order_status_changed", "order_handover", "order_created"];
@@ -176,7 +181,14 @@ export function AdminNotificationPopover() {
               </button>
             ) : notifs.length > 0 ? (
               <button
-                onClick={() => setNotifs([])}
+                onClick={() => {
+                  // Simpan semua ID notif saat ini ke dismissed agar tidak muncul lagi
+                  const existingDismissed: string[] = JSON.parse(localStorage.getItem("revtech_notif_dismissed") || "[]");
+                  const allCurrentIds = notifs.map((n) => n.id);
+                  const newDismissed = Array.from(new Set([...existingDismissed, ...allCurrentIds]));
+                  localStorage.setItem("revtech_notif_dismissed", JSON.stringify(newDismissed));
+                  setNotifs([]);
+                }}
                 className="text-[10px] font-semibold transition-colors opacity-70 hover:opacity-100"
                 style={{ color: "var(--adm-danger)" }}
               >

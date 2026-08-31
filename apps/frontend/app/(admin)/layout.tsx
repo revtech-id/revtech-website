@@ -41,7 +41,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/system/pengaturan": "Pengaturan",
   "/admin/trash": "Tempat Sampah",
   "/admin/testimoni": "Testimoni",
-  "/admin/hero": "Hero Banner",
   "/admin/jasa-web": "Jasa Web",
   "/admin/produk-digital": "Produk Digital",
   "/admin/change-password": "Ubah Kata Sandi",
@@ -57,7 +56,6 @@ const ROUTE_ROLES: Record<string, string[]> = {
   "/admin/blog": ["Superadmin", "Content Writer"],
   "/admin/portofolio": ["Superadmin", "Developer"],
   "/admin/testimoni": ["Superadmin", "Project Manager"],
-  "/admin/hero": ["Superadmin"],
   "/admin/jasa-web": ["Superadmin"],
   "/admin/produk-digital": ["Superadmin"],
   "/admin/profile": ["Superadmin", "Project Manager", "Developer", "Content Writer"],
@@ -82,7 +80,6 @@ const PAGE_DESCRIPTIONS: Record<string, string> = {
   "/admin/system": "Konfigurasi informasi profil bisnis, kontak, dan pengaturan utama",
   "/admin/trash": "Penampungan terpusat untuk memulihkan atau menghapus permanen data yang dihapus dari berbagai modul.",
   "/admin/testimoni": "Kelola ulasan dan testimoni klien",
-  "/admin/hero": "Atur latar belakang untuk banner utama",
   "/admin/jasa-web": "Kelola harga paket jasa web dan opsi serah terima",
   "/admin/produk-digital": "Kelola daftar katalog produk digital",
 };

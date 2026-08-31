@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, Plus, Trash2, Pencil, X, Save, Check, ChevronDown, Package, FileText, Wrench } from "lucide-react";
 import { PageHeader, AdminToast, AdminConfirmModal, AdminModal, AdminButton } from "@/components/admin/ui";
@@ -178,10 +178,18 @@ export default function JasaWebAdminPage() {
     isOpen: false, action: () => {}, title: "", message: "", confirmText: "", confirmVariant: "danger"
   });
 
+  // Mencegah onSnapshot menimpa state saat sedang menyimpan (race condition)
+  const suppressSnapshot = useRef(false);
+
   useEffect(() => {
     setIsClient(true);
     
     const unsub = onSnapshot(doc(db, "settings", "jasa-web"), (docSnap) => {
+      // Abaikan snapshot yang dipicu oleh write lokal kita sendiri
+      if (suppressSnapshot.current) {
+        suppressSnapshot.current = false;
+        return;
+      }
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.plans) setPlans(data.plans);
@@ -211,38 +219,50 @@ export default function JasaWebAdminPage() {
     });
 
     return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const savePlans = async (newPlans: PricingPlan[]) => {
-    setPlans(newPlans);
+    // Bersihkan originalPrice kosong agar halaman publik tidak menerima string kosong
+    const cleanedPlans = newPlans.map(p => ({
+      ...p,
+      originalPrice: p.originalPrice?.trim() || undefined,
+    }));
+    suppressSnapshot.current = true;
+    setPlans(cleanedPlans);
     try {
-      await setDoc(doc(db, "settings", "jasa-web"), { plans: newPlans }, { merge: true });
+      await setDoc(doc(db, "settings", "jasa-web"), { plans: cleanedPlans }, { merge: true });
       setToast({ isVisible: true, message: "Harga paket berhasil disimpan", type: "success" });
       setEditingPlanId(null);
     } catch (err) {
+      suppressSnapshot.current = false;
       console.error(err);
       setToast({ isVisible: true, message: "Gagal menyimpan harga paket", type: "error" });
     }
   };
 
   const saveHandovers = async (newHandovers: HandoverOption[]) => {
+    suppressSnapshot.current = true;
     setHandovers(newHandovers);
     try {
       await setDoc(doc(db, "settings", "jasa-web"), { handovers: newHandovers }, { merge: true });
       setToast({ isVisible: true, message: "Opsi serah terima disimpan", type: "success" });
       setEditingHandoverIdx(null);
     } catch (err) {
+      suppressSnapshot.current = false;
       console.error(err);
       setToast({ isVisible: true, message: "Gagal menyimpan serah terima", type: "error" });
     }
   };
 
   const saveMods = async (newMods: ModCategory[]) => {
+    suppressSnapshot.current = true;
     setMods(newMods);
     try {
       await setDoc(doc(db, "settings", "jasa-web"), { mods: newMods }, { merge: true });
       setToast({ isVisible: true, message: "Katalog modifikasi disimpan", type: "success" });
     } catch (err) {
+      suppressSnapshot.current = false;
       console.error(err);
       setToast({ isVisible: true, message: "Gagal menyimpan modifikasi", type: "error" });
     }

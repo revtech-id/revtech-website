@@ -43,7 +43,6 @@ export const NAV_ITEMS = [
   { label: "Blog", icon: FileText, href: "/admin/blog", roles: ["Superadmin", "Content Writer"] },
   { label: "Portofolio", icon: FolderKanban, href: "/admin/portofolio", roles: ["Superadmin", "Developer"] },
   { label: "Testimoni", icon: Star, href: "/admin/testimoni", roles: ["Superadmin", "Project Manager"] },
-  { label: "Hero Banner", icon: ImageIcon, href: "/admin/hero", roles: ["Superadmin"] },
   { label: "Jasa Web", icon: Globe, href: "/admin/jasa-web", roles: ["Superadmin"] },
   { label: "Produk Digital", icon: Package, href: "/admin/produk-digital", roles: ["Superadmin"] },
 ];

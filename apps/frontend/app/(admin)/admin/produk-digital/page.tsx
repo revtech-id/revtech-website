@@ -313,7 +313,10 @@ export default function ProdukDigitalPage() {
 
   async function confirmPublish(id: string) {
     try {
-      await updateDoc(doc(db, "digital_products", id), { status: "published" });
+      await updateDoc(doc(db, "digital_products", id), {
+        status: "published",
+        publishedAt: new Date().toISOString(),
+      });
       setToast({ isVisible: true, message: "Produk berhasil diterbitkan", type: "success" });
     } catch (err) {
       console.error(err);

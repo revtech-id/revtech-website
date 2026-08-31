@@ -13,13 +13,19 @@ import { calculateDiscount } from '@/lib/utils';
 export default function PricingCards({ initialPlans }: { initialPlans?: PricingPlan[] }) {
     const [showEksklusifToast, setShowEksklusifToast] = useState(false);
     
-    const mergedPlans = defaultPlans.map(dp => {
+    // Merge: Firestore data menimpa default, tapi originalPrice kosong/undefined
+    // harus dihapus agar badge diskon tidak muncul untuk string kosong
+    const plans = defaultPlans.map(dp => {
         if (!initialPlans) return dp;
         const matching = initialPlans.find(p => p.id === dp.id);
-        return matching ? { ...dp, ...matching } : dp;
+        if (!matching) return dp;
+        return {
+            ...dp,
+            ...matching,
+            // Jika originalPrice kosong/undefined di Firestore, hilangkan field-nya
+            originalPrice: matching.originalPrice?.trim() || undefined,
+        };
     });
-
-    const [plans, setPlans] = useState<PricingPlan[]>(mergedPlans);
     //     setShowEksklusifToast(true);
     // }, []);
 
