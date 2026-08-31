@@ -1034,6 +1034,13 @@ export default function PesananPage() {
           await setDoc(doc(db, "invoices", invoicePelunasan.id), invoicePelunasan);
         }
 
+        logActivity({
+          type: "order_status_changed",
+          title: "Project Baru Ditambahkan",
+          description: `Project baru untuk ${order.client} — ${order.service} berhasil dibuat.`,
+          user: "Admin",
+        });
+
         showToast("Project baru berhasil ditambahkan");
       } catch (err) {
         console.error(err);
